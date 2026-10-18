@@ -25,6 +25,7 @@ OUT = HERE / "export"
 
 # material ids
 PALLET, PLINTH, IRON, PANEL, KNOB, SIDE, BACK, RIM, STONES, EMBERS = range(10)
+EMBER_RGB = np.array([0.90, 0.26, 0.04])  # deep red-orange, close to the original emission
 ZONE_IDS = {"front": 0, "back": 1, "right": 2, "left": 3, "top": 4, "hidden": 5}
 
 
@@ -147,6 +148,14 @@ def position_maps(V, T, F, N, zone):
 
 def material_map(pos, nrm, zid, glow):
     x, y, z = pos[..., 0], pos[..., 1], pos[..., 2]
+    # oven interior (behind the door, where the coils are); the bars sit in front of it at z >= 0.32
+    inside = (np.abs(x) < 0.325) & (z > -0.30) & (z < 0.28) & (y > 0.33) & (y < 1.0)
+    # thin parts (bars, edges) miss the visibility raster and come out "hidden":
+    # outside the oven, give them the side their normal faces instead
+    hidden_out = (zid == 5) & ~inside
+    nx, ny, nz = nrm[..., 0], nrm[..., 1], nrm[..., 2]
+    by_normal = np.where(ny > 0.7, 4, np.where(np.abs(nz) >= np.abs(nx), np.where(nz > 0, 0, 1), np.where(nx > 0, 2, 3)))
+    zid = np.where(hidden_out, by_normal, zid).astype(np.int8)
     mat = np.full(zid.shape, SIDE, np.int8)
     mat[zid == 1] = BACK
     front = zid == 0
@@ -155,15 +164,15 @@ def material_map(pos, nrm, zid, glow):
     mat[front & (y < 0.93)] = IRON
     mat[(y >= 0.27) & (y < 0.33) & (zid != 4)] = IRON
     mat[(y < 0.27) & (zid != 4)] = PLINTH
-    mat[(glow | (zid == 5)) & (zid != 4) & (y > 0.30) & (y < 1.12)] = EMBERS
+    mat[(glow | (zid == 5)) & inside & (zid != 4)] = EMBERS
     mat[zid == 4] = RIM
     mat[(zid == 4) & (y >= 1.155)] = STONES
     mat[y < 0.045] = PALLET
-    return mat
+    return mat, zid
 
 
 # ---------------------------------------------------------------- materials
-def build(pos, nrm, mat, zid):
+def build(pos, nrm, mat, zid, glow0):
     x, y, z = (pos[..., i].astype(np.float64) for i in range(3))
     vertical = np.abs(nrm[..., 1]) < 0.7
     along_x = np.abs(nrm[..., 2]) >= np.abs(nrm[..., 0])
@@ -243,8 +252,10 @@ def build(pos, nrm, mat, zid):
     sel = mat == STONES
     put(sel, stone_c, 0.009 * dome - 0.004 * crack, 0, 50 + 30 * mineral, crack, 0.0)
     flicker = 0.55 + 0.45 * fbm(x * 30, z * 30, y, 3, SEED + 13)
-    glow_top = crack * flicker
-    emit[sel] = (glow_top[..., None] * (hexc("#FF6A1F") * 0.8 + hexc("#FFB347") * 0.2 * flicker[..., None]))[sel]
+    # thin coil strips get a low even warmth (cracks would blur into solid rings at 512 px);
+    # the rest of the burner glows only in the cracks
+    glow_top = np.where(glow0, 0.18 * flicker, 0.75 * crack * flicker)
+    emit[sel] = (glow_top[..., None] * EMBER_RGB)[sel]
 
     # --- embers: stones inside the oven, seen through the bars (triplanar on dominant axis)
     an = np.abs(nrm)
@@ -260,7 +271,7 @@ def build(pos, nrm, mat, zid):
     low = np.clip(1.25 - (y - 0.33) / 0.55, 0.35, 1.0)
     hot_stone = smooth(0.55, 0.85, gid) * 0.35
     heat = (1.3 * gcrack + hot_stone) * low * (0.7 + 0.5 * fbm(x * 25, y * 25, z * 25, 3, SEED + 21))
-    emit[sel] = (np.clip(heat, 0, 1)[..., None] * hexc("#FF6A1F"))[sel]
+    emit[sel] = (np.clip(heat * 0.7, 0, 1)[..., None] * EMBER_RGB)[sel]
 
     # --- forged iron (door, bars, kick band)
     mott = fbm(x * 40, y * 40, z * 40, 4, SEED + 30)
@@ -329,9 +340,10 @@ def main():
     print("rasterising position maps ...")
     pos, nrm, zid, dens, filled = position_maps(V, T, F, N, zone)
     em0 = np.asarray(PILImage.open(ORIG / "ElectricFurnace_em.png").convert("RGB").resize((SIZE, SIZE), PILImage.NEAREST))
-    mat = material_map(pos, nrm, zid, em0[..., 0] > 60)
+    glow0 = em0[..., 0] > 60
+    mat, zid = material_map(pos, nrm, zid, glow0)
     print("building materials ...")
-    col, height, metal, gloss, emit, cavity, orig_w = build(pos, nrm, mat, zid)
+    col, height, metal, gloss, emit, cavity, orig_w = build(pos, nrm, mat, zid, glow0)
 
     n_new = height_to_normal(height, pos, dens, mat, strength=3.0)
     n0 = np.asarray(PILImage.open(ORIG / "ElectricFurnace_nrm.png").convert("RGB"), np.float64) / 255 * 2 - 1
@@ -355,7 +367,7 @@ def main():
     ao_small = PILImage.fromarray((ao * 255).round().astype(np.uint8)).resize((512, 512), PILImage.BOX)
     PILImage.fromarray(rgba(np.repeat(np.asarray(ao_small)[..., None], 3, -1))).save(OUT / "ElectricFurnace_v1_occlusion.png")
     em_small = PILImage.fromarray((np.clip(emit, 0, 1) * 255).round().astype(np.uint8)).resize((512, 512), PILImage.BOX)
-    em_arr = np.clip(np.asarray(em_small, np.float64) * 1.6, 0, 255)  # box filter dims thin cracks; compensate
+    em_arr = np.clip(np.asarray(em_small, np.float64) * 1.2, 0, 255)  # box filter dims thin cracks; compensate a little
     PILImage.fromarray(rgba(em_arr.round())).save(OUT / "ElectricFurnace_v1_emission.png")
 
     print("rendering previews ...")
