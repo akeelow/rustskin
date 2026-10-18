@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "blender": {
+      "command": "C:/Users/akeel/OneDrive/rustskin/.venv/Scripts/mcp-for-blender.exe",
+      "args": [],
+      "env": {
+        "DISABLE_TELEMETRY": "true",
+        "BLENDER_HOST": "localhost",
+        "BLENDER_PORT": "9876"
+      }
+    }
+  }
+}

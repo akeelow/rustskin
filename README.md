@@ -40,6 +40,8 @@ python -m venv .venv
 "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P tools/blender/preview.py -- <model.obj> <export/ИмяТекстур_v1> <out.png> day 35
 ```
 
+Живое управление Blender из Claude (MCP): см. [tools/blender/mcp](tools/blender/mcp/README.md).
+
 Тяжёлые исходники (PSD, KRA, SPP, blend, а также PNG/TGA) хранятся через
 **Git LFS** — см. `.gitattributes`. Перед первым коммитом с графикой:
 
