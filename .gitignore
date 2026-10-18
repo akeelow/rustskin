@@ -1,0 +1,22 @@
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editor autosaves / backups
+*.blend1
+*.blend2
+*~
+*.bak
+*.tmp
+*.autosave
+*.kra~
+*.spp.bak
+
+# Substance Painter caches
+*.spp.lock
+.cache/
+
+# Large scratch exports
+tmp/
+scratch/
