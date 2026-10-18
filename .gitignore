@@ -21,10 +21,7 @@ desktop.ini
 tmp/
 scratch/
 
-# Third-party Workshop previews: study only, not ours to publish
-references/*/workshop-*/
 
-# Facepunch original assets (downloaded from the in-game editor), keep local
-skins/*/*/originals/*
-!skins/*/*/originals/.gitkeep
+# Python
 __pycache__/
+
