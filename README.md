@@ -34,6 +34,12 @@ python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt
 ```
 
+Превью скина в Blender (5.2, установлен через Steam):
+
+```bash
+"C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P tools/blender/preview.py -- <model.obj> <export/ИмяТекстур_v1> <out.png> day 35
+```
+
 Тяжёлые исходники (PSD, KRA, SPP, blend, а также PNG/TGA) хранятся через
 **Git LFS** — см. `.gitattributes`. Перед первым коммитом с графикой:
 
