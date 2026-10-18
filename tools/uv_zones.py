@@ -140,31 +140,24 @@ def read_png(path):
     return w, h, ch, out
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("obj")
-    ap.add_argument("out")
-    ap.add_argument("--diffuse")
-    ap.add_argument("--size", type=int, default=2048)
-    ap.add_argument("--plinth", type=float, default=0.27, help="height (m) below which side faces count as plinth")
-    a = ap.parse_args()
-    out = Path(a.out)
-    out.mkdir(parents=True, exist_ok=True)
-    V, T, F = load_obj(a.obj)
-    N = [normal(*(V[i] for i in vi)) for vi, _ in F]
+def screen_mapper(V, cell=512):
     ys = [p[1] for p in V]
     span = max(max(p[0] for p in V) - min(p[0] for p in V), max(ys) - min(ys)) * 1.1
     cy = (max(ys) + min(ys)) / 2
-    cell = 512
 
     def to_screen(k, name, proj, p):
         q = proj(p)
         oy = 0 if name == "top" else cy
         return (k * cell + cell / 2 + q[0] / span * cell, cell / 2 - (q[1] - oy) / span * cell, q[2])
 
-    # visibility: per view, z-buffer of triangle ids
+    return to_screen
+
+
+def classify(V, F, N, plinth=0.27, cell=512):
+    """Zone per triangle: the view it is most visible from (+ '-plinth' below `plinth` m), or 'hidden'."""
+    to_screen = screen_mapper(V, cell)
     seen = [dict() for _ in F]
-    for k, (name, _, proj, d) in enumerate(VIEWS):
+    for name, _, proj, d in VIEWS:
         zbuf, ids = {}, {}
         for f, (vi, _) in enumerate(F):
             if N[f][0] * d[0] + N[f][1] * d[1] + N[f][2] * d[2] <= 0.05:
@@ -182,8 +175,51 @@ def main():
             zone.append("hidden")
             continue
         z = max(seen[f], key=seen[f].get)
-        low = sum(V[i][1] for i in vi) / 3 < a.plinth and z != "top"
+        low = sum(V[i][1] for i in vi) / 3 < plinth and z != "top"
         zone.append(z + ("-plinth" if low else ""))
+    return zone
+
+
+def render_views(V, T, F, N, path, colour_of=None, tex=None, cell=512):
+    """5 orthographic views; colour_of(f) -> RGB, or sample `tex` (from read_png) by UV."""
+    to_screen = screen_mapper(V, cell)
+    img, zb = Image(cell * len(VIEWS), cell), {}
+    for k, (name, _, proj, d) in enumerate(VIEWS):
+        for f, (vi, ti) in enumerate(F):
+            shade = N[f][0] * d[0] + N[f][1] * d[1] + N[f][2] * d[2]
+            if shade <= 0.05:
+                continue
+            s = [to_screen(k, name, proj, V[i]) for i in vi]
+            for x, y, b0, b1, b2 in raster([(p[0], p[1]) for p in s], cell * len(VIEWS), cell):
+                z = b0 * s[0][2] + b1 * s[1][2] + b2 * s[2][2]
+                if z <= zb.get((x, y), -1e9):
+                    continue
+                zb[(x, y)] = z
+                if tex and None not in ti:
+                    u = b0 * T[ti[0]][0] + b1 * T[ti[1]][0] + b2 * T[ti[2]][0]
+                    v = b0 * T[ti[0]][1] + b1 * T[ti[1]][1] + b2 * T[ti[2]][1]
+                    tw, th, ch, px = tex
+                    i = (min(int((1 - v) * th), th - 1) * tw + min(int(u * tw), tw - 1)) * ch
+                    c = tuple(int(px[i + j] * (0.55 + 0.45 * shade)) for j in range(3))
+                else:
+                    c = tuple(int(cc * (0.4 + 0.6 * shade)) for cc in colour_of(f))
+                img.set(x, y, c)
+    img.save(path)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("obj")
+    ap.add_argument("out")
+    ap.add_argument("--diffuse")
+    ap.add_argument("--size", type=int, default=2048)
+    ap.add_argument("--plinth", type=float, default=0.27, help="height (m) below which side faces count as plinth")
+    a = ap.parse_args()
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    V, T, F = load_obj(a.obj)
+    N = [normal(*(V[i] for i in vi)) for vi, _ in F]
+    zone = classify(V, F, N, a.plinth)
 
     def colour(z):
         base = COLOURS[z.split("-")[0]]
@@ -207,31 +243,9 @@ def main():
     uvz.save(out / "uv_zones.png")
     wire.save(out / "uv_wire.png")
 
-    tex = read_png(a.diffuse) if a.diffuse else None
-    sheets = [("views.png", False)] + ([("views_tex.png", True)] if tex else [])
-    for fname, textured in sheets:
-        img, zb = Image(cell * len(VIEWS), cell), {}
-        for k, (name, _, proj, d) in enumerate(VIEWS):
-            for f, (vi, ti) in enumerate(F):
-                shade = N[f][0] * d[0] + N[f][1] * d[1] + N[f][2] * d[2]
-                if shade <= 0.05:
-                    continue
-                s = [to_screen(k, name, proj, V[i]) for i in vi]
-                for x, y, b0, b1, b2 in raster([(p[0], p[1]) for p in s], cell * len(VIEWS), cell):
-                    z = b0 * s[0][2] + b1 * s[1][2] + b2 * s[2][2]
-                    if z <= zb.get((x, y), -1e9):
-                        continue
-                    zb[(x, y)] = z
-                    if textured and None not in ti:
-                        u = b0 * T[ti[0]][0] + b1 * T[ti[1]][0] + b2 * T[ti[2]][0]
-                        v = b0 * T[ti[0]][1] + b1 * T[ti[1]][1] + b2 * T[ti[2]][1]
-                        tw, th, ch, px = tex
-                        i = (min(int((1 - v) * th), th - 1) * tw + min(int(u * tw), tw - 1)) * ch
-                        c = tuple(int(px[i + j] * (0.55 + 0.45 * shade)) for j in range(3))
-                    else:
-                        c = tuple(int(cc * (0.4 + 0.6 * shade)) for cc in colour(zone[f]))
-                    img.set(x, y, c)
-        img.save(out / fname)
+    render_views(V, T, F, N, out / "views.png", colour_of=lambda f: colour(zone[f]))
+    if a.diffuse:
+        render_views(V, T, F, N, out / "views_tex.png", tex=read_png(a.diffuse))
 
     counts = {}
     for z in zone:
