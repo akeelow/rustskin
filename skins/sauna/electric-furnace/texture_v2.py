@@ -153,14 +153,27 @@ def main():
     flicker = 0.55 + 0.45 * fbm(x * 30, z * 30, y, 3, SEED + 13)
     deep = smooth(0.75, 0.25, ao_b)
     put(bed, hexc("#1A1210") * (1 - deep[..., None]) + hexc("#3A1A0E") * deep[..., None], 0, 30)
-    glow = np.where(bed, 0.85 * deep * flicker, 0)
+    # only the dish floor between rocks glows; the dish's inner wall (exposed once the coils are
+    # cut away) glowed as a bright ring in game (v2.1), so it stays dark soot
+    floor = (nrm[..., 1] > 0.75) & (y < 1.145)  # dish floor, not the tops of the coil turns left in place
+    glow = np.where(bed & floor, 0.85 * deep * flicker, 0)
+    bcx = np.where(x > 0, 0.143, -0.143)
+    bcz = np.where(z > 0, 0.1435, -0.1435)
+    in_dish = (y > 1.13) & (np.hypot(x - bcx, z - bcz) < 0.1) & (np.abs(x) < 0.3) & (np.abs(z) < 0.3)
+    wall = in_dish & ~stone & ~floor
+    put(wall, hexc("#1E1714") * (0.8 + 0.4 * flicker[..., None]), 0, 25)
+    emit[wall] = 0
     glow = glow + np.where(stone & (mat == STONES), 0.25 * smooth(0.45, 0.15, ao_b) * flicker, 0)  # rock undersides
     emit[burner | bed] = 0
     emit += glow[..., None] * EMBER_RGB
 
     # ------------------------------------------------ fieldstone plinth on mortar
     pst = pid == ID["plinth"]
-    mor = (pid == ID["mortar"]) | ((mat == PLINTH) & (pid == ID["base"]))
+    # upward faces of the lumpy original plinth come out as "top plate" (RIM) in the v1 map and
+    # showed as rusty streaks along the stones in game (v2.1): they are mortar too
+    plinth_tops = (mat == RIM) & (y > 0.04) & (y < 0.27)
+    print(f"  plinth tops repainted: {(plinth_tops & (pid == ID['base'])).sum()} texels")
+    mor = (pid == ID["mortar"]) | (((mat == PLINTH) | plinth_tops) & (pid == ID["base"]))
     pt = rnd[..., None]
     pc = hexc("#4E4943") * (1 - pt) + hexc("#8A7F72") * pt
     pc = pc * (0.85 + 0.3 * fbm(x * 500, y * 500, z * 500, 2, SEED + 51)[..., None])
@@ -224,7 +237,10 @@ def main():
     # the dish under them carries the same baked heap, so the spirals' outline disappears
     cx = np.where(x > 0, 0.143, -0.143)
     cz = np.where(z > 0, 0.1435, -0.1435)
-    coil = (y > 1.145) & (np.hypot(x - cx, z - cz) < 0.093) & (np.abs(x) < 0.3) & (np.abs(z) < 0.3)
+    # cut radius per burner: wider and the cut opens a slot between dish and ring through which
+    # the stove's insides show (seen as glowing rings in game, v2.1); checked by ray casts in Blender
+    big = (x > 0) == (z > 0)
+    coil = (y > 1.145) & (np.hypot(x - cx, z - cz) < np.where(big, 0.083, 0.06)) & (np.abs(x) < 0.3) & (np.abs(z) < 0.3)
     alpha = np.where(coil, 0, 255)
     PILImage.fromarray(rgba((np.clip(col, 0, 1) * 255).round(), alpha)).save(OUT / "ElectricFurnace_v2_diffuse_cutout.png")
     nr = np.dstack([(nrm_out[..., 0] * 0.5 + 0.5) * 255, (nrm_out[..., 1] * 0.5 + 0.5) * 255, np.full(mat.shape, 255)]).round()
