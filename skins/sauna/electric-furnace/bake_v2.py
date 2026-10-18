@@ -357,7 +357,7 @@ def build_plinth(low, mats, rng):
     """Fieldstone plinth: courses of rough stones proud of a mortar bed, all four sides."""
     st = bmesh.new()
     mo = bmesh.new()
-    y0, y1 = 0.040, 0.302
+    y0, y1 = 0.040, 0.272  # up to the iron kick band (v2.1: the top course used to run over it)
     face = 0.343           # mortar plane, just outside the lumpy original bricks
     for side in range(4):
         # local frame per side: u along the face, n outwards
@@ -462,6 +462,8 @@ def cage_offset(p, n):
         return axis(Vector((0, 1, 0)), 0.075)            # rest of the top plate
     if y < 0.045:
         return n * 0.025                                 # pallet
+    if y < 0.305 and abs(x) > 0.29 and abs(z) > 0.29:
+        return n * 0.05                                  # plinth corners: don't smear one side onto the other
     if y < 0.305:
         a = Vector((math.copysign(1, n.x), 0, 0)) if abs(n.x) > abs(n.z) else Vector((0, 0, math.copysign(1, n.z)))
         return axis(a, 0.065)                            # plinth stones, per side (back is set in)

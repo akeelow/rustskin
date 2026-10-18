@@ -162,16 +162,16 @@ def main():
     pst = pid == ID["plinth"]
     mor = (pid == ID["mortar"]) | ((mat == PLINTH) & (pid == ID["base"]))
     pt = rnd[..., None]
-    pc = hexc("#6A6157") * (1 - pt) + hexc("#968A7A") * pt
+    pc = hexc("#4E4943") * (1 - pt) + hexc("#8A7F72") * pt
     pc = pc * (0.85 + 0.3 * fbm(x * 500, y * 500, z * 500, 2, SEED + 51)[..., None])
     lichen = smooth(0.66, 0.74, fbm(x * 25, y * 25, z * 25, 3, SEED + 52)) * smooth(0.2, 0.06, y)
     pc = pc * (1 - 0.25 * lichen[..., None]) + hexc("#5C6A39") * 0.25 * lichen[..., None]
-    pc = pc * (1 + 0.3 * edge[..., None]) * (0.75 + 0.25 * ao_b[..., None])
+    pc = pc * (1 + 0.08 * edge[..., None]) * (0.8 + 0.2 * ao_b[..., None])
     wet = smooth(0.11, 0.05, y)
     pc = pc * (1 - 0.3 * wet[..., None])
-    put(pst, pc, 0, 40 + 60 * wet + 20 * edge)
-    mc = hexc("#787068") * (0.8 + 0.3 * fbm(x * 200, y * 200, z * 200, 3, SEED + 53)[..., None])
-    mc = mc * (0.55 + 0.45 * ao_b[..., None]) * (1 - 0.3 * wet[..., None])
+    put(pst, pc, 0, 40 + 60 * wet)
+    mc = hexc("#968E81") * (0.8 + 0.3 * fbm(x * 200, y * 200, z * 200, 3, SEED + 53)[..., None])
+    mc = mc * (0.7 + 0.3 * ao_b[..., None]) * (1 - 0.3 * wet[..., None])
     put(mor, mc, 0, 30 + 50 * wet)
     micro[pst] = (0.0004 * fbm(x * 300, y * 300, z * 300, 3, SEED + 54))[pst]
     micro[mor] = (0.0003 * fbm(x * 400, y * 400, z * 400, 2, SEED + 55))[mor]
@@ -205,6 +205,11 @@ def main():
     w = np.where(keep_v1, orig_w, 0)[..., None]
     n0 = n0 * w + np.array([0.0, 0.0, 1.0]) * (1 - w)
     n0 /= np.maximum(np.linalg.norm(n0, axis=-1, keepdims=True), 1e-6)
+    # masonry: the low-poly is already lumpy, so full-strength stone edges read as pillows
+    # with white rims in game (v2) -> soften them
+    soft = (pst | mor)[..., None]
+    nb = np.where(soft, nb * np.array([0.45, 0.45, 1.0]), nb)
+    nb /= np.linalg.norm(nb, axis=-1, keepdims=True)
     nrm_out = whiteout(whiteout(nb, n_fine), n0)
 
     # ------------------------------------------------ occlusion: original x baked
