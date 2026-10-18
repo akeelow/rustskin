@@ -164,6 +164,8 @@ def material_map(pos, nrm, zid, glow):
     mat[front & (y < 0.93)] = IRON
     mat[(y >= 0.27) & (y < 0.33) & (zid != 4)] = IRON
     mat[(y < 0.27) & (zid != 4)] = PLINTH
+    # right-side vent: the louver fins are the tilted faces (nx < 0.95) of the vent -> cast-iron grille
+    mat[(zid == 2) & (nrm[..., 0] < 0.95) & (np.abs(z) < 0.31) & (y > 0.42) & (y < 0.97)] = IRON
     mat[(glow | (zid == 5)) & inside & (zid != 4)] = EMBERS
     mat[zid == 4] = RIM
     mat[(zid == 4) & (y >= 1.155)] = STONES
@@ -218,17 +220,39 @@ def build(pos, nrm, mat, zid, glow0):
         rust_halo = (1 - smooth(0.005, 0.012, d)) * 0.5
         stain = np.maximum(stain, rust_halo)
 
+    # bevels and recess frames (tilted faces): plain trim, no gaps or nails
+    trim = vertical & (np.maximum(np.abs(nrm[..., 0]), np.abs(nrm[..., 2])) < 0.95)
+    gap = gap * ~trim
+    nail = nail * ~trim
+    # worn slat edges and box corners: lighter, rounded
+    e = np.minimum(fr, 1 - fr)
+    chips = fbm(h * 120, y * 60, board, 3, SEED + 5)
+    wear = smooth(0.14, 0.065, e) * (1 - gap) * smooth(0.35, 0.65, chips)
+    corner = smooth(0.025, 0.0, 0.389 - np.abs(h)) * smooth(0.3, 0.6, chips)
+    wear = np.maximum(wear, corner)
+    # scorch around the firebox door (heat rises: stronger above it)
+    dx = np.maximum(np.abs(x) - 0.30, 0)
+    dy = np.maximum(np.maximum(0.33 - y, y - 0.93), 0)
+    dz = np.maximum(0.33 - z, 0)
+    dd = np.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+    scorch_n = fbm(x * 30, y * 30, z * 30, 4, SEED + 6)
+    scorch = np.clip((1 - smooth(0.0, 0.16, dd + 0.04 * (scorch_n - 0.5))) * (0.5 + 0.8 * smooth(0.55, 0.95, y)), 0, 1)
+    scorch = scorch * (z > 0.20)  # only the front half of the box
+
     def wood(base, darker):
         c = base[None, None, :] * (0.88 + 0.22 * tone[..., None])
         c = c * (0.86 + 0.24 * grain[..., None])
         c = c * (1 - 0.35 * knots[..., None])
         c = c * (1 - darker * steam[..., None]) * (1 - 0.28 * stain[..., None]) * (1 - 0.2 * drips[..., None])
         c = c * (1 - gap[..., None]) + hexc("#2A2018") * gap[..., None]
+        c = c * (1 + 0.22 * wear[..., None])
+        char = hexc("#1C120B") * (0.7 + 0.6 * scorch_n[..., None])
+        c = c * (1 - 0.88 * scorch[..., None]) + char * 0.88 * scorch[..., None]
         c = c * (1 - nail[..., None]) + hexc("#3A3430") * nail[..., None]
         return c
 
-    wood_h = -0.003 * gap + 0.0003 * grain + 0.0008 * nail - 0.0004 * knots
-    wood_gloss = 30 + 45 * stain + 30 * drips
+    wood_h = -0.003 * gap + 0.0003 * grain + 0.0008 * nail - 0.0004 * knots - 0.0007 * wear         + 0.0003 * scorch * fbm(x * 400, y * 400, z * 400, 2, SEED + 7)
+    wood_gloss = (30 + 45 * stain + 30 * drips) * (1 - 0.6 * scorch)
     wood_metal = 120 * nail
     for m, base, dk in ((SIDE, hexc("#C2A77E"), 0.25), (BACK, hexc("#7A5A3C"), 0.15), (PANEL, hexc("#C2A77E"), 0.3)):
         sel = mat == m
@@ -243,10 +267,10 @@ def build(pos, nrm, mat, zid, glow0):
     crack = 1 - smooth(0.03, 0.1, edge)
     speck = fbm(x * 900, z * 900, y * 900, 2, SEED + 11)
     t = cid[..., None]
-    stone_c = hexc("#5C5D60") * (1 - t) + hexc("#908D88") * t
-    stone_c = stone_c * (0.85 + 0.3 * speck[..., None])
-    mineral = smooth(0.7, 0.78, fbm(x * 70, z * 70, cid * 9, 3, SEED + 12))
-    stone_c = stone_c * (1 - 0.6 * mineral[..., None]) + hexc("#CFCAC0") * 0.6 * mineral[..., None]
+    stone_c = hexc("#2B2C2E") * (1 - t) + hexc("#4A4846") * t  # basalt
+    stone_c = stone_c * (0.88 + 0.22 * speck[..., None])
+    mineral = smooth(0.76, 0.82, fbm(x * 70, z * 70, cid * 9, 3, SEED + 12))
+    stone_c = stone_c * (1 - 0.35 * mineral[..., None]) + hexc("#BDB7AC") * 0.35 * mineral[..., None]
     stone_c = stone_c * (1 - crack[..., None]) + hexc("#1E1A18") * crack[..., None]
     dome = np.sqrt(np.clip(1 - (f1 / 0.75) ** 2, 0, 1))
     sel = mat == STONES
@@ -283,11 +307,44 @@ def build(pos, nrm, mat, zid, glow0):
 
     # --- sooty rim of the top plate
     soot = fbm(x * 18, z * 18, y, 4, SEED + 40)
-    white = smooth(0.74, 0.8, fbm(x * 35, z * 35, y * 35, 4, SEED + 41)) * 0.8
     rim_c = hexc("#45403B") * (0.75 + 0.45 * soot[..., None])
-    rim_c = rim_c * (1 - white[..., None]) + hexc("#B8B2A6") * white[..., None]
+    # burner centres from the stone texels, one per quadrant
+    st = mat == STONES
+    bdist = np.full(mat.shape, 9.0)
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            q = st & (np.sign(x) == sx) & (np.sign(z) == sz)
+            if q.sum() < 50:
+                continue
+            cx, cz = x[q].mean(), z[q].mean()
+            r = np.percentile(np.hypot(x[q] - cx, z[q] - cz), 98)
+            bdist = np.minimum(bdist, np.hypot(x - cx, z - cz) - r)
+    bdist = bdist + 0.012 * (fbm(x * 25, z * 25, y, 3, SEED + 42) - 0.5)
+    # temper (heat-tint) bands: straw -> bronze -> purple -> blue -> plate
+    stops = [(0.0, "#B8975A"), (0.012, "#9C6236"), (0.026, "#64386C"), (0.04, "#3B4F84"), (0.065, None)]
+    temper_c = np.zeros(pos.shape)
+    temper_a = np.zeros(mat.shape)
+    for (d0, c0), (d1, c1) in zip(stops, stops[1:]):
+        m = (bdist >= d0) & (bdist < d1)
+        t = ((bdist - d0) / (d1 - d0))[..., None]
+        a0 = 1.0
+        a1 = 0.0 if c1 is None else 1.0
+        cc1 = hexc(c0) if c1 is None else hexc(c1)
+        temper_c[m] = (hexc(c0) * (1 - t) + cc1 * t)[m]
+        temper_a[m] = (a0 * (1 - t[..., 0]) + a1 * t[..., 0])[m]
+    temper_a *= 0.4 * (bdist >= 0)
+    rim_c = rim_c * (1 - temper_a[..., None]) + temper_c * temper_a[..., None]
+    # evaporated water: pale tide lines and duller patches
+    tide = np.zeros(mat.shape)
+    patch = np.zeros(mat.shape)
+    for k, (sc, lvl) in enumerate(((9, 0.56), (14, 0.6))):
+        b = fbm(x * sc, z * sc, y + k, 4, SEED + 43 + k)
+        tide = np.maximum(tide, 1 - smooth(0.0, 0.01, np.abs(b - lvl)))
+        patch = np.maximum(patch, smooth(lvl, lvl + 0.02, b))
+    rim_c = rim_c * (1 + 0.1 * patch[..., None])
+    rim_c = rim_c * (1 - 0.35 * tide[..., None]) + hexc("#A9A398") * 0.35 * tide[..., None]
     sel = mat == RIM
-    put(sel, rim_c, 0.0003 * soot, 90 * (1 - white), 55 - 25 * white, None, 1.0)
+    put(sel, rim_c, 0.0003 * soot + 0.0002 * tide, 90 + 40 * temper_a - 50 * tide, 55 + 20 * temper_a - 25 * patch, None, 1.0)
 
     # --- fieldstone plinth (anisotropic voronoi on the face)
     p1, p2, pid = voronoi(h / 0.085, y / 0.055, SEED + 50)
