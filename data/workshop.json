@@ -1,0 +1,522 @@
+{
+ "Bandana": {
+  "group": "Clothing",
+  "total": 1945,
+  "last_12m": 109
+ },
+ "Balaclava": {
+  "group": "Clothing",
+  "total": 968,
+  "last_12m": 41
+ },
+ "Beenie Hat": {
+  "group": "Clothing",
+  "total": 604,
+  "last_12m": 26
+ },
+ "Burlap Shoes": {
+  "group": "Clothing",
+  "total": 497,
+  "last_12m": 24
+ },
+ "Burlap Shirt": {
+  "group": "Clothing",
+  "total": 1191,
+  "last_12m": 80
+ },
+ "Burlap Pants": {
+  "group": "Clothing",
+  "total": 1101,
+  "last_12m": 82
+ },
+ "Burlap Headwrap": {
+  "group": "Clothing",
+  "total": 882,
+  "last_12m": 52
+ },
+ "Bucket Helmet": {
+  "group": "Clothing",
+  "total": 829,
+  "last_12m": 132
+ },
+ "Boonie Hat": {
+  "group": "Clothing",
+  "total": 774,
+  "last_12m": 66
+ },
+ "Cap": {
+  "group": "Clothing",
+  "total": 1095,
+  "last_12m": 49
+ },
+ "Collared Shirt": {
+  "group": "Clothing",
+  "total": 578,
+  "last_12m": 14
+ },
+ "Coffee Can Helmet": {
+  "group": "Clothing",
+  "total": 1995,
+  "last_12m": 138
+ },
+ "Deer Skull Mask": {
+  "group": "Clothing",
+  "total": 449,
+  "last_12m": 27
+ },
+ "Hide Skirt": {
+  "group": "Clothing",
+  "total": 218,
+  "last_12m": 8
+ },
+ "Hide Shirt": {
+  "group": "Clothing",
+  "total": 253,
+  "last_12m": 29
+ },
+ "Hide Pants": {
+  "group": "Clothing",
+  "total": 290,
+  "last_12m": 23
+ },
+ "Hide Shoes": {
+  "group": "Clothing",
+  "total": 248,
+  "last_12m": 23
+ },
+ "Hide Halterneck": {
+  "group": "Clothing",
+  "total": 154,
+  "last_12m": 5
+ },
+ "Hoodie": {
+  "group": "Clothing",
+  "total": 5115,
+  "last_12m": 575
+ },
+ "Hide Poncho": {
+  "group": "Clothing",
+  "total": 729,
+  "last_12m": 101
+ },
+ "Leather Gloves": {
+  "group": "Clothing",
+  "total": 1074,
+  "last_12m": 50
+ },
+ "Long TShirt": {
+  "group": "Clothing",
+  "total": 1064,
+  "last_12m": 55
+ },
+ "Metal Chest Plate": {
+  "group": "Clothing",
+  "total": 4730,
+  "last_12m": 593
+ },
+ "Metal Facemask": {
+  "group": "Clothing",
+  "total": 6125,
+  "last_12m": 673
+ },
+ "Miner Hat": {
+  "group": "Clothing",
+  "total": 292,
+  "last_12m": 27
+ },
+ "Pants": {
+  "group": "Clothing",
+  "total": 4670,
+  "last_12m": 601
+ },
+ "Roadsign Vest": {
+  "group": "Clothing",
+  "total": 1509,
+  "last_12m": 150
+ },
+ "Roadsign Pants": {
+  "group": "Clothing",
+  "total": 2071,
+  "last_12m": 281
+ },
+ "Riot Helmet": {
+  "group": "Clothing",
+  "total": 534,
+  "last_12m": 20
+ },
+ "Snow Jacket": {
+  "group": "Clothing",
+  "total": 429,
+  "last_12m": 36
+ },
+ "Shorts": {
+  "group": "Clothing",
+  "total": 369,
+  "last_12m": 23
+ },
+ "Tank Top": {
+  "group": "Clothing",
+  "total": 341,
+  "last_12m": 14
+ },
+ "TShirt": {
+  "group": "Clothing",
+  "total": 5658,
+  "last_12m": 165
+ },
+ "Vagabond Jacket": {
+  "group": "Clothing",
+  "total": 803,
+  "last_12m": 79
+ },
+ "Work Boots": {
+  "group": "Clothing",
+  "total": 2115,
+  "last_12m": 293
+ },
+ "Large Backpack": {
+  "group": "Clothing",
+  "total": 764,
+  "last_12m": 267
+ },
+ "Roadsign Gloves": {
+  "group": "Clothing",
+  "total": 750,
+  "last_12m": 135
+ },
+ "Tactical Gloves": {
+  "group": "Clothing",
+  "total": 260,
+  "last_12m": 260
+ },
+ "AK47": {
+  "group": "Weapons/Tools",
+  "total": 8312,
+  "last_12m": 882
+ },
+ "Bolt Rifle": {
+  "group": "Weapons/Tools",
+  "total": 1557,
+  "last_12m": 99
+ },
+ "Bone Club": {
+  "group": "Weapons/Tools",
+  "total": 310,
+  "last_12m": 27
+ },
+ "Bone Knife": {
+  "group": "Weapons/Tools",
+  "total": 544,
+  "last_12m": 25
+ },
+ "Crossbow": {
+  "group": "Weapons/Tools",
+  "total": 1199,
+  "last_12m": 67
+ },
+ "Double Barrel Shotgun": {
+  "group": "Weapons/Tools",
+  "total": 646,
+  "last_12m": 64
+ },
+ "Eoka Pistol": {
+  "group": "Weapons/Tools",
+  "total": 741,
+  "last_12m": 44
+ },
+ "F1 Grenade": {
+  "group": "Weapons/Tools",
+  "total": 668,
+  "last_12m": 48
+ },
+ "Longsword": {
+  "group": "Weapons/Tools",
+  "total": 452,
+  "last_12m": 21
+ },
+ "Mp5": {
+  "group": "Weapons/Tools",
+  "total": 2441,
+  "last_12m": 238
+ },
+ "Pump Shotgun": {
+  "group": "Weapons/Tools",
+  "total": 763,
+  "last_12m": 96
+ },
+ "Rock": {
+  "group": "Weapons/Tools",
+  "total": 3641,
+  "last_12m": 319
+ },
+ "Salvaged Hammer": {
+  "group": "Weapons/Tools",
+  "total": 101,
+  "last_12m": 11
+ },
+ "Salvaged Icepick": {
+  "group": "Weapons/Tools",
+  "total": 439,
+  "last_12m": 46
+ },
+ "Satchel Charge": {
+  "group": "Weapons/Tools",
+  "total": 552,
+  "last_12m": 44
+ },
+ "Semi-Automatic Pistol": {
+  "group": "Weapons/Tools",
+  "total": 2255,
+  "last_12m": 161
+ },
+ "Stone Hatchet": {
+  "group": "Weapons/Tools",
+  "total": 554,
+  "last_12m": 31
+ },
+ "Stone Pick Axe": {
+  "group": "Weapons/Tools",
+  "total": 402,
+  "last_12m": 24
+ },
+ "Sword": {
+  "group": "Weapons/Tools",
+  "total": 740,
+  "last_12m": 80
+ },
+ "Thompson": {
+  "group": "Weapons/Tools",
+  "total": 1281,
+  "last_12m": 121
+ },
+ "Hammer": {
+  "group": "Weapons/Tools",
+  "total": 1929,
+  "last_12m": 183
+ },
+ "Hatchet": {
+  "group": "Weapons/Tools",
+  "total": 1711,
+  "last_12m": 97
+ },
+ "Pick Axe": {
+  "group": "Weapons/Tools",
+  "total": 937,
+  "last_12m": 80
+ },
+ "Revolver": {
+  "group": "Weapons/Tools",
+  "total": 707,
+  "last_12m": 69
+ },
+ "Rocket Launcher": {
+  "group": "Weapons/Tools",
+  "total": 829,
+  "last_12m": 69
+ },
+ "Semi-Automatic Rifle": {
+  "group": "Weapons/Tools",
+  "total": 1749,
+  "last_12m": 206
+ },
+ "Waterpipe Shotgun": {
+  "group": "Weapons/Tools",
+  "total": 343,
+  "last_12m": 53
+ },
+ "Custom SMG": {
+  "group": "Weapons/Tools",
+  "total": 1039,
+  "last_12m": 65
+ },
+ "Python": {
+  "group": "Weapons/Tools",
+  "total": 1279,
+  "last_12m": 121
+ },
+ "LR300": {
+  "group": "Weapons/Tools",
+  "total": 1932,
+  "last_12m": 127
+ },
+ "Combat Knife": {
+  "group": "Weapons/Tools",
+  "total": 979,
+  "last_12m": 158
+ },
+ "Hunting bow": {
+  "group": "Weapons/Tools",
+  "total": 1037,
+  "last_12m": 87
+ },
+ "L96": {
+  "group": "Weapons/Tools",
+  "total": 956,
+  "last_12m": 174
+ },
+ "M249": {
+  "group": "Weapons/Tools",
+  "total": 667,
+  "last_12m": 104
+ },
+ "M39": {
+  "group": "Weapons/Tools",
+  "total": 386,
+  "last_12m": 29
+ },
+ "Jackhammer": {
+  "group": "Weapons/Tools",
+  "total": 505,
+  "last_12m": 98
+ },
+ "HMLMG": {
+  "group": "Weapons/Tools",
+  "total": 84,
+  "last_12m": 84
+ },
+ "SKS": {
+  "group": "Weapons/Tools",
+  "total": 185,
+  "last_12m": 185
+ },
+ "Armored Door": {
+  "group": "Deployables",
+  "total": 3239,
+  "last_12m": 267
+ },
+ "Concrete Barricade": {
+  "group": "Deployables",
+  "total": 632,
+  "last_12m": 38
+ },
+ "Large Wood Box": {
+  "group": "Deployables",
+  "total": 9988,
+  "last_12m": 1554
+ },
+ "Reactive Target": {
+  "group": "Deployables",
+  "total": 258,
+  "last_12m": 23
+ },
+ "Sandbag Barricade": {
+  "group": "Deployables",
+  "total": 176,
+  "last_12m": 22
+ },
+ "Sleeping Bag": {
+  "group": "Deployables",
+  "total": 2862,
+  "last_12m": 192
+ },
+ "Sheet Metal Door": {
+  "group": "Deployables",
+  "total": 6038,
+  "last_12m": 823
+ },
+ "Water Purifier": {
+  "group": "Deployables",
+  "total": 134,
+  "last_12m": 14
+ },
+ "Wood Storage Box": {
+  "group": "Deployables",
+  "total": 1900,
+  "last_12m": 386
+ },
+ "Wooden Door": {
+  "group": "Deployables",
+  "total": 1653,
+  "last_12m": 156
+ },
+ "Fridge": {
+  "group": "Deployables",
+  "total": 978,
+  "last_12m": 162
+ },
+ "Wooden Double Door": {
+  "group": "Deployables",
+  "total": 429,
+  "last_12m": 38
+ },
+ "Sheet Metal Double Door": {
+  "group": "Deployables",
+  "total": 1650,
+  "last_12m": 254
+ },
+ "Armored Double Door": {
+  "group": "Deployables",
+  "total": 960,
+  "last_12m": 175
+ },
+ "Garage Door": {
+  "group": "Deployables",
+  "total": 12952,
+  "last_12m": 2085
+ },
+ "Locker": {
+  "group": "Deployables",
+  "total": 677,
+  "last_12m": 112
+ },
+ "Chair": {
+  "group": "Deployables",
+  "total": 582,
+  "last_12m": 63
+ },
+ "Table": {
+  "group": "Deployables",
+  "total": 614,
+  "last_12m": 44
+ },
+ "Furnace": {
+  "group": "Deployables",
+  "total": 2284,
+  "last_12m": 275
+ },
+ "Rug": {
+  "group": "Deployables",
+  "total": 5110,
+  "last_12m": 502
+ },
+ "Bearskin Rug": {
+  "group": "Deployables",
+  "total": 572,
+  "last_12m": 66
+ },
+ "Spinning Wheel": {
+  "group": "Deployables",
+  "total": 250,
+  "last_12m": 95
+ },
+ "Vending Machine": {
+  "group": "Deployables",
+  "total": 722,
+  "last_12m": 84
+ },
+ "Bed": {
+  "group": "Deployables",
+  "total": 390,
+  "last_12m": 278
+ },
+ "BBQ": {
+  "group": "Deployables",
+  "total": 0,
+  "last_12m": 0
+ },
+ "Electric Furnace": {
+  "group": "Deployables",
+  "total": 117,
+  "last_12m": 117
+ },
+ "Auto Turret": {
+  "group": "Deployables",
+  "total": 235,
+  "last_12m": 235
+ },
+ "Acoustic Guitar": {
+  "group": "Misc",
+  "total": 641,
+  "last_12m": 33
+ }
+}

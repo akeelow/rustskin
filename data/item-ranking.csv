@@ -1,0 +1,89 @@
+item,group,subs_total,subs_12m,store_total,store_12m,one_in,sold_median,price_median,glow_share_12m,value
+Bed,Deployables,390,278,34,29,9.6,33953,2.49,0.69,8819
+Locker,Deployables,677,112,40,12,9.3,18046,2.49,0.75,4815
+Electric Furnace,Deployables,117,117,18,18,6.5,11558,2.49,1.0,4428
+HMLMG,Weapons/Tools,84,84,13,13,6.5,10722,2.49,0.0,4132
+Snow Jacket,Clothing,429,36,7,4,9.0,15318,1.99,0.0,3387
+Double Barrel Shotgun,Weapons/Tools,646,64,73,9,7.1,9628,2.49,0.0,3371
+Armored Door,Deployables,3239,267,67,17,15.7,15642,2.99,0.82,2978
+SKS,Weapons/Tools,185,185,16,16,11.6,13379,2.49,0.0,2881
+Jackhammer,Weapons/Tools,505,98,19,6,16.3,19628,2.24,0.33,2692
+Bone Knife,Weapons/Tools,544,25,6,1,25.0,25902,2.49,0.0,2580
+Crossbow,Weapons/Tools,1199,67,78,6,11.2,13306,1.99,0.0,2371
+Miner Hat,Clothing,292,27,6,2,13.5,31423,0.99,0.0,2304
+Thompson,Weapons/Tools,1281,121,71,10,12.1,13656,1.99,0.0,2246
+Custom SMG,Weapons/Tools,1039,65,60,6,10.8,9237,2.49,0.0,2123
+Armored Double Door,Deployables,960,175,20,8,21.9,18588,2.49,1.0,2116
+Tactical Gloves,Clothing,260,260,17,17,15.3,15912,1.99,0.0,2070
+Vagabond Jacket,Clothing,803,79,37,4,19.8,20085,1.99,0.0,2024
+Hide Poncho,Clothing,729,101,50,10,10.1,10140,1.99,0.0,1998
+Burlap Headwrap,Clothing,882,52,21,5,10.4,20908,0.99,0.2,1990
+Satchel Charge,Weapons/Tools,552,44,27,4,11.0,14442,1.49,0.5,1956
+Auto Turret,Deployables,235,235,15,15,15.7,9249,2.99,0.47,1765
+Wooden Double Door,Deployables,429,38,14,2,19.0,12913,2.49,0.0,1692
+Furnace,Deployables,2284,275,161,15,18.3,15479,1.99,0.93,1680
+Salvaged Icepick,Weapons/Tools,439,46,12,2,23.0,18577,1.99,0.0,1607
+Fridge,Deployables,978,162,31,9,18.0,11412,2.49,0.78,1579
+Semi-Automatic Pistol,Weapons/Tools,2255,161,82,11,14.6,11582,1.99,0.09,1575
+Roadsign Vest,Clothing,1509,150,126,9,16.7,12650,1.99,0.0,1510
+Sheet Metal Double Door,Deployables,1650,254,64,9,28.2,16699,2.49,1.0,1473
+L96,Weapons/Tools,956,174,26,6,29.0,17030,2.49,0.0,1462
+Pump Shotgun,Weapons/Tools,763,96,37,7,13.7,9884,1.99,0.0,1434
+Wood Storage Box,Deployables,1900,386,113,21,18.4,13188,1.99,0.71,1428
+Hunting bow,Weapons/Tools,1037,87,81,8,10.9,7582,1.99,0.0,1387
+Wooden Door,Deployables,1653,156,87,9,17.3,10678,2.24,0.56,1380
+Revolver,Weapons/Tools,707,69,47,3,23.0,11720,2.49,0.0,1269
+Bearskin Rug,Deployables,572,66,7,2,33.0,23865,1.74,1.0,1258
+Coffee Can Helmet,Clothing,1995,138,120,9,15.3,12786,1.49,0.0,1242
+Concrete Barricade,Deployables,632,38,10,2,19.0,10980,1.99,0.0,1150
+LR300,Weapons/Tools,1932,127,96,6,21.2,8958,2.49,0.0,1054
+Sleeping Bag,Deployables,2862,192,105,7,27.4,14146,1.99,0.43,1026
+Bolt Rifle,Weapons/Tools,1557,99,36,5,19.8,10173,1.99,0.0,1022
+Large Backpack,Clothing,764,267,38,9,29.7,14941,1.99,0.0,1002
+Eoka Pistol,Weapons/Tools,741,44,18,2,22.0,10847,1.99,0.0,981
+Waterpipe Shotgun,Weapons/Tools,343,53,26,6,8.8,4343,1.99,0.0,978
+Mp5,Weapons/Tools,2441,238,79,10,23.8,11310,1.99,0.0,946
+M249,Weapons/Tools,667,104,25,3,34.7,12655,2.49,0.0,909
+Pick Axe,Weapons/Tools,937,80,72,4,20.0,8770,1.99,0.25,873
+Sword,Weapons/Tools,740,80,38,3,26.7,8987,2.49,0.0,839
+Sheet Metal Door,Deployables,6038,823,270,21,39.2,13202,2.49,0.71,839
+Roadsign Pants,Clothing,2071,281,130,9,31.2,12934,1.99,0.0,824
+Semi-Automatic Rifle,Weapons/Tools,1749,206,162,8,25.8,10616,1.99,0.0,820
+Hatchet,Weapons/Tools,1711,97,99,4,24.2,9744,1.99,0.25,800
+Rock,Weapons/Tools,3641,319,73,7,45.6,14310,2.49,0.0,782
+Combat Knife,Weapons/Tools,979,158,20,6,26.3,9989,1.99,0.17,755
+Garage Door,Deployables,12952,2085,195,31,67.3,19657,2.49,0.94,728
+Chair,Deployables,582,63,12,4,15.8,7623,1.49,0.5,721
+AK47,Weapons/Tools,8312,882,283,21,42.0,11797,2.49,0.0,699
+Python,Weapons/Tools,1279,121,85,4,30.2,10187,1.99,0.0,670
+F1 Grenade,Weapons/Tools,668,48,6,1,48.0,15909,1.99,0.0,660
+Vending Machine,Deployables,722,84,16,1,84.0,14448,3.74,1.0,643
+Rug,Deployables,5110,502,37,7,71.7,22829,1.99,0.71,633
+Spinning Wheel,Deployables,250,95,5,4,23.8,9827,1.49,0.5,617
+Metal Chest Plate,Clothing,4730,593,152,13,45.6,13652,1.99,0.0,596
+Metal Facemask,Clothing,6125,673,176,14,48.1,14282,1.99,0.0,591
+Bucket Helmet,Clothing,829,132,17,7,18.9,6350,1.74,0.0,586
+Roadsign Gloves,Clothing,750,135,63,7,19.3,10697,0.99,0.0,549
+Water Purifier,Deployables,134,14,2,1,14.0,5100,1.49,0.0,543
+Balaclava,Clothing,968,41,18,1,41.0,16328,1.24,1.0,494
+Hammer,Weapons/Tools,1929,183,35,3,61.0,14917,1.99,0.67,487
+Hide Shirt,Clothing,253,29,7,1,29.0,12201,0.99,0.0,417
+Rocket Launcher,Weapons/Tools,829,69,28,1,69.0,11277,2.49,0.0,407
+Burlap Shirt,Clothing,1191,80,29,2,40.0,14840,0.99,0.5,367
+Sandbag Barricade,Deployables,176,22,1,1,22.0,5199,1.49,0.0,352
+Large Wood Box,Deployables,9988,1554,259,12,129.5,17436,2.49,0.83,335
+Work Boots,Clothing,2115,293,96,9,32.6,10553,0.99,0.0,321
+Burlap Pants,Clothing,1101,82,21,2,41.0,13035,0.99,0.5,315
+Bandana,Clothing,1945,109,39,3,36.3,11242,0.99,0.0,306
+Boonie Hat,Clothing,774,66,21,1,66.0,13346,1.24,0.0,251
+Hoodie,Clothing,5115,575,184,8,71.9,12017,1.49,0.0,249
+Pants,Clothing,4670,601,171,8,75.1,12061,1.49,0.0,239
+Cap,Clothing,1095,49,15,0,,16376,1.24,,0
+Hide Skirt,Clothing,218,8,3,0,,14094,0.99,,0
+Hide Pants,Clothing,290,23,7,0,,12210,0.99,,0
+Hide Shoes,Clothing,248,23,6,0,,13806,0.99,,0
+Hide Halterneck,Clothing,154,5,3,0,,13680,0.99,,0
+Leather Gloves,Clothing,1074,50,38,0,,11635,2.49,,0
+Stone Hatchet,Weapons/Tools,554,31,45,0,,8268,2.24,,0
+Stone Pick Axe,Weapons/Tools,402,24,34,0,,10297,1.99,,0
+M39,Weapons/Tools,386,29,16,0,,11871,2.24,,0
