@@ -1,7 +1,7 @@
 """Render a Rust item with its skin textures in Blender (headless).
 
 Usage (from the repo root):
-  "<blender.exe>" -b -P tools/blender/preview.py -- <model.obj> <textures_prefix> <out.png> [day|night] [yaw_deg]
+  "<blender.exe>" -b -P tools/blender/preview.py -- <model.obj> <textures_prefix> <out.png> [day|night] [yaw_deg] [cutout]
 
 <textures_prefix> + _diffuse.png / _normal.png / _metalgloss.png / _occlusion.png / _emission.png
 (Rust editor slots: Metal/Gloss = RGB metallic + A smoothness, Normal = OpenGL).
@@ -17,6 +17,7 @@ argv = sys.argv[sys.argv.index("--") + 1:]
 obj_path, prefix, out_path = argv[0], argv[1], argv[2]
 mode = argv[3] if len(argv) > 3 else "day"
 yaw = math.radians(float(argv[4])) if len(argv) > 4 else math.radians(35)
+cutout = len(argv) > 5 and argv[5] == "cutout"  # use <prefix>_diffuse_cutout.png with alpha clipping
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
@@ -40,9 +41,15 @@ mat = bpy.data.materials.new("skin")
 mat.use_nodes = True  # still needed for new materials in 5.x
 nodes, links = mat.node_tree.nodes, mat.node_tree.links
 bsdf = nodes["Principled BSDF"]
-d = tex(nodes, "diffuse", "sRGB")
+d = tex(nodes, "diffuse_cutout" if cutout else "diffuse", "sRGB")
 if d:
     links.new(d.outputs["Color"], bsdf.inputs["Base Color"])
+    if cutout:  # like the editor's Alpha Cutoff 0.5
+        clip = nodes.new("ShaderNodeMath")
+        clip.operation = "GREATER_THAN"
+        clip.inputs[1].default_value = 0.5
+        links.new(d.outputs["Alpha"], clip.inputs[0])
+        links.new(clip.outputs[0], bsdf.inputs["Alpha"])
 mg = tex(nodes, "metalgloss", "Non-Color")
 if mg:
     sep = nodes.new("ShaderNodeSeparateColor")
