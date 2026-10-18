@@ -20,3 +20,6 @@ desktop.ini
 # Large scratch exports
 tmp/
 scratch/
+
+# Third-party Workshop previews: study only, not ours to publish
+references/*/workshop-*/
