@@ -240,7 +240,7 @@ def build(pos, nrm, mat, zid, glow0):
     cs = 0.038
     f1, f2, cid = voronoi(x / cs, z / cs, SEED + 10)
     edge = f2 - f1
-    crack = 1 - smooth(0.04, 0.16, edge)
+    crack = 1 - smooth(0.03, 0.1, edge)
     speck = fbm(x * 900, z * 900, y * 900, 2, SEED + 11)
     t = cid[..., None]
     stone_c = hexc("#5C5D60") * (1 - t) + hexc("#908D88") * t
@@ -254,7 +254,7 @@ def build(pos, nrm, mat, zid, glow0):
     flicker = 0.55 + 0.45 * fbm(x * 30, z * 30, y, 3, SEED + 13)
     # thin coil strips get a low even warmth (cracks would blur into solid rings at 512 px);
     # the rest of the burner glows only in the cracks
-    glow_top = np.where(glow0, 0.18 * flicker, 0.75 * crack * flicker)
+    glow_top = np.where(glow0, 0.05 * flicker, 0.6 * crack * flicker)
     emit[sel] = (glow_top[..., None] * EMBER_RGB)[sel]
 
     # --- embers: stones inside the oven, seen through the bars (triplanar on dominant axis)
@@ -262,16 +262,16 @@ def build(pos, nrm, mat, zid, glow0):
     pu = np.where(an[..., 1] >= np.maximum(an[..., 0], an[..., 2]), x, np.where(along_x, x, z))
     pv = np.where(an[..., 1] >= np.maximum(an[..., 0], an[..., 2]), z, y)
     g1, g2, gid = voronoi(pu / 0.028, pv / 0.028, SEED + 20)
-    gcrack = 1 - smooth(0.05, 0.2, g2 - g1)
+    gcrack = 1 - smooth(0.025, 0.08, g2 - g1)
     gt = gid[..., None]
     ember_c = hexc("#2F2F31") * (1 - gt) + hexc("#5A5653") * gt
     ember_c = ember_c * (1 - gcrack[..., None]) + hexc("#160F0C") * gcrack[..., None]
     sel = mat == EMBERS
     put(sel, ember_c, 0.007 * np.sqrt(np.clip(1 - (g1 / 0.75) ** 2, 0, 1)), 0, 45, gcrack, 0.3)
     low = np.clip(1.25 - (y - 0.33) / 0.55, 0.35, 1.0)
-    hot_stone = smooth(0.55, 0.85, gid) * 0.35
+    hot_stone = smooth(0.7, 0.9, gid) * 0.18
     heat = (1.3 * gcrack + hot_stone) * low * (0.7 + 0.5 * fbm(x * 25, y * 25, z * 25, 3, SEED + 21))
-    emit[sel] = (np.clip(heat * 0.7, 0, 1)[..., None] * EMBER_RGB)[sel]
+    emit[sel] = (np.clip(heat * 0.55, 0, 1)[..., None] * EMBER_RGB)[sel]
 
     # --- forged iron (door, bars, kick band)
     mott = fbm(x * 40, y * 40, z * 40, 4, SEED + 30)
