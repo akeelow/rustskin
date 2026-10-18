@@ -27,6 +27,13 @@ tools/         скрипты сбора и анализа данных
 data/          срезы данных Workshop / SCMM и рейтинг предметов
 ```
 
+Скрипты генерации текстур требуют numpy и Pillow:
+
+```bash
+python -m venv .venv
+.venv/Scripts/pip install -r requirements.txt
+```
+
 Тяжёлые исходники (PSD, KRA, SPP, blend, а также PNG/TGA) хранятся через
 **Git LFS** — см. `.gitattributes`. Перед первым коммитом с графикой:
 
