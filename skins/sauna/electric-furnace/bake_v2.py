@@ -41,6 +41,13 @@ IDS = {"base": 0, "board": 1, "nail": 2, "stone": 3, "plinth": 4, "mortar": 5, "
 BOARD_W, BOARD_GAP, BOARD_T, BOARD_BEVEL = 0.075, 0.004, 0.010, 0.0025
 BURNERS = [(sx * 0.143, sz * 0.1435) for sx in (-1, 1) for sz in (-1, 1)]
 PLATE_Y = 1.136
+# oven (firebox) inner box, local OBJ space: walls x = +-0.22, floor y = 0.47, back z = -0.23
+OVEN_X, OVEN_FLOOR, OVEN_BACK, OVEN_FRONT = 0.215, 0.47, -0.23, 0.27
+
+
+def in_oven_volume(c, margin=0.0):
+    """Racks, fan and heating elements float inside the oven box, away from its walls."""
+    return (abs(c.x) < 0.2 - margin and 0.49 < c.y < 0.91 and -0.21 < c.z < OVEN_FRONT)
 
 
 # ---------------------------------------------------------------- mesh helpers
@@ -435,6 +442,31 @@ def build_pallet(low, mats, rng):
     return [new_obj("hp_pallet", bm, mats["pallet"], low), new_obj("hp_pallet_nails", nails, mats["nail"], low)]
 
 
+def build_oven_heap(low, mats, rng):
+    """Rocks heaped in the firebox: a full bottom layer, rising towards the back wall,
+    so through the door bars one sees a slope of stones, not a flat glowing floor."""
+    bm = bmesh.new()
+    placed = []
+    # (radius range, front limit z, half width x, lift, tries, overlap)
+    layers = ((0.035, 0.05, 0.21, 0.19, 0.0, 2500, 0.72), (0.015, 0.024, 0.21, 0.19, 0.0, 2500, 0.85),
+              (0.032, 0.046, 0.13, 0.18, 0.045, 1500, 0.74), (0.03, 0.044, 0.05, 0.17, 0.09, 1200, 0.75),
+              (0.028, 0.04, -0.03, 0.15, 0.135, 900, 0.76), (0.026, 0.036, -0.1, 0.13, 0.175, 600, 0.78),
+              (0.024, 0.032, -0.16, 0.1, 0.21, 300, 0.8))
+    for layer, (rmin, rmax, zf, hw, lift, tries, ov) in enumerate(layers):
+        for _ in range(tries):
+            r = rng.uniform(rmin, rmax)
+            xmax = min(hw, OVEN_X - r - 0.006)      # bake rays start at the opposite wall: stay clear of it
+            x = rng.uniform(-xmax, xmax)
+            z = rng.uniform(OVEN_BACK + 0.01, zf)
+            if any(math.hypot(x - px, z - pz) < (r + pr) * ov for (px, pz, pr, pl) in placed
+                   if pl == layer or (layer <= 1 and pl <= 1)):
+                continue
+            ry = r * rng.uniform(0.55, 0.75)
+            placed.append((x, z, r, layer))
+            add_rock(bm, (x, OVEN_FLOOR + lift + ry * 0.8, z), (r, ry, r * rng.uniform(0.75, 1.0)), rng, subdiv=3)
+    return new_obj("hp_oven_stones", bm, mats["stone"], low)
+
+
 def build_base_copy(low, mats):
     me = low.data.copy()
     ob = bpy.data.objects.new("hp_base", me)
@@ -442,6 +474,12 @@ def build_base_copy(low, mats):
     ob.matrix_world = low.matrix_world.copy()
     me.materials.clear()
     me.materials.append(mats["base"])
+    # without racks and fan: they would cast rack-shaped holes into the baked heap
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if in_oven_volume(f.calc_center_median())], context="FACES")
+    bm.to_mesh(me)
+    bm.free()
     return ob
 
 
@@ -456,6 +494,18 @@ def cage_offset(p, n):
             return a * dist
         return n * 0.012
 
+    if abs(x) < 0.235 and 0.45 < y < 0.95 and -0.25 < z < OVEN_FRONT and not in_oven_volume(Vector(p)):
+        # firebox walls: floor looks down from above the heap, the back wall looks at it from
+        # the door, each side wall from the opposite wall -- so every wall shows the heap
+        if n.y > 0.5 and y < 0.53:
+            return Vector((0, 0.3, 0))
+        if n.z > 0.5 and z < -0.17:
+            return Vector((0, 0, OVEN_FRONT - z))
+        if n.x > 0.5 and x < -0.17:
+            return Vector((OVEN_X - x, 0, 0))
+        if n.x < -0.5 and x > 0.17:
+            return Vector((-OVEN_X - x, 0, 0))
+        return n * 0.012
     if y > 1.139 and abs(x) < 0.30 and abs(z) < 0.30:
         return Vector((0, 0.075, 0))                     # burners: every face of the coils looks up at the heap
     if y > 1.12 and abs(x) < 0.34 and abs(z) < 0.34:
@@ -500,7 +550,7 @@ def build(low, seed=7):
     rng = random.Random(seed)
     mats = {k: id_material(k) for k in IDS}
     set_pass(mats.values(), "normal")
-    hp = [build_base_copy(low, mats), build_burner_stones(low, mats, rng)]
+    hp = [build_base_copy(low, mats), build_burner_stones(low, mats, rng), build_oven_heap(low, mats, random.Random(seed + 1))]  # own rng: keeps the rest of the layout as in v2.2
     hp += build_boards(low, mats, rng)
     hp += build_panel(low, mats, rng)
     hp += build_door(low, mats, rng)

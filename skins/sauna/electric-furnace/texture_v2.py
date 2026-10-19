@@ -167,6 +167,43 @@ def main():
     emit[burner | bed] = 0
     emit += glow[..., None] * EMBER_RGB
 
+    # ------------------------------------------------ firebox: baked heap of rocks behind the door bars
+    # (v2.3; v1 painted the whole oven as flat glowing "lava", which the game's bloom blew out)
+    box = (mat == EMBERS) & (np.abs(x) < 0.235) & (y > 0.45) & (y < 0.95) & (z > -0.25) & (z < 0.28)
+    floating = box & (np.abs(x) < 0.2) & (y > 0.49) & (y < 0.91) & (z > -0.21)   # racks, fan, elements
+    ostone = box & ~floating & (pid == ID["stone"])
+    owall = box & ~floating & ~ostone
+    hot = smooth(0.75, 0.5, y)                         # heat sits low, near the floor
+    oc = hexc("#232326") * (1 - t) + hexc("#3E3C3D") * t
+    oc = oc * (0.85 + 0.25 * speck[..., None]) * (1 + 0.3 * edge[..., None]) * (0.5 + 0.5 * ao_b[..., None])
+    oc = oc * (1 - 0.35 * hot[..., None]) + hexc("#4A2414") * 0.35 * hot[..., None]   # heat-reddened lower rocks
+    put(ostone, oc, 0, 40 + 25 * edge)
+    micro[ostone] = (0.0003 * speck)[ostone]
+    odeep = smooth(0.7, 0.2, ao_b)
+    ofl_c = fbm(x * 30, y * 30, z * 30, 3, SEED + 23)
+    put(owall, hexc("#1A1412") * (0.8 + 0.4 * ofl_c[..., None]), 0, 25)
+    put(floating, hexc("#1E1B19") * (0.8 + 0.4 * fbm(x * 40, y * 40, z * 40, 3, SEED + 22)[..., None]), 120, 45)
+    ofl = 0.6 + 0.4 * fbm(x * 25, y * 25, z * 25, 3, SEED + 21)
+    # glow only in the gaps of the heap (bare texels hemmed in by rocks), not on bare walls:
+    # inside the closed box AO is low everywhere, so it can't tell the two apart on its own
+    near_rock = ostone.copy()
+    for _ in range(5):
+        g = near_rock.copy()
+        for dyy, dxx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            g |= np.roll(np.roll(near_rock, dyy, 0), dxx, 1)
+        near_rock = g
+    ogap = owall & near_rock
+    put(ogap, hexc("#2A120A"), 0, 25)
+    oglow = np.where(ogap, (0.45 + 0.55 * odeep) * (0.4 + 0.6 * hot), 0) * ofl
+    oglow = oglow + np.where(owall & ~ogap, 0.06 * hot, 0)   # faint warmth on the bare walls low down
+    oglow = oglow + np.where(ostone, 0.3 * smooth(0.5, 0.15, ao_b) * hot, 0) * ofl
+    emit[box] = 0
+    emit += (np.clip(oglow, 0, 1) * 0.9)[..., None] * EMBER_RGB
+    # the rest of v1's embers (the compartment behind the right-hand louvres): half the glow
+    rest = (mat == EMBERS) & ~box
+    emit[rest] *= 0.5
+    col[rest] *= 0.8
+
     # ------------------------------------------------ fieldstone plinth on mortar
     pst = pid == ID["plinth"]
     # upward faces of the lumpy original plinth come out as "top plate" (RIM) in the v1 map and
@@ -208,9 +245,29 @@ def main():
     put(pgap, hexc("#24190F"), 0, 60)
     micro[pal] = (0.0003 * pg)[pal]
 
+    # ------------------------------------------------ knobs: turned birch (v2.3; v1's cream discs read as
+    # cooker knobs). All five knobs share one patch of the UV layout, so they can't differ
+    # (a thermometer on just one of them is impossible). Centres from the model, front at z ~0.36.
+    KNOBS = ((-0.203, 0.035), (-0.05, 0.031), (0.04, 0.031), (0.129, 0.031), (0.217, 0.031))
+    kd = np.full(mat.shape, 9.0)
+    kid = np.full(mat.shape, -1)
+    for i, (kx, kr) in enumerate(KNOBS):
+        d = np.hypot(x - kx, y - 1.037) / kr
+        closer = d < kd
+        kd = np.where(closer, d, kd)
+        kid = np.where(closer, i, kid)
+    knob = (z > 0.334) & (kd < 1.08) & (zid == 0)
+    face = knob & (nrm[..., 2] > 0.9)
+    kgrain = fbm(x * 30, y * 300, kid * 7.0, 3, SEED + 70)              # grain runs across the face
+    rings = 0.5 + 0.5 * np.sin(kd * 40 + 3 * kgrain)                      # lathe rings
+    kc = hexc("#A8814F") * (0.82 + 0.25 * kgrain[..., None]) * (0.94 + 0.08 * rings[..., None])
+    grime = smooth(0.6, 1.0, kd) * (1 - face) + 0.35 * smooth(0.75, 1.0, kd)   # dark, greasy rim from hands
+    kc = kc * (1 - 0.45 * grime[..., None])
+    put(knob, kc, 0, 70 + 50 * grime)
+
     # ------------------------------------------------ normal: baked + fine detail; flat leftovers keep v1
     detail = pid != ID["base"]
-    keep_v1 = ~detail & ~gap & ~bed & ~pgap & ~mor
+    keep_v1 = ~detail & ~gap & ~bed & ~pgap & ~mor & ~box
     height = np.where(keep_v1, height, micro)
     n_fine = v1.height_to_normal(height, pos, dens, mat, strength=3.0)
     n0 = np.asarray(PILImage.open(ORIG / "ElectricFurnace_nrm.png").convert("RGB"), np.float64) / 255 * 2 - 1
@@ -222,6 +279,7 @@ def main():
     # with white rims in game (v2) -> soften them
     soft = (pst | mor)[..., None]
     nb = np.where(soft, nb * np.array([0.45, 0.45, 1.0]), nb)
+    nb = np.where(floating[..., None], np.array([0.0, 0.0, 1.0]), nb)   # racks were not in the bake
     nb /= np.linalg.norm(nb, axis=-1, keepdims=True)
     nrm_out = whiteout(whiteout(nb, n_fine), n0)
 
