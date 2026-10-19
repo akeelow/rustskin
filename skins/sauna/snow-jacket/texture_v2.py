@@ -170,6 +170,9 @@ def main():
     full = np.full((SIZE, SIZE), 255, np.uint8)
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
     Image.fromarray(np.dstack([q(col), full]), "RGBA").save(OUT / "SnowJacket_v2_diffuse.png")
+    # experiment: the V cut out (alpha 0) for Alpha Cutoff 0.5 - shows what is under the robe
+    vcut = blur(vee.astype(np.float64), 0.8) > 0.5
+    Image.fromarray(np.dstack([q(col), np.where(vcut, 0, 255).astype(np.uint8)]), "RGBA").save(OUT / "SnowJacket_v2_diffuse_vcut.png")
     Image.fromarray(np.dstack([q(nx * 0.5 + 0.5), q(ny * 0.5 + 0.5), full, full]), "RGBA").save(OUT / "SnowJacket_v2_normal.png")
     Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "SnowJacket_v2_specgloss.png")
     Image.fromarray(np.dstack([q(fuzz), q(fuzz), q(fuzz), full]), "RGBA").save(OUT / "SnowJacket_v2_fuzz.png")
