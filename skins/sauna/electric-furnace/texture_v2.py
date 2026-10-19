@@ -169,7 +169,9 @@ def main():
 
     # ------------------------------------------------ firebox: baked heap of rocks behind the door bars
     # (v2.3; v1 painted the whole oven as flat glowing "lava", which the game's bloom blew out)
-    box = (mat == EMBERS) & (np.abs(x) < 0.235) & (y > 0.45) & (y < 0.95) & (z > -0.25) & (z < 0.28)
+    # by position, not by v1's material: v1 called the back wall "front" (it faces +z) and painted
+    # it shiny iron, which mirrored the game's own firebox light (v2.4 screenshots)
+    box = (np.abs(x) < 0.235) & (y > 0.45) & (y < 0.95) & (z > -0.25) & (z < 0.26) & (zid != 4)
     floating = box & (np.abs(x) < 0.2) & (y > 0.49) & (y < 0.91) & (z > -0.21)   # racks, fan, elements
     ostone = box & ~floating & (pid == ID["stone"])
     owall = box & ~floating & ~ostone
@@ -183,7 +185,7 @@ def main():
     micro[ostone] = (0.0003 * speck)[ostone]
     odeep = smooth(0.7, 0.2, ao_b)
     ofl_c = fbm(x * 30, y * 30, z * 30, 3, SEED + 23)
-    put(owall, hexc("#1A1412") * (0.8 + 0.4 * ofl_c[..., None]), 0, 25)
+    put(owall, hexc("#120E0C") * (0.8 + 0.4 * ofl_c[..., None]), 0, 15)
     put(floating, hexc("#1E1B19") * (0.8 + 0.4 * fbm(x * 40, y * 40, z * 40, 3, SEED + 22)[..., None]), 120, 45)
     ofl = 0.6 + 0.4 * fbm(x * 25, y * 25, z * 25, 3, SEED + 21)
     # glow only in the gaps of the heap (bare texels hemmed in by rocks), not on bare walls:
@@ -195,7 +197,7 @@ def main():
             g |= np.roll(np.roll(near_rock, dyy, 0), dxx, 1)
         near_rock = g
     ogap = owall & near_rock
-    put(ogap, hexc("#2A120A"), 0, 25)
+    put(ogap, hexc("#1E0E08"), 0, 15)
     oglow = np.where(ogap, (0.45 + 0.55 * odeep) * (0.4 + 0.6 * hot), 0) * ofl
     oglow = oglow + np.where(owall & ~ogap, 0.06 * hot, 0)   # faint warmth on the bare walls low down
     oglow = oglow + np.where(ostone, 0.3 * smooth(0.5, 0.15, ao_b) * hot, 0) * ofl
