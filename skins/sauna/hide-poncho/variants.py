@@ -177,7 +177,24 @@ def geometry():
     d_neck[cov] = nearest_dist(flat, samples[is_neck])
     print("seam samples", len(samples), "neck", int(is_neck.sum()))
 
-    return dict(V=V, T=T, F=F, N=N, pos=pos, cov=cov, outer=outer, inner=inner, small=small,
+    # the wooden toggles are separate shells (vertex-connected parts other than the hide); "small"
+    # above is UV islands other than the two big ones, which also takes in a patch of the hide
+    vpar = list(range(len(V)))
+
+    def vfind(i):
+        while vpar[i] != i:
+            vpar[i] = vpar[vpar[i]]
+            i = vpar[i]
+        return i
+
+    for vi, _ in F:
+        for a_ in vi[1:]:
+            vpar[vfind(a_)] = vfind(vi[0])
+    shell = np.array([vfind(vi[0]) for vi, _ in F])
+    main_shell = collections.Counter(shell).most_common(1)[0][0]
+    _, tog, _ = raster(V, T, F, np.where(shell == main_shell, 0, 1))
+    toggles = tog == 1
+    return dict(V=V, T=T, F=F, N=N, pos=pos, cov=cov, outer=outer, inner=inner, small=small, toggles=toggles,
                 x=x, y=y, z=z, d_hem=d_hem, d_neck=d_neck)
 
 

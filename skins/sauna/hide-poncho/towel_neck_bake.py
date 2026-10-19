@@ -179,6 +179,25 @@ def towel_material(L, kind):
     if kind == "mask":
         em.inputs["Color"].default_value = (1, 1, 1, 1)
         return m
+    if kind == "shade":
+        # the roll's own shading: 1 on top of the folded towel, darker on its rounded sides; from
+        # the towel's UV (around), so it doesn't depend on how the hide under it is tilted
+        tc = N.new("ShaderNodeTexCoord")
+        sep = N.new("ShaderNodeSeparateXYZ")
+        Lk.new(tc.outputs["UV"], sep.inputs[0])
+        ang = N.new("ShaderNodeMath")
+        ang.operation = "MULTIPLY"
+        ang.inputs[1].default_value = 2 * math.pi
+        Lk.new(sep.outputs["Y"], ang.inputs[0])
+        sn = N.new("ShaderNodeMath")
+        sn.operation = "SINE"
+        Lk.new(ang.outputs[0], sn.inputs[0])
+        mx = N.new("ShaderNodeMath")
+        mx.operation = "MAXIMUM"
+        mx.inputs[1].default_value = 0.0
+        Lk.new(sn.outputs[0], mx.inputs[0])
+        Lk.new(mx.outputs[0], em.inputs["Color"])
+        return m
     tc = N.new("ShaderNodeTexCoord")
     sep = N.new("ShaderNodeSeparateXYZ")
     Lk.new(tc.outputs["UV"], sep.inputs[0])
@@ -257,6 +276,8 @@ def main():
 
     Pr, Nr, ss, L = resample(surface_path(low))
     print(f"towel length {L:.2f} m, {len(Pr)} sections", flush=True)
+    (HERE / "bake").mkdir(exist_ok=True)
+    np.save(HERE / "bake" / "towel_neck_path.npy", np.hstack([Pr, Nr]))   # centre line on the hide, OBJ space
     me = sweep(Pr, Nr, ss, L)
     towel = bpy.data.objects.new("towel", me)
     scene.collection.objects.link(towel)
@@ -303,7 +324,7 @@ def main():
     bpy.context.view_layer.objects.active = low
 
     res = {}
-    for name, kind, btype, samples in (("albedo", "albedo", "EMIT", 4), ("mask", "mask", "EMIT", 1),
+    for name, kind, btype, samples in (("albedo", "albedo", "EMIT", 4), ("mask", "mask", "EMIT", 1), ("shade", "shade", "EMIT", 1),
                                        ("normal", "normal", "NORMAL", 1), ("ao", "ao", "AO", 64)):
         towel.data.materials.clear()
         towel.data.materials.append(towel_material(L, kind))
@@ -332,6 +353,7 @@ def main():
     save_png(np.clip(res["albedo"], 0, 1) ** (1 / 2.2), HERE / "bake" / "towel_neck_albedo.png")   # -> sRGB
     save_png(res["mask"], HERE / "bake" / "towel_neck_mask.png")
     save_png(res["ao"], HERE / "bake" / "towel_neck_ao.png")
+    save_png(res["shade"], HERE / "bake" / "towel_neck_shade.png")
     save_png(res["normal"], HERE / "bake" / "towel_neck_normal.png")
     if "--blend" in argv:
         (HERE / "bake").mkdir(exist_ok=True)

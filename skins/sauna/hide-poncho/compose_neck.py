@@ -36,7 +36,7 @@ def load(name):
 
 def main():
     g = v.geometry()
-    small, cov = g["small"], g["cov"]
+    small, cov = g["toggles"], g["cov"]   # only the wooden toggles; "small" also holds a patch of hide
     albedo, mask, ao, nrm = load("albedo"), load("mask")[..., 0], load("ao")[..., 0], load("normal")
 
     yy, xx = np.mgrid[0:SIZE, 0:SIZE]
@@ -59,6 +59,24 @@ def main():
     front = np.zeros_like(cov)
     front[chest] = zc >= zmax[np.clip(idx, 0, len(zmax) - 1)] - 0.006
     m = m & (~chest | front)
+    # only hide texels right under the towel: near its centre line sideways (half width + 6 mm) and
+    # within 1.5 cm of the surface it was laid on. v3.4: a fold of the hide behind the neck lay within
+    # the bake's ray reach and caught a floating scrap of towel.
+    path = np.load(BAKE / "towel_neck_path.npy")
+    C, Nn = path[:, :3], path[:, 3:]
+    pts = np.stack([g["x"], g["y"], g["z"]], -1)[m]
+    keep_pt = np.zeros(len(pts), bool)
+    for i in range(0, len(pts), 20000):
+        P = pts[i:i + 20000]
+        d = np.linalg.norm(P[:, None, :] - C[None, :, :], axis=-1)
+        j = d.argmin(1)
+        rel = P - C[j]
+        h = np.abs((rel * Nn[j]).sum(1))
+        lat = np.sqrt(np.maximum((rel ** 2).sum(1) - h ** 2, 0))
+        keep_pt[i:i + 20000] = (h < 0.015) & (lat < 0.055 + 0.006)
+    mm = np.zeros_like(m)
+    mm[m] = keep_pt
+    m = mm
     filt = lambda a, f: np.asarray(Image.fromarray((a * 255).astype(np.uint8)).filter(f)) > 127
     # closing fills pinholes in the hit mask (v3.1: grey specks), opening drops specks and slivers
     # thinner than ~4 texels; the strip's outline stays
@@ -90,7 +108,11 @@ def main():
     tufts = v.blur(rng0.random((SIZE, SIZE)), 3.0)
     tufts = (tufts - tufts.mean()) / (tufts.std() + 1e-6)
     pile = np.clip(0.5 + 0.18 * loops + 0.12 * tufts, 0, 1)
-    side = 0.6 + 0.4 * nz ** 1.5                     # rolled sides turn away from the light
+    # rolled sides darker, from the towel's own profile (baked "shade"). v3.4 used the baked
+    # normal's tilt, which is also large where the hide under the towel is dented - those dents
+    # came out as dark patches ("a hole") although the normal map already flattens them
+    shade = load("shade")[..., 0]
+    side = 0.68 + 0.32 * np.sqrt(np.clip(shade, 0, 1))
     # dirtier (v3.2): a used towel - greyed and yellowed, blotchy stains, grime in the folds,
     # sweat at the neck, darker lower ends
     rng = np.random.default_rng(43)
@@ -102,6 +124,33 @@ def main():
     diffuse = albedo * used * (0.5 + 0.5 * ao[..., None]) * side[..., None] * (0.85 + 0.3 * pile)[..., None]
     diffuse = diffuse * (1 - (stain + low)[..., None]) + np.array([0.42, 0.36, 0.28]) * (stain + low)[..., None]
     diffuse = diffuse * (1 - neck[..., None]) + np.array([0.62, 0.55, 0.40]) * neck[..., None]
+    # the hide's worn holes are tunnels through its thickness; their walls catch the towel at a
+    # grazing angle and came out as flat grey patches (v3.4). Repaint them from the towel around
+    # them (colour and normal), so they read as dents in the towel instead of grey holes.
+    lum = diffuse.mean(-1)
+    sat = diffuse.max(-1) - diffuse.min(-1)
+    ref = np.stack([v.blur(lum * m, 25)], -1)[..., 0] / np.maximum(v.blur(m.astype(np.float64), 25), 1e-3)
+    bad = m & (lum < 0.72 * ref) & (sat < 0.12)
+    bad = np.asarray(Image.fromarray((bad * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(7))) > 127
+    bad &= m
+    w = (m & ~bad).astype(np.float64)
+    for r in (2, 6, 16):
+        acc = np.stack([v.blur(diffuse[..., i] * w, r) for i in range(3)], -1)
+        cnt = v.blur(w, r)[..., None]
+        sel = (bad & (w < 0.5) & (cnt[..., 0] > 0.01))
+        diffuse = np.where(sel[..., None], acc / np.maximum(cnt, 1e-3), diffuse)
+        # (normals are NOT copied: in a dent the baked normal is what flattens it)
+        w = np.maximum(w, sel.astype(np.float64))
+    print("repainted hole texels", int(bad.sum()))
+    # the hide's worn holes go through its outer layer: through them one sees the inside layer
+    # (also towel), which faces the body and sits in shadow -> a dark "hole" (v3.4). Brighten the
+    # inside layer under the towel so the holes read as soft dips in the terry.
+    _, fid, _ = v.raster(g["V"], g["T"], g["F"], np.arange(len(g["F"])))
+    fn = np.array(g["N"])[np.clip(fid, 0, None)]
+    pos = np.stack([g["x"], g["y"], g["z"]], -1)
+    inside = ((fn * (pos - np.array([0.0, 1.2, -0.02]))).sum(-1) < 0) & m     # faces turned to the body
+    diffuse = np.where(inside[..., None], np.clip(diffuse * 1.6, 0, 1), diffuse)
+    print("brightened inside texels", int(inside.sum()))
     # pad the colour outwards from the strip, so the soft alpha edge shows towel, not grey
     w = m.astype(np.float64)
     for r in (1.5, 4, 10):
