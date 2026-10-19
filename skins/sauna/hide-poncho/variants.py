@@ -133,7 +133,8 @@ def grad_normal(h, k):
     return -gx * k, gy * k
 
 
-def main():
+def geometry():
+    """Texel -> 3D point, outside/inside, toggles, distance to the hem and to the neck edge."""
     V, T, F = load_obj(ORIG / "attire.hide.poncho_poncho.obj")
     N = [normal(*(V[i] for i in vi)) for vi, _ in F]
     # Two layers: the UV islands follow the hide's two layers (left island = outer layer, right =
@@ -175,6 +176,16 @@ def main():
     d_hem[cov] = nearest_dist(flat, samples[~is_neck])
     d_neck[cov] = nearest_dist(flat, samples[is_neck])
     print("seam samples", len(samples), "neck", int(is_neck.sum()))
+
+    return dict(V=V, T=T, F=F, N=N, pos=pos, cov=cov, outer=outer, inner=inner, small=small,
+                x=x, y=y, z=z, d_hem=d_hem, d_neck=d_neck)
+
+
+def main():
+    g = geometry()
+    V, T, F, N, pos, cov = g["V"], g["T"], g["F"], g["N"], g["pos"], g["cov"]
+    outer, inner, small, x, y, z = g["outer"], g["inner"], g["small"], g["x"], g["y"], g["z"]
+    d_hem, d_neck = g["d_hem"], g["d_neck"]
 
     bc = np.asarray(Image.open(ORIG / "hide_poncho_bc.png").convert("RGBA"), np.float64) / 255.0
     alpha0 = (bc[..., 3] * 255).round().astype(np.uint8)
