@@ -1,6 +1,6 @@
 # Sauna Towel Poncho (Hide Poncho)
 
-> Статус: 🟡 **выбран вариант C — полотенце**; v1 готов, ждёт проверки в игре (19.10.2026).
+> Статус: 🟡 **v2 — только полотенце, остальное прозрачное**: два варианта (на шее / на плече), ждут проверки в игре. v1 (полотенце-пончо целиком) — запасной.
 > Сет: [Sauna](../README.md). Халат ушёл на Snow Jacket, поэтому образ пончо пересматриваем.
 
 ## Варианты образа
@@ -28,6 +28,33 @@
 
 Скриншоты: [screenshots/orig_editor_front.webp](screenshots/orig_editor_front.webp), [orig_side](screenshots/orig_side.webp), [orig_back](screenshots/orig_back.webp).
 Развёртка: [uv/poncho/uv_zones.png](uv/poncho/uv_zones.png), [uv/fur/uv_zones.png](uv/fur/uv_zones.png).
+
+## Версия v2: свёрнутое полотенце, остальная шкура прозрачная
+
+По просьбе пользователя (референсы `references/sauna/poncho/towel_round_neck.png`,
+`towel_over_shoulder.png`): полотенце, сложенное вдоль, на шее концами вперёд — или на плече.
+Геометрия шкуры та же, поэтому полотенце — это полоса шкуры с альфой 255, всё остальное (спина,
+клапан, мех, прищепки) — альфа 0 (**Alpha Cutoff 0.24**).
+
+[texture_v2.py](texture_v2.py) (`.venv/Scripts/python skins/sauna/hide-poncho/texture_v2.py`).
+
+| Вариант | Форма |
+|---|---|
+| `neck` | полоса 7 см вокруг ворота + два конца по груди по бокам от шеи (до ~1.08 м), на концах — полосы и бахрома |
+| `shoulder` | полоса 20 см через левое плечо, свисает на грудь и на спину, полосы и бахрома на обоих концах |
+
+Полоса «скруглена» в нормали (сложенное полотенце толще посередине), тёмные линии сгиба по краям,
+махра. Сзади у `neck` сквозь пустую спину видна изнанка передних концов — это нормально.
+
+![v2](uv/v2_preview.png)
+
+### Как загрузить в игру
+
+| Слот | Файл / значение |
+|---|---|
+| Diffuse | `export/HidePoncho_v2_neck_diffuse.png` или `..._shoulder_diffuse.png`, **Color 255/255/255**, **Alpha Cutoff 0.24** |
+| Normal | `export/HidePoncho_v2_neck_normal.png` или `..._shoulder_normal.png` |
+| Occlusion | убрать (крестик) или оставить — AO шкуры может затемнять полотенце пятнами |
 
 ## Заметки
 
