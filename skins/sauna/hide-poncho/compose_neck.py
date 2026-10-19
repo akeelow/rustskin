@@ -10,7 +10,8 @@ and stray white flecks by the toggles. v3.1:
     opening (erode, then grow back) in texture space.
 
     .venv/Scripts/python skins/sauna/hide-poncho/compose_neck.py
-Writes export/HidePoncho_v3_neck_{diffuse,normal}.png and uv/v3_neck_views.png.
+Writes export/HidePoncho_v3_neck_{diffuse,normal,specgloss}.png (2048) and uv/v3_neck_views.png.
+v3.3: 2048 bake, front-most layer only on the chest, a matte spec/gloss map.
 """
 import sys
 from pathlib import Path
@@ -24,7 +25,8 @@ sys.path.insert(0, str(HERE.parents[2] / "tools"))
 import variants as v  # noqa: E402
 from uv_zones import read_png, render_views  # noqa: E402
 
-SIZE, OUT = v.SIZE, v.OUT
+SIZE, OUT = 2048, v.OUT
+v.SIZE = SIZE                      # rasterise the hide at the bake's resolution
 BAKE = HERE / "bake"
 
 
@@ -40,11 +42,28 @@ def main():
     yy, xx = np.mgrid[0:SIZE, 0:SIZE]
     fur = (xx > 0.78 * SIZE) & (yy > 0.76 * SIZE)
     m = (mask > 0.5) & ~small & ~fur & cov
+    # front z-buffer: on the chest the hide is two layers by the toggles (the flap over the panel);
+    # the towel baked onto both, giving a double edge and grey under-panel patches (v3.2). Keep only
+    # the front-most hide surface there.
+    x, y, z = g["x"], g["y"], g["z"]
+    chest = cov & (z > 0.05) & (y < 1.40)
+    bx = np.floor(x / 0.006).astype(np.int64)
+    by = np.floor(y / 0.006).astype(np.int64)
+    key = (bx + 1000) * 100000 + (by + 1000)
+    kc, zc = key[chest], z[chest]
+    order = np.argsort(kc)
+    ks, zs = kc[order], zc[order]
+    starts = np.r_[0, np.nonzero(np.diff(ks))[0] + 1]
+    zmax = np.maximum.reduceat(zs, starts)
+    idx = np.searchsorted(ks[starts], key[chest])
+    front = np.zeros_like(cov)
+    front[chest] = zc >= zmax[np.clip(idx, 0, len(zmax) - 1)] - 0.006
+    m = m & (~chest | front)
     filt = lambda a, f: np.asarray(Image.fromarray((a * 255).astype(np.uint8)).filter(f)) > 127
     # closing fills pinholes in the hit mask (v3.1: grey specks), opening drops specks and slivers
     # thinner than ~4 texels; the strip's outline stays
-    m = filt(filt(m, ImageFilter.MaxFilter(7)), ImageFilter.MinFilter(7)) & ~small & ~fur & cov
-    m = filt(filt(m, ImageFilter.MinFilter(5)), ImageFilter.MaxFilter(5)) & m
+    m = filt(filt(m, ImageFilter.MaxFilter(13)), ImageFilter.MinFilter(13)) & ~small & ~fur & cov
+    m = filt(filt(m, ImageFilter.MinFilter(9)), ImageFilter.MaxFilter(9)) & m
     # drop small separate pieces (the flap's second layer by the toggles catches a sliver of towel)
     lab = Image.fromarray((m * 255).astype(np.uint8))
     keep = np.zeros_like(m)
@@ -57,10 +76,10 @@ def main():
         ImageDraw.floodfill(tmp, (int(xx0), int(yy0)), 128)
         comp = np.asarray(tmp) == 128
         seen |= comp
-        if comp.sum() > 6000:
+        if comp.sum() > 24000:
             keep |= comp
     m = keep
-    soft = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8)), np.float64) / 255.0
+    soft = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2)), np.float64) / 255.0
 
     nz = np.clip(nrm[..., 2] * 2 - 1, 0, 1)
     side = 0.6 + 0.4 * nz ** 1.5                     # rolled sides turn away from the light
@@ -86,12 +105,15 @@ def main():
     diffuse = np.where(w[..., None] > 0.5, diffuse, np.array([0.7, 0.66, 0.58]))
     alpha = np.clip((soft - 0.35) / 0.3, 0, 1) * 255
     normal = np.where(m[..., None], nrm, np.array([0.5, 0.5, 1.0]))
+    spec = np.where(m, 0.04, 0.0)
+    gloss = np.where(m, 0.08, 0.0)
 
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
     full = np.full((SIZE, SIZE), 255, np.uint8)
     OUT.mkdir(exist_ok=True)
     Image.fromarray(np.dstack([q(diffuse), alpha.round().astype(np.uint8)]), "RGBA").save(OUT / "HidePoncho_v3_neck_diffuse.png")
     Image.fromarray(np.dstack([q(normal[..., 0]), q(normal[..., 1]), full, full]), "RGBA").save(OUT / "HidePoncho_v3_neck_normal.png")
+    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "HidePoncho_v3_neck_specgloss.png")
     render_views(g["V"], g["T"], g["F"], g["N"], HERE / "uv" / "v3_neck_views.png", tex=read_png(OUT / "HidePoncho_v3_neck_diffuse.png"))
     print("done; towel texels", int(m.sum()))
 

@@ -27,7 +27,7 @@ from mathutils.bvhtree import BVHTree
 HERE = Path(__file__).resolve().parent
 ORIG = HERE / "originals"
 OUT = HERE / "export"
-SIZE = 1024
+SIZE = 2048   # 2x the original diffuse: smoother alpha-cut edges (v3.2 had stair steps)
 
 WIDTH, THICK = 0.13, 0.03
 NECK_C = Vector((0.0, 0.0, -0.03))            # neck centre in x/z (OBJ space)
