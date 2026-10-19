@@ -48,7 +48,7 @@
 |---|---|---|---|---:|---|
 | 1 | Electric Furnace | Sauna Stove | Каменка: обшивка рейками, раскалённые камни в окне | 1 из 6 | 🟢 [v2.6 готов, проверен в игре](electric-furnace/README.md) |
 | 2 | Burlap Headwrap | Sauna Towel Wrap | Полотенце, накрученное тюрбаном, или войлочная банная шапка с «рожками» (см. references) | 1 из 10 | 🟢 [v1 готов, проверен в игре](burlap-headwrap/README.md) |
-| 3 | Snow Jacket | Sauna Sheepskin | Овчинный тулуп «выскочить в снег» | 1 из 9 | ⚪ сезонный |
+| 3 | Snow Jacket | Sauna Sheepskin | Овчинный тулуп «выскочить в снег» | 1 из 9 | ⚪ сезонный, [старт — ждём оригиналы](snow-jacket/README.md) |
 | 4 | Locker | Sauna Changing Locker | Деревянный шкафчик раздевалки с крючками и полотенцами | 1 из 9 | ⚪ |
 | 5 | Hide Poncho | Sauna Robe | Простыня/махровый халат поверх плеч | 1 из 10 | ⚪ |
 | 6 | Bed | Sauna Bench | Полок из реек с подголовником | 1 из 10 | ⚪ |
