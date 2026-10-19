@@ -11,7 +11,8 @@ a fringe. Baked onto the poncho (selected to active, rays from 4 cm outside):
 
   "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/hide-poncho/towel_neck_bake.py [-- --blend]
 
-Writes export/HidePoncho_v3_neck_{diffuse,normal}.png (+ bake/towel_neck.blend with --blend).
+Writes bake/towel_neck_{albedo,mask,ao,normal}.png (+ bake/towel_neck.blend with --blend);
+then `.venv/Scripts/python skins/sauna/hide-poncho/compose_neck.py` makes the export textures.
 """
 import math
 import sys
@@ -28,17 +29,17 @@ ORIG = HERE / "originals"
 OUT = HERE / "export"
 SIZE = 1024
 
-WIDTH, THICK = 0.11, 0.025
+WIDTH, THICK = 0.13, 0.03
 NECK_C = Vector((0.0, 0.0, -0.03))            # neck centre in x/z (OBJ space)
-RING_RX, RING_RZ = 0.19, 0.165
-TAIL_END_Y, TAIL_X = 1.10, 0.085
+RING_RX, RING_RZ = 0.175, 0.155
+TAIL_END_Y, TAIL_X = 1.10, 0.09
 
 
 def lin(h):
     return tuple((int(h[i:i + 2], 16) / 255) ** 2.2 for i in (1, 3, 5))
 
 
-TOWEL, BRICK, BRICK2, STITCH = lin("#D6CEBF"), lin("#8A3A2E"), lin("#9C5446"), lin("#9A9080")
+TOWEL, BRICK, BRICK2, STITCH = lin("#D2CABB"), lin("#7E3127"), lin("#8E4639"), lin("#8C8272")
 
 
 # ---------------------------------------------------------------- path on the poncho's surface
@@ -232,8 +233,8 @@ def towel_material(L, kind):
 
     base = mix(0.25, TOWEL, nz.outputs["Color"])
     base = mix(math_("MULTIPLY", mott.outputs["Fac"], 0.25), base, (0.55, 0.5, 0.42))
-    c = mix(math_("MULTIPLY", wide, 0.85), base, BRICK)
-    c = mix(math_("MULTIPLY", narrow, 0.8), c, BRICK2)
+    c = mix(wide, base, BRICK)
+    c = mix(narrow, c, BRICK2)
     c = mix(math_("MULTIPLY", hem, 0.12), c, (0.3, 0.28, 0.24))
     c = mix(hem_stitch, c, STITCH)
     c = mix(selv, c, STITCH)
@@ -312,37 +313,27 @@ def main():
         res[name] = np.array(img.pixels[:], dtype=np.float32).reshape(SIZE, SIZE, 4)[::-1, :, :3]
         print("baked", name, flush=True)
 
-    # ---------------------------------------------------------------- compose (numpy, image rows top-down)
-    mask = np.clip(res["mask"][..., 0], 0, 1)
-    ao = np.clip(res["ao"][..., 0], 0, 1)
-    albedo = np.clip(res["albedo"], 0, 1) ** (1 / 2.2)            # linear -> sRGB
-    diffuse = albedo * (0.55 + 0.45 * ao[..., None])
-    nrm = np.where(mask[..., None] > 0.5, res["normal"], np.array([0.5, 0.5, 1.0]))
-    alpha = (np.clip((mask - 0.3) / 0.4, 0, 1) * 255)
-    # fur tuft cards (bottom-right corner of the texture) are not part of the towel
-    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
-    alpha[(xx > 0.78 * SIZE) & (yy > 0.76 * SIZE)] = 0
-    pad = np.array([0.82, 0.79, 0.73])
-    diffuse = np.where(mask[..., None] > 0.05, diffuse, pad)
+    # raw passes -> bake/towel_neck_*.png (rows top-down in numpy, saved as-is); compose_neck.py
+    # (in .venv) turns them into the export textures
+    (HERE / "bake").mkdir(exist_ok=True)
 
-    OUT.mkdir(exist_ok=True)
-
-    def save_png(rgba, path):
-        """rgba: (H, W, 4) floats 0..1, rows top-down; written as-is (no colour conversion)."""
+    def save_png(rgb, path):
         im = bpy.data.images.new(path.stem, SIZE, SIZE, alpha=True)
         im.colorspace_settings.name = "Non-Color"
-        im.alpha_mode = "STRAIGHT"
+        rgba = np.dstack([np.clip(rgb, 0, 1), np.ones((SIZE, SIZE))])
         im.pixels[:] = np.ascontiguousarray(rgba[::-1]).ravel()
         im.filepath_raw = str(path)
         im.file_format = "PNG"
         im.save()
 
-    save_png(np.dstack([np.clip(diffuse, 0, 1), alpha / 255.0]), OUT / "HidePoncho_v3_neck_diffuse.png")
-    save_png(np.dstack([nrm[..., 0], nrm[..., 1], np.ones((SIZE, SIZE)), np.ones((SIZE, SIZE))]), OUT / "HidePoncho_v3_neck_normal.png")
+    save_png(np.clip(res["albedo"], 0, 1) ** (1 / 2.2), HERE / "bake" / "towel_neck_albedo.png")   # -> sRGB
+    save_png(res["mask"], HERE / "bake" / "towel_neck_mask.png")
+    save_png(res["ao"], HERE / "bake" / "towel_neck_ao.png")
+    save_png(res["normal"], HERE / "bake" / "towel_neck_normal.png")
     if "--blend" in argv:
         (HERE / "bake").mkdir(exist_ok=True)
         bpy.ops.wm.save_as_mainfile(filepath=str(HERE / "bake" / "towel_neck.blend"))
-    print("done; towel texels", int((mask > 0.5).sum()), flush=True)
+    print("done", flush=True)
 
 
 if __name__ == "__main__":
