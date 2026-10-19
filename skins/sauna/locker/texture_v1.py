@@ -135,7 +135,8 @@ def height_to_normal(h, pos, dens, group, k=1.0):
     return n / np.linalg.norm(n, axis=-1, keepdims=True)
 
 
-def main():
+def build():
+    """All v1 maps plus the per-texel context, for v1 itself and for v2."""
     V, T, F = load_obj(ORIG / "locker.obj")
     N = [normal(*(V[i] for i in vi)) for vi, _ in F]
     obj = object_of_faces(ORIG / "locker.obj")
@@ -276,14 +277,26 @@ def main():
     spec = np.where(towel, 0.03, spec)
     gloss = np.where(towel, 0.08, gloss)
 
+    return dict(V=V, T=T, F=F, N=N, obj=obj, pos=pos, nrm=nrm, oid=oid, dens=dens, cov=cov, ids=ids,
+                col=col, h=h, group=group, n0=n0, nb=nb, spec=spec, gloss=gloss, steam=steam,
+                planks=planks, front_face=front_face, rng=rng)
+
+
+def save(m, tag):
     OUT.mkdir(exist_ok=True)
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
     full = np.full((SIZE, SIZE), 255, np.uint8)
-    Image.fromarray(np.dstack([q(col), full]), "RGBA").save(OUT / "Locker_v1_diffuse.png")
-    Image.fromarray(np.dstack([q(nb[..., 0] * 0.5 + 0.5), q(nb[..., 1] * 0.5 + 0.5), full, full]), "RGBA").save(OUT / "Locker_v1_normal.png")
-    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "Locker_v1_specgloss.png")
-    render_views(V, T, F, N, HERE / "uv" / "v1_views.png", tex=read_png(OUT / "Locker_v1_diffuse.png"))
-    print("done; towel texels", int(towel.sum()), "tag", int(tag.sum()), "rail", int(rail.sum()))
+    alpha = q(m["alpha"]) if "alpha" in m else full
+    nb = m["nb"]
+    Image.fromarray(np.dstack([q(m["col"]), alpha]), "RGBA").save(OUT / f"Locker_{tag}_diffuse.png")
+    Image.fromarray(np.dstack([q(nb[..., 0] * 0.5 + 0.5), q(nb[..., 1] * 0.5 + 0.5), full, full]), "RGBA").save(OUT / f"Locker_{tag}_normal.png")
+    Image.fromarray(np.dstack([q(m["spec"])] * 3 + [q(m["gloss"])]), "RGBA").save(OUT / f"Locker_{tag}_specgloss.png")
+    render_views(m["V"], m["T"], m["F"], m["N"], HERE / "uv" / f"{tag}_views.png", tex=read_png(OUT / f"Locker_{tag}_diffuse.png"))
+
+
+def main():
+    save(build(), "v1")
+    print("done")
 
 
 if __name__ == "__main__":
