@@ -174,7 +174,9 @@ def main():
     ostone = box & ~floating & (pid == ID["stone"])
     owall = box & ~floating & ~ostone
     hot = smooth(0.75, 0.5, y)                         # heat sits low, near the floor
-    oc = hexc("#232326") * (1 - t) + hexc("#3E3C3D") * t
+    # lighter than the burner rocks: in game the lit furnace floods the firebox with its own
+    # light, and only rocks that catch it read as rocks (v2.3 was a solid orange blur)
+    oc = hexc("#3A3A3C") * (1 - t) + hexc("#5E5B59") * t
     oc = oc * (0.85 + 0.25 * speck[..., None]) * (1 + 0.3 * edge[..., None]) * (0.5 + 0.5 * ao_b[..., None])
     oc = oc * (1 - 0.35 * hot[..., None]) + hexc("#4A2414") * 0.35 * hot[..., None]   # heat-reddened lower rocks
     put(ostone, oc, 0, 40 + 25 * edge)
@@ -198,11 +200,15 @@ def main():
     oglow = oglow + np.where(owall & ~ogap, 0.06 * hot, 0)   # faint warmth on the bare walls low down
     oglow = oglow + np.where(ostone, 0.3 * smooth(0.5, 0.15, ao_b) * hot, 0) * ofl
     emit[box] = 0
-    emit += (np.clip(oglow, 0, 1) * 0.9)[..., None] * EMBER_RGB
+    emit += (np.clip(oglow, 0, 1) * 0.35)[..., None] * EMBER_RGB   # v2.4: x0.4, the game adds its own light
     # the rest of v1's embers (the compartment behind the right-hand louvres): half the glow
+    # behind the right-hand louvres: v1's voronoi "lava" showed as blocky orange specks at 512 px
+    # (v2.3) -> sooty dark with a smooth warmth rising from below, no pattern to alias
     rest = (mat == EMBERS) & ~box
-    emit[rest] *= 0.5
-    col[rest] *= 0.8
+    rhot = smooth(0.85, 0.4, y) * (0.75 + 0.25 * fbm(x * 6, y * 6, z * 6, 2, SEED + 24))
+    put(rest, hexc("#1C1613") * (0.85 + 0.3 * fbm(x * 20, y * 20, z * 20, 2, SEED + 25)[..., None]), 0, 25)
+    blotch = smooth(0.42, 0.68, fbm(x * 12, y * 12, z * 12, 3, SEED + 26))   # big soft embers, no fine pattern
+    emit[rest] = (0.13 * rhot * (0.25 + 0.75 * blotch))[rest][..., None] * EMBER_RGB
 
     # ------------------------------------------------ fieldstone plinth on mortar
     pst = pid == ID["plinth"]
@@ -267,7 +273,7 @@ def main():
 
     # ------------------------------------------------ normal: baked + fine detail; flat leftovers keep v1
     detail = pid != ID["base"]
-    keep_v1 = ~detail & ~gap & ~bed & ~pgap & ~mor & ~box
+    keep_v1 = ~detail & ~gap & ~bed & ~pgap & ~mor & ~box & ~rest
     height = np.where(keep_v1, height, micro)
     n_fine = v1.height_to_normal(height, pos, dens, mat, strength=3.0)
     n0 = np.asarray(PILImage.open(ORIG / "ElectricFurnace_nrm.png").convert("RGB"), np.float64) / 255 * 2 - 1
