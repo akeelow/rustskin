@@ -1,4 +1,4 @@
-"""Sauna Towel v3.1 (neck): compose the export textures from the Blender bake (towel_neck_bake.py).
+"""Sauna Towel v3.2 (neck): compose the export textures from the Blender bake (towel_neck_bake.py).
 
 v3 in game (screenshots/v3_neck_front.webp) read as a white vest: flat bright white, wide bands,
 and stray white flecks by the toggles. v3.1:
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -40,16 +40,50 @@ def main():
     yy, xx = np.mgrid[0:SIZE, 0:SIZE]
     fur = (xx > 0.78 * SIZE) & (yy > 0.76 * SIZE)
     m = (mask > 0.5) & ~small & ~fur & cov
-    # opening: drop specks and slivers thinner than ~4 texels, keep the strip's outline
-    im = Image.fromarray((m * 255).astype(np.uint8))
-    opened = im.filter(ImageFilter.MinFilter(5)).filter(ImageFilter.MaxFilter(5))
-    m = (np.asarray(opened) > 127) & m
+    filt = lambda a, f: np.asarray(Image.fromarray((a * 255).astype(np.uint8)).filter(f)) > 127
+    # closing fills pinholes in the hit mask (v3.1: grey specks), opening drops specks and slivers
+    # thinner than ~4 texels; the strip's outline stays
+    m = filt(filt(m, ImageFilter.MaxFilter(7)), ImageFilter.MinFilter(7)) & ~small & ~fur & cov
+    m = filt(filt(m, ImageFilter.MinFilter(5)), ImageFilter.MaxFilter(5)) & m
+    # drop small separate pieces (the flap's second layer by the toggles catches a sliver of towel)
+    lab = Image.fromarray((m * 255).astype(np.uint8))
+    keep = np.zeros_like(m)
+    ys, xs = np.nonzero(m)
+    seen = np.zeros_like(m)
+    for yy0, xx0 in zip(ys[::97], xs[::97]):
+        if seen[yy0, xx0] or not m[yy0, xx0]:
+            continue
+        tmp = lab.copy()
+        ImageDraw.floodfill(tmp, (int(xx0), int(yy0)), 128)
+        comp = np.asarray(tmp) == 128
+        seen |= comp
+        if comp.sum() > 6000:
+            keep |= comp
+    m = keep
     soft = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8)), np.float64) / 255.0
 
     nz = np.clip(nrm[..., 2] * 2 - 1, 0, 1)
     side = 0.6 + 0.4 * nz ** 1.5                     # rolled sides turn away from the light
-    diffuse = albedo * (0.6 + 0.4 * ao[..., None]) * side[..., None]
-    diffuse = np.where(m[..., None], diffuse, np.array([0.8, 0.77, 0.71]))
+    # dirtier (v3.2): a used towel - greyed and yellowed, blotchy stains, grime in the folds,
+    # sweat at the neck, darker lower ends
+    rng = np.random.default_rng(43)
+    nse = lambda r: v.blur(rng.random((SIZE, SIZE)), r)
+    stain = v.smooth(0.52, 0.62, nse(14)) * 0.22 + v.smooth(0.55, 0.65, nse(5)) * 0.12
+    neck = v.smooth(0.07, 0.0, g["d_neck"]) * 0.35
+    low = v.smooth(1.25, 1.1, g["y"]) * 0.12
+    used = np.array([0.86, 0.82, 0.74])
+    diffuse = albedo * used * (0.5 + 0.5 * ao[..., None]) * side[..., None]
+    diffuse = diffuse * (1 - (stain + low)[..., None]) + np.array([0.42, 0.36, 0.28]) * (stain + low)[..., None]
+    diffuse = diffuse * (1 - neck[..., None]) + np.array([0.62, 0.55, 0.40]) * neck[..., None]
+    # pad the colour outwards from the strip, so the soft alpha edge shows towel, not grey
+    w = m.astype(np.float64)
+    for r in (1.5, 4, 10):
+        acc = np.stack([v.blur(diffuse[..., i] * w, r) for i in range(3)], -1)
+        cnt = v.blur(w, r)[..., None]
+        fill = acc / np.maximum(cnt, 1e-3)
+        diffuse = np.where((w < 0.5)[..., None] & (cnt > 0.01), fill, diffuse)
+        w = np.maximum(w, (cnt[..., 0] > 0.01).astype(np.float64))
+    diffuse = np.where(w[..., None] > 0.5, diffuse, np.array([0.7, 0.66, 0.58]))
     alpha = np.clip((soft - 0.35) / 0.3, 0, 1) * 255
     normal = np.where(m[..., None], nrm, np.array([0.5, 0.5, 1.0]))
 
