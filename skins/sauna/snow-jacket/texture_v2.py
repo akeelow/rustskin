@@ -27,8 +27,8 @@ from blocking import ORIG, OUT, SIZE, blur, hexc, position_map, smooth  # noqa: 
 from uv_zones import load_obj, normal, read_png, render_views  # noqa: E402
 
 SEED = 13
-CLOTH = hexc("#C9B28C")      # beige waffle cotton (reference), a little washed out
-BAND = hexc("#C2AA83")       # collar / belt / cuffs: same cloth, denser weave reads a touch darker
+CLOTH = hexc("#BFA67F")      # beige waffle cotton (reference), a little washed out
+BAND = hexc("#B79E78")       # collar / belt / cuffs: same cloth, denser weave reads a touch darker
 SEAM = hexc("#8C775A")
 SHADOW = hexc("#5A4A38")
 DAMP = hexc("#A8916C")
@@ -129,8 +129,9 @@ def main():
     damp = smooth(0.58, 0.68, blur(rng.random((SIZE, SIZE)), 22)) * 0.35
     col = col * (1 - damp[..., None]) + DAMP * damp[..., None]
     col = col * (1 - 0.35 * edge_shadow[..., None]) + SHADOW * 0.35 * edge_shadow[..., None]
-    vee_depth = smooth(0.6, 0.78, y) * vee
-    col = np.where(vee[..., None], SHADOW * (0.75 + 0.35 * (1 - vee_depth))[..., None], col)
+    # the V stays cloth (the under panel, a touch shaded): cutting it out with alpha was tried
+    # in game (screenshots/v2_vcut_test.webp) and shows the game's green undershirt, not skin
+    col = np.where(vee[..., None], col * (0.82 + 0.1 * smooth(0.6, 0.78, y))[..., None], col)
     # seams and belt edges
     belt_edge = belt & ~(blur(belt.astype(np.float64), 1.2) > 0.97)
     band_edge = collar & ~(blur(collar.astype(np.float64), 1.2) > 0.97)
@@ -155,8 +156,6 @@ def main():
     hx, hy = grad_normal(h, 0.9)
     rx, ry = grad_normal(relief - 0.8 * blur(grooves, 0.8), 1.4)
     nx, ny = fx + hx + rx, fy + hy + ry
-    nx = np.where(vee, fx * 0.3, nx)
-    ny = np.where(vee, fy * 0.3, ny)
     nz = np.sqrt(np.clip(1 - nx ** 2 - ny ** 2, 0.05, 1))
     ln = np.sqrt(nx ** 2 + ny ** 2 + nz ** 2)
     nx, ny = nx / ln, ny / ln
@@ -164,15 +163,12 @@ def main():
     # ---------------------------------------------------------------- spec / gloss / fuzz
     spec = np.full((SIZE, SIZE), 0.04) + 0.04 * damp
     gloss = np.full((SIZE, SIZE), 0.1) + 0.25 * damp
-    fuzz = np.where(band, 0.7, 1.0) * (1 - 0.5 * vee)
+    fuzz = np.where(band, 0.7, 1.0)
 
     OUT.mkdir(exist_ok=True)
     full = np.full((SIZE, SIZE), 255, np.uint8)
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
     Image.fromarray(np.dstack([q(col), full]), "RGBA").save(OUT / "SnowJacket_v2_diffuse.png")
-    # experiment: the V cut out (alpha 0) for Alpha Cutoff 0.5 - shows what is under the robe
-    vcut = blur(vee.astype(np.float64), 0.8) > 0.5
-    Image.fromarray(np.dstack([q(col), np.where(vcut, 0, 255).astype(np.uint8)]), "RGBA").save(OUT / "SnowJacket_v2_diffuse_vcut.png")
     Image.fromarray(np.dstack([q(nx * 0.5 + 0.5), q(ny * 0.5 + 0.5), full, full]), "RGBA").save(OUT / "SnowJacket_v2_normal.png")
     Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "SnowJacket_v2_specgloss.png")
     Image.fromarray(np.dstack([q(fuzz), q(fuzz), q(fuzz), full]), "RGBA").save(OUT / "SnowJacket_v2_fuzz.png")
