@@ -1,4 +1,4 @@
-"""Sauna Towel v3.2 (neck): compose the export textures from the Blender bake (towel_neck_bake.py).
+"""Sauna Towel v3.4 (neck): compose the export textures from the Blender bake (towel_neck_bake.py).
 
 v3 in game (screenshots/v3_neck_front.webp) read as a white vest: flat bright white, wide bands,
 and stray white flecks by the toggles. v3.1:
@@ -82,6 +82,14 @@ def main():
     soft = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2)), np.float64) / 255.0
 
     nz = np.clip(nrm[..., 2] * 2 - 1, 0, 1)
+    # terry pile (v3.4: v3.3 read as a plain white strip): loops of 2-3 texels in tufts, strong
+    # in the normal and visible in the colour
+    rng0 = np.random.default_rng(7)
+    loops = v.blur(rng0.random((SIZE, SIZE)), 1.0)
+    loops = (loops - loops.mean()) / (loops.std() + 1e-6)
+    tufts = v.blur(rng0.random((SIZE, SIZE)), 3.0)
+    tufts = (tufts - tufts.mean()) / (tufts.std() + 1e-6)
+    pile = np.clip(0.5 + 0.18 * loops + 0.12 * tufts, 0, 1)
     side = 0.6 + 0.4 * nz ** 1.5                     # rolled sides turn away from the light
     # dirtier (v3.2): a used towel - greyed and yellowed, blotchy stains, grime in the folds,
     # sweat at the neck, darker lower ends
@@ -91,7 +99,7 @@ def main():
     neck = v.smooth(0.07, 0.0, g["d_neck"]) * 0.35
     low = v.smooth(1.25, 1.1, g["y"]) * 0.12
     used = np.array([0.86, 0.82, 0.74])
-    diffuse = albedo * used * (0.5 + 0.5 * ao[..., None]) * side[..., None]
+    diffuse = albedo * used * (0.5 + 0.5 * ao[..., None]) * side[..., None] * (0.85 + 0.3 * pile)[..., None]
     diffuse = diffuse * (1 - (stain + low)[..., None]) + np.array([0.42, 0.36, 0.28]) * (stain + low)[..., None]
     diffuse = diffuse * (1 - neck[..., None]) + np.array([0.62, 0.55, 0.40]) * neck[..., None]
     # pad the colour outwards from the strip, so the soft alpha edge shows towel, not grey
@@ -104,7 +112,11 @@ def main():
         w = np.maximum(w, (cnt[..., 0] > 0.01).astype(np.float64))
     diffuse = np.where(w[..., None] > 0.5, diffuse, np.array([0.7, 0.66, 0.58]))
     alpha = np.clip((soft - 0.35) / 0.3, 0, 1) * 255
-    normal = np.where(m[..., None], nrm, np.array([0.5, 0.5, 1.0]))
+    hx, hy = v.grad_normal(pile, 2.2)
+    nb = nrm * 2 - 1
+    nb = np.stack([nb[..., 0] + hx, nb[..., 1] + hy, nb[..., 2]], -1)
+    nb /= np.linalg.norm(nb, axis=-1, keepdims=True)
+    normal = np.where(m[..., None], nb * 0.5 + 0.5, np.array([0.5, 0.5, 1.0]))
     spec = np.where(m, 0.04, 0.0)
     gloss = np.where(m, 0.08, 0.0)
 

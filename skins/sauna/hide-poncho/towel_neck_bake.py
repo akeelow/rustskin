@@ -29,10 +29,13 @@ ORIG = HERE / "originals"
 OUT = HERE / "export"
 SIZE = 2048   # 2x the original diffuse: smoother alpha-cut edges (v3.2 had stair steps)
 
-WIDTH, THICK = 0.13, 0.03
+WIDTH, THICK = 0.11, 0.03
 NECK_C = Vector((0.0, 0.0, -0.03))            # neck centre in x/z (OBJ space)
 RING_RX, RING_RZ = 0.175, 0.155
-TAIL_END_Y, TAIL_X = 1.10, 0.09
+TAIL_END_Y = 1.17
+# the tails keep clear of the flap with the toggles (two hide sheets at x -0.06..0.09 below 1.3 m,
+# whose torn edge cut the towel ragged in v3.3) and inside the hide's outer edge
+TAIL_X_POS, TAIL_X_NEG = 0.148, 0.112
 
 
 def lin(h):
@@ -61,8 +64,8 @@ def surface_path(low):
     top_r = Vector((NECK_C.x + RING_RX * math.sin(ring_a), 0, NECK_C.z + RING_RZ * math.cos(ring_a)))
     for k in range(40):
         t = k / 39
-        y = TAIL_END_Y + t * 0.32
-        x = TAIL_X + (top_r.x - TAIL_X) * smoothstep(0.6, 1.0, t)
+        y = TAIL_END_Y + t * 0.25
+        x = TAIL_X_POS + (top_r.x - TAIL_X_POS) * smoothstep(0.6, 1.0, t)
         loc, n = cast((x, y, 1.0), (0, 0, -1))
         if loc is not None:
             pts.append((loc, n))
@@ -79,8 +82,8 @@ def surface_path(low):
     # left tail, top -> bottom
     for k in range(40):
         t = 1 - k / 39
-        y = TAIL_END_Y + t * 0.32
-        x = -(TAIL_X + (top_r.x - TAIL_X) * smoothstep(0.6, 1.0, t))
+        y = TAIL_END_Y + t * 0.25
+        x = -(TAIL_X_NEG + (top_r.x - TAIL_X_NEG) * smoothstep(0.6, 1.0, t))
         loc, n = cast((x, y, 1.0), (0, 0, -1))
         if loc is not None:
             pts.append((loc, n))
