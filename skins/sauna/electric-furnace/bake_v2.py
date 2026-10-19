@@ -2,7 +2,7 @@
 onto its UVs in Cycles.
 
 Usage (from the repo root):
-  "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/electric-furnace/bake_v2.py -- [--size 2048] [--blend]
+  "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/electric-furnace/bake_v2.py -- [--size 4096] [--blend]
 
 Writes into skins/sauna/electric-furnace/bake/:
   normal.png      tangent-space normal, OpenGL (Y+), like the Rust Normal slot
@@ -19,7 +19,8 @@ over the burners, close around the door), so planks and rock heaps land undistor
 low-poly's bevels and coils. Every flat field (side inset, back wall, raised box) gets its
 own planks at its own depth, with trim over the steps between fields.
 
-With --size 2048 it takes about a minute on an RTX 3060 Ti (OptiX).
+Default 4096 (texture_v2 downsamples to 2048, which anti-aliases plank edges and nails);
+about 3 minutes on an RTX 3060 Ti (OptiX), 2048 about one.
 """
 import math
 import random
@@ -46,8 +47,10 @@ OVEN_X, OVEN_FLOOR, OVEN_BACK, OVEN_FRONT = 0.215, 0.47, -0.23, 0.27
 
 
 def in_oven_volume(c, margin=0.0):
-    """Racks, fan and heating elements float inside the oven box, away from its walls."""
-    return (abs(c.x) < 0.2 - margin and 0.49 < c.y < 0.91 and -0.21 < c.z < OVEN_FRONT)
+    """Racks and heating elements float inside the oven box, away from its walls. The fan cover on
+    the back wall (front face at z = -0.204) is *not* floating: it gets the heap baked onto it like
+    the back wall (v2.5 painted it as dark iron and it hid the heap)."""
+    return (abs(c.x) < 0.2 - margin and 0.49 < c.y < 0.91 and -0.17 < c.z < OVEN_FRONT)
 
 
 # ---------------------------------------------------------------- mesh helpers
@@ -448,10 +451,12 @@ def build_oven_heap(low, mats, rng):
     bm = bmesh.new()
     placed = []
     # (radius range, front limit z, half width x, lift, tries, overlap)
+    # v2.6: taller (to ~0.85 m at the back) so through the door one sees mostly rocks, not bare wall
     layers = ((0.035, 0.05, 0.21, 0.19, 0.0, 2500, 0.72), (0.015, 0.024, 0.21, 0.19, 0.0, 2500, 0.85),
-              (0.032, 0.046, 0.13, 0.18, 0.045, 1500, 0.74), (0.03, 0.044, 0.05, 0.17, 0.09, 1200, 0.75),
-              (0.028, 0.04, -0.03, 0.15, 0.135, 900, 0.76), (0.026, 0.036, -0.1, 0.13, 0.175, 600, 0.78),
-              (0.024, 0.032, -0.16, 0.1, 0.21, 300, 0.8))
+              (0.032, 0.046, 0.15, 0.185, 0.045, 1500, 0.74), (0.03, 0.044, 0.09, 0.18, 0.09, 1300, 0.75),
+              (0.03, 0.042, 0.03, 0.17, 0.135, 1100, 0.76), (0.028, 0.04, -0.03, 0.16, 0.18, 900, 0.77),
+              (0.026, 0.038, -0.09, 0.15, 0.225, 700, 0.78), (0.024, 0.034, -0.15, 0.14, 0.27, 500, 0.8),
+              (0.022, 0.03, -0.19, 0.12, 0.31, 300, 0.8))
     for layer, (rmin, rmax, zf, hw, lift, tries, ov) in enumerate(layers):
         for _ in range(tries):
             r = rng.uniform(rmin, rmax)
@@ -498,7 +503,7 @@ def cage_offset(p, n):
         # firebox walls: floor looks down from above the heap, the back wall looks at it from
         # the door, each side wall from the opposite wall -- so every wall shows the heap
         if n.y > 0.5 and y < 0.53:
-            return Vector((0, 0.3, 0))
+            return Vector((0, 0.42, 0))                  # above the heap top (~0.85), below the ceiling
         if n.z > 0.5 and z < -0.17:
             return Vector((0, 0, OVEN_FRONT - z))
         if n.x > 0.5 and x < -0.17:
@@ -649,7 +654,7 @@ def load_low():
 
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-    size = int(argv[argv.index("--size") + 1]) if "--size" in argv else 2048
+    size = int(argv[argv.index("--size") + 1]) if "--size" in argv else 4096  # texture_v2 downsamples to 2048 (anti-aliased edges)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     low = load_low()
     hp, mats = build(low)

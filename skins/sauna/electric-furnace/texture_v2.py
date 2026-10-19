@@ -167,18 +167,39 @@ def main():
     emit[burner | bed] = 0
     emit += glow[..., None] * EMBER_RGB
 
+    # ------------------------------------------------ top plate (v2.6): sooty iron instead of v1's purple/blue
+    # temper rings and white tide lines, which read as marble in game; only a thin straw/bronze tint
+    # hugs the heaps, soot darkens towards them
+    rimsel = (mat == RIM) & (y > 1.0) & ~stone & ~(in_dish)
+    bcxr = np.where(x > 0, 0.143, -0.143)
+    bczr = np.where(z > 0, 0.1435, -0.1435)
+    bigr = (x > 0) == (z > 0)
+    bd = np.hypot(x - bcxr, z - bczr) - np.where(bigr, 0.112, 0.098)
+    bd = bd + 0.01 * (fbm(x * 25, z * 25, y, 3, SEED + 80) - 0.5)
+    rsoot = fbm(x * 14, z * 14, y, 4, SEED + 81)
+    rc = hexc("#38332F") * (0.72 + 0.5 * rsoot[..., None])
+    near = smooth(0.07, 0.0, bd)
+    rc = rc * (1 - 0.35 * near[..., None])
+    temper = smooth(-0.004, 0.006, bd) * smooth(0.035, 0.012, bd) * 0.3
+    tcol = hexc("#A68652") * (1 - smooth(0.0, 0.03, bd)[..., None]) + hexc("#7E5232") * smooth(0.0, 0.03, bd)[..., None]
+    rc = rc * (1 - temper[..., None]) + tcol * temper[..., None]
+    stain = smooth(0.6, 0.66, fbm(x * 7, z * 7, y + 3, 3, SEED + 82)) * 0.12
+    rc = rc * (1 - stain[..., None]) + hexc("#8F887D") * stain[..., None]
+    put(rimsel, rc, 85 + 30 * temper * 3, 50 - 20 * stain * 5)
+    height[rimsel] = (0.0002 * rsoot)[rimsel]
+
     # ------------------------------------------------ firebox: baked heap of rocks behind the door bars
     # (v2.3; v1 painted the whole oven as flat glowing "lava", which the game's bloom blew out)
     # by position, not by v1's material: v1 called the back wall "front" (it faces +z) and painted
     # it shiny iron, which mirrored the game's own firebox light (v2.4 screenshots)
     box = (np.abs(x) < 0.235) & (y > 0.45) & (y < 0.95) & (z > -0.25) & (z < 0.26) & (zid != 4)
-    floating = box & (np.abs(x) < 0.2) & (y > 0.49) & (y < 0.91) & (z > -0.21)   # racks, fan, elements
+    floating = box & (np.abs(x) < 0.2) & (y > 0.49) & (y < 0.91) & (z > -0.17)   # racks, elements (not the fan cover)
     ostone = box & ~floating & (pid == ID["stone"])
     owall = box & ~floating & ~ostone
     hot = smooth(0.75, 0.5, y)                         # heat sits low, near the floor
     # lighter than the burner rocks: in game the lit furnace floods the firebox with its own
     # light, and only rocks that catch it read as rocks (v2.3 was a solid orange blur)
-    oc = hexc("#3A3A3C") * (1 - t) + hexc("#5E5B59") * t
+    oc = hexc("#26262A") * (1 - t) + hexc("#403E3F") * t   # v2.6: dark silhouettes against glowing gaps
     oc = oc * (0.85 + 0.25 * speck[..., None]) * (1 + 0.3 * edge[..., None]) * (0.5 + 0.5 * ao_b[..., None])
     oc = oc * (1 - 0.35 * hot[..., None]) + hexc("#4A2414") * 0.35 * hot[..., None]   # heat-reddened lower rocks
     put(ostone, oc, 0, 40 + 25 * edge)
@@ -200,9 +221,9 @@ def main():
     put(ogap, hexc("#1E0E08"), 0, 15)
     oglow = np.where(ogap, (0.45 + 0.55 * odeep) * (0.4 + 0.6 * hot), 0) * ofl
     oglow = oglow + np.where(owall & ~ogap, 0.06 * hot, 0)   # faint warmth on the bare walls low down
-    oglow = oglow + np.where(ostone, 0.3 * smooth(0.5, 0.15, ao_b) * hot, 0) * ofl
+    oglow = oglow + np.where(ostone, 0.15 * smooth(0.5, 0.15, ao_b) * hot, 0) * ofl
     emit[box] = 0
-    emit += (np.clip(oglow, 0, 1) * 0.35)[..., None] * EMBER_RGB   # v2.4: x0.4, the game adds its own light
+    emit += (np.clip(oglow, 0, 1) * 0.7)[..., None] * EMBER_RGB   # v2.6: gaps bright again, rocks dark
     # the rest of v1's embers (the compartment behind the right-hand louvres): half the glow
     # behind the right-hand louvres: v1's voronoi "lava" showed as blocky orange specks at 512 px
     # (v2.3) -> sooty dark with a smooth warmth rising from below, no pattern to alias
