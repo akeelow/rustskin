@@ -73,6 +73,32 @@ def islands(V, T, F):
     return np.asarray(ids)
 
 
+def rope_mask(hood, lum):
+    """The binding ropes on the hood: much darker than their surroundings in the original."""
+    rope = hood & (lum < blur(lum, 8) * 0.8)
+    return (blur(rope.astype(np.float64), 1.6) > 0.2) & hood    # take in the rope's grey edges too
+
+
+def stripe_mask(cowl, hood, alpha, rng):
+    """Two faded stripes along each hem: the cowl's frayed lower edge and the hood's lower edge.
+    Returns (mask, fade 0..1 per texel)."""
+    ys = np.arange(SIZE)[:, None]
+    xs = np.arange(SIZE)
+    stripes = np.zeros((SIZE, SIZE), bool)
+    for part, offs in ((cowl, ((46, 6), (64, 3))), (hood, ((34, 5), (50, 3)))):
+        solid = part & (alpha > 200)
+        has = solid.any(0)
+        hem = np.where(has, SIZE - 1 - np.argmax(solid[::-1], 0), np.nan)
+        hem = np.interp(xs, xs[has], hem[has])        # bridge empty columns with the nearest hem
+        k = 51                                        # smooth the frayed edge into a hem line
+        hem = np.convolve(np.pad(hem, k // 2, mode="edge"), np.ones(k) / k, mode="valid")
+        d = hem[None, :] - ys + 3 * np.sin(xs / 37.0)[None, :]
+        for off, w in offs:
+            stripes |= (np.abs(d - off) < w) & part & has[None, :]
+    fade = 0.55 + 0.25 * blur(rng.random((SIZE, SIZE)), 6)
+    return stripes, fade
+
+
 def main():
     V, T, F = load_obj(ORIG / "burlap.headwrap.obj")
     N = [normal(*(V[i] for i in vi)) for vi, _ in F]
@@ -95,28 +121,12 @@ def main():
     col = TOWEL[None, None, :] * detail[..., None] * (0.86 + 0.14 * ao[..., None])
     col = col * (0.95 + 0.1 * terry[..., None])
 
-    # ropes on the hood: much darker than their surroundings in the original
-    rope = hood & (lum < blur(lum, 8) * 0.8)
-    rope = (blur(rope.astype(np.float64), 1.6) > 0.2) & hood    # take in the rope's grey edges too
+    rope = rope_mask(hood, lum)
     twine = TWINE[None, None, :] * detail[..., None] * (0.9 + 0.2 * terry[..., None])
     col[rope] = twine[rope]
 
-    # faded stripes along the towel's hems: the cowl's frayed lower edge and the hood's lower edge
-    ys = np.arange(SIZE)[:, None]
-    fade = 0.55 + 0.25 * blur(rng.random((SIZE, SIZE)), 6)
+    stripes, fade = stripe_mask(cowl, hood, alpha, rng)
     sc = STRIPE[None, None, :] * detail[..., None]
-    stripes = np.zeros((SIZE, SIZE), bool)
-    for part, offs in ((cowl, ((46, 6), (64, 3))), (hood, ((34, 5), (50, 3)))):
-        solid = part & (alpha > 200)
-        has = solid.any(0)
-        hem = np.where(has, SIZE - 1 - np.argmax(solid[::-1], 0), np.nan)
-        xs = np.arange(SIZE)
-        hem = np.interp(xs, xs[has], hem[has])        # bridge empty columns with the nearest hem
-        k = 51                                        # smooth the frayed edge into a hem line
-        hem = np.convolve(np.pad(hem, k // 2, mode="edge"), np.ones(k) / k, mode="valid")
-        d = hem[None, :] - ys + 3 * np.sin(xs / 37.0)[None, :]
-        for off, w in offs:
-            stripes |= (np.abs(d - off) < w) & part & has[None, :]
     col[stripes] = (col * (1 - fade[..., None]) + sc * fade[..., None])[stripes]
 
     col = col * (1 - 0.12 * damp[..., None] * (cowl | hood)[..., None])
