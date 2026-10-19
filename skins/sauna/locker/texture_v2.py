@@ -61,6 +61,42 @@ def hanging_towel(x, y, cx, y_top, y_bot, halfw, seed):
     return m, u, v, folds
 
 
+def open_doors(m):
+    """Alpha 0 on the three doors (texels shared with the carcass, like hinges, kept).
+    Returns alpha, carcass coverage, inner back wall mask, cut mask."""
+    V, T, F, obj = m["V"], m["T"], m["F"], m["obj"]
+    nrm, z = m["nrm"], m["pos"][..., 2]
+    doors = coverage(V, T, F, obj, lambda o: "door" in o)
+    body = coverage(V, T, F, obj, lambda o: "door" not in o)
+    cut = doors & ~body
+    back_in = (nrm[..., 2] > 0.5) & (np.abs(z - BACK_Z) < 1.5) & body
+    return np.where(cut, 0.0, 1.0), body, back_in, cut
+
+
+def lamp(m, body, back_in, col):
+    """Warm amber strip along the shelf fronts and its light on the walls below."""
+    pos, nrm, cov = m["pos"], m["nrm"], m["cov"]
+    x, y, z = pos[..., 0], pos[..., 1], pos[..., 2]
+    # the shelf's top and underside share UVs (the underside alone can't be lit), so the strip is
+    # the front 8 cm of the top shelf's faces plus its front edge
+    # both shelves share UVs too, so both get the lamp strip and its light below
+    on_shelf = (np.abs(y - TOP_SHELF - 1) < 2.5) | (np.abs(y - MID_SHELF + 1.5) < 2.5)
+    shelf = body & (np.abs(nrm[..., 1]) > 0.5) & on_shelf & (np.abs(x) < 87)
+    edge = body & (nrm[..., 2] > 0.5) & (np.abs(z - 20) < 2.5) & on_shelf
+    strip = (shelf & (z > 12)) | edge
+    below = np.maximum(smooth(TOP_SHELF - 45, TOP_SHELF, y) * (y < TOP_SHELF) * (y > MID_SHELF),
+                       smooth(MID_SHELF - 30, MID_SHELF - 3, y) * (y < MID_SHELF - 3) * (y > 49))
+    fall = below * back_in
+    side_walls = body & (np.abs(nrm[..., 0]) > 0.5) & (z < 20) & (z > -27)
+    fall_side = below * side_walls * 0.6
+    emit = np.zeros(cov.shape + (3,))
+    emit += (1.0 * strip)[..., None] * LAMP
+    emit += (0.22 * fall + 0.18 * fall_side)[..., None] * LAMP * (col / np.maximum(col.max(-1, keepdims=True), 1e-3))
+    col = np.where(strip[..., None], np.array([0.95, 0.8, 0.55]), col)
+
+    return emit, col, strip, fall
+
+
 def main():
     m = v1.build()
     V, T, F, obj = m["V"], m["T"], m["F"], m["obj"]
@@ -69,13 +105,7 @@ def main():
     col, h, spec, gloss = m["col"].copy(), m["h"].copy(), m["spec"].copy(), m["gloss"].copy()
     rng = np.random.default_rng(29)
 
-    # ---------------------------------------------------------------- doors out
-    doors = coverage(V, T, F, obj, lambda o: "door" in o)
-    body = coverage(V, T, F, obj, lambda o: "door" not in o)
-    cut = doors & ~body
-    alpha = np.where(cut, 0.0, 1.0)
-    back_in = (nrm[..., 2] > 0.5) & (np.abs(z - BACK_Z) < 1.5) & body
-    print("inner back wall texels:", int(back_in.sum()))
+    alpha, body, back_in, cut = open_doors(m)
 
     # ---------------------------------------------------------------- props on the back wall
     # the three compartments share one patch of the UV layout (as do the shelves), so the props
@@ -114,23 +144,7 @@ def main():
 
     col = col * (1 - 0.35 * shade[..., None] * back_in[..., None])
 
-    # ---------------------------------------------------------------- warm lamp under the top shelves
-    # the shelf's top and underside share UVs (the underside alone can't be lit), so the strip is
-    # the front 8 cm of the top shelf's faces plus its front edge
-    # both shelves share UVs too, so both get the lamp strip and its light below
-    on_shelf = (np.abs(y - TOP_SHELF - 1) < 2.5) | (np.abs(y - MID_SHELF + 1.5) < 2.5)
-    shelf = body & (np.abs(nrm[..., 1]) > 0.5) & on_shelf & (np.abs(x) < 87)
-    edge = body & (nrm[..., 2] > 0.5) & (np.abs(z - 20) < 2.5) & on_shelf
-    strip = (shelf & (z > 12)) | edge
-    below = np.maximum(smooth(TOP_SHELF - 45, TOP_SHELF, y) * (y < TOP_SHELF) * (y > MID_SHELF),
-                       smooth(MID_SHELF - 30, MID_SHELF - 3, y) * (y < MID_SHELF - 3) * (y > 49))
-    fall = below * back_in
-    side_walls = body & (np.abs(nrm[..., 0]) > 0.5) & (z < 20) & (z > -27)
-    fall_side = below * side_walls * 0.6
-    emit = np.zeros(cov.shape + (3,))
-    emit += (1.0 * strip)[..., None] * LAMP
-    emit += (0.22 * fall + 0.18 * fall_side)[..., None] * LAMP * (col / np.maximum(col.max(-1, keepdims=True), 1e-3))
-    col = np.where(strip[..., None], np.array([0.95, 0.8, 0.55]), col)
+    emit, col, strip, fall = lamp(m, body, back_in, col)
 
     # ---------------------------------------------------------------- normal
     nb_new = v1.height_to_normal(h, pos, m["dens"], m["group"], k=1.0)
