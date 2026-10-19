@@ -154,7 +154,7 @@ def main():
     emit_k = np.where(lamp, 0.75 * gapg, emit_k)
     gloss = np.where(lamp & (gapg > 0.5), 0.6, gloss)
     halo = np.exp(-((xu - lx) ** 2 + (y - ly) ** 2) / (2 * 17.0 ** 2)) * back * (y > 165) * (frame_o < 0.5)
-    wash = np.maximum(wash, 0.85 * halo)
+    wash = np.maximum(wash, 0.75 * halo)
 
     # hanger rail with three pegs, middle section
     rail = back & (rect(xu, y, -24, 24, 146, 150) > 0.5)
@@ -327,10 +327,11 @@ def main():
     below = np.zeros(cov.shape)
     for L in LIGHTS:
         below = np.maximum(below, (0.35 + 0.65 * smooth(L - 55, L - 1, y)) * (y < L - 1) * (y > L - 82))
-    # the outer walls' inner faces share their UVs with the outside of the locker: no glow there
-    divider = niche_side & (np.abs(x) < 85)
-    wash = np.maximum(wash, 0.62 * below * back + 0.5 * below * divider)
-    wash = np.maximum(wash, 0.45 * shelf * smooth(-25, 15, z) + 0.3 * floor + 0.25 * ceiling)
+    # the niche side walls share their UVs with the outside of the locker (v4 in game: the outer
+    # side glowed at night), so they get no light; the back wall carries the glow (v4.1: a bit less,
+    # the emission also brightens the niches by day)
+    wash = np.maximum(wash, 0.52 * below * back)
+    wash = np.maximum(wash, 0.38 * shelf * smooth(-25, 15, z) + 0.25 * floor + 0.2 * ceiling)
     emit = emit_k[..., None] * LED + (wash[..., None] * col * WARM)
     spec = np.where(emit_k > 0.5, 0.3, spec)
     gloss = np.where(emit_k > 0.5, 0.55, gloss)
