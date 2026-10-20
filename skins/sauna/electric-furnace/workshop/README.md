@@ -9,7 +9,7 @@
 **Description** (вставить на странице Steam после публикации):
 
 ```
-A Electric Furnace skin from the Sauna set.
+An Electric Furnace skin from the Sauna set.
 
 Every Rust life starts naked. Might as well warm up properly.
 
