@@ -10,8 +10,6 @@ Writes uv/islands.png (original diffuse, islands outlined and numbered) and uv/i
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
-
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tools"))
 from uv_zones import load_obj, normal  # noqa: E402
@@ -40,6 +38,8 @@ def islands(F):
 
 
 def main():
+    from PIL import Image, ImageDraw, ImageFont   # not in Blender's Python (bake_chair.py imports islands)
+
     V, T, F = load_obj(HERE / "originals" / "chair.obj")
     I = islands(F)
     img = Image.open(HERE / "originals" / "chair_bc.png").convert("RGB")
