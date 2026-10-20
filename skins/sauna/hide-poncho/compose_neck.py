@@ -163,11 +163,44 @@ def main():
     fn = np.array(g["N"])[np.clip(fid, 0, None)]
     pos = np.stack([g["x"], g["y"], g["z"]], -1)
     inside = ((fn * (pos - np.array([0.0, 1.2, -0.02]))).sum(-1) < 0) & m     # faces turned to the body
-    if SHAPE in ("shoulder", "drape"):
+    if SHAPE == "shoulder":
         # the inside of the hide is only ever seen through the neck opening or the open sides: no towel
         m = m & ~inside
         inside = inside & m
         soft = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2)), np.float64) / 255.0
+    if SHAPE == "drape":
+        # v5.2: the inside face of the hide under the towel shows the towel's back (v5.1 was see-
+        # through from inside): every body-facing texel within 1.2 cm of an outward towel texel
+        # takes that texel's colour, a little darker (the towel's underside, in shadow)
+        out_t = m & ~inside
+        fac = (fn * (pos - np.array([0.0, 1.2, -0.02]))).sum(-1) < 0
+        cand = cov & fac & ~g["toggles"]
+        # nearest outward towel texel within ~1.2 cm: shifted voxel grids (fast; v5.2 brute force took 29 min)
+        P_out, C_out = pos[out_t], diffuse[out_t]
+        Pc = pos[cand]
+        take = np.zeros(len(Pc), bool)
+        col_in = np.zeros((len(Pc), 3))
+        cell = 0.012
+        for off in [np.array(o) * cell / 2 for o in np.ndindex(2, 2, 2)]:
+            ko = np.floor((P_out + off) / cell).astype(np.int64)
+            kc = np.floor((Pc + off) / cell).astype(np.int64)
+            enc = lambda k: (k[:, 0] + 10000) * 10 ** 10 + (k[:, 1] + 10000) * 10 ** 5 + (k[:, 2] + 10000)
+            eo, ec = enc(ko), enc(kc)
+            uniq, inv = np.unique(eo, return_inverse=True)
+            sums = np.zeros((len(uniq), 3))
+            np.add.at(sums, inv, C_out)
+            cnt = np.bincount(inv, minlength=len(uniq))[:, None]
+            idx = np.clip(np.searchsorted(uniq, ec), 0, len(uniq) - 1)
+            hit = (uniq[idx] == ec) & ~take
+            col_in[hit] = (sums[idx[hit]] / cnt[idx[hit]])
+            take |= hit
+        inner_m = np.zeros_like(m)
+        inner_m[cand] = take
+        diffuse[cand] = np.where(take[:, None], col_in * 0.8, diffuse[cand])
+        m = m | inner_m
+        inside = np.zeros_like(m)
+        soft = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2)), np.float64) / 255.0
+        print("towel back texels (inside face)", int(inner_m.sum()))
     diffuse = np.where(inside[..., None], np.clip(diffuse * 1.6, 0, 1), diffuse)
     print("brightened inside texels", int(inside.sum()))
     # pad the colour outwards from the strip, so the soft alpha edge shows towel, not grey

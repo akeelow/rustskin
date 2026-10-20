@@ -79,109 +79,71 @@ def build_sheet(low):
         for j, a in enumerate(A):
             q, ok = surface_point(bvh, p, n, b, a)
             pos[i, j], sup[i, j] = q, ok
-    # how far the hide reaches each side of the path, per row (scan wider than the towel)
-    MARGIN = 0.022                                      # fold well inside the hide's ragged edge
-    reach = np.zeros((2, NU))
-    for i, r in enumerate(rows):
-        p, n, b = Vector(Pr[r]), Vector(Nn[r]), Vector(Bn[r])
-        for side, sgn in ((0, -1), (1, 1)):
-            d, last = 0.0, 0.0
-            prev = None
-            while d <= 0.16:
-                q, ok_ = surface_point(bvh, p, n, b, sgn * d)
-                # strict: on outer hide, close to the path's surface (not a layer further down) and
-                # continuous with the previous step (no jump onto another sheet of hide)
-                if not ok_ or abs(Vector(q - p).dot(n)) > 0.035 or (prev is not None and (q - prev).length > 0.012):
-                    break
-                prev = q
-                last = d
-                d += 0.004
-            reach[side, i] = last
-    # v5.1: re-centre the towel on the hide that is there (the front panel is narrow and off the
-    # path), then fold both edges evenly - a towel folded lengthwise, a long fold on each side
-    # (v5 front: the edge on the body side was clipped to 3 cm and cut by the flap - no fold seen)
-    half = np.clip((reach[0] + reach[1]) / 2 - MARGIN, 0.025, W / 2)
-    off = (reach[1] - reach[0]) / 2
-    # smooth reach-limited half widths too: a ragged hide edge must not make a ragged fold
-    half = np.minimum.reduce([np.roll(half, d) for d in range(-4, 5)])
-    k = 9
-    pad = lambda x: np.pad(x, k // 2, mode="edge")
-    off = np.convolve(pad(off), np.ones(k) / k, mode="valid")
-    # fold half-width: straight lines over each narrow run (a clean long fold), never wider than measured
-    hf = np.full(NU, W / 2)
-    over = half < W / 2 - 1e-3
-    i = 0
-    while i < NU:
-        if not over[i]:
-            i += 1
-            continue
-        i0 = i
-        while i < NU and over[i]:
-            i += 1
-        i1 = i - 1
-        ssel, hv = S[i0:i1 + 1], half[i0:i1 + 1]
-        beta = np.polyfit(ssel, hv, 1)[0] if len(ssel) > 2 else 0.0
-        alpha = np.min(hv - beta * ssel)
-        line = alpha + beta * S + np.maximum(0, np.maximum(S[i0] - S, S - S[i1]))
-        hf = np.minimum(hf, np.clip(line, 0.025, W / 2))
-    fold = np.stack([hf, hf])
-    # the back (rows past the shoulder top) is wide and was right in v5: there keep the towel on its
-    # path, with a fold only where the measured hide (the per-vertex support) runs out
-    top_row = int(np.argmax(Pr[rows][:, 1]))
+    # how far each side reaches on hide, per row
     mid = NV // 2
-    for side, js in ((0, range(mid, -1, -1)), (1, range(mid, NV))):
-        rv = np.zeros(NU)
-        for i in range(NU):
+    reach = np.zeros((2, NU))
+    for i in range(NU):
+        for side, js in ((0, range(mid, -1, -1)), (1, range(mid, NV))):
             last = mid
             for j in js:
                 if not sup[i, j]:
                     break
                 last = j
-            rv[i] = abs(A[last]) - 0.018
-        rv = np.minimum.reduce([np.roll(rv, d) for d in range(-4, 5)])
-        back = np.arange(NU) > top_row + 6
-        fold[side, back] = np.clip(rv[back], 0.03, W / 2)
-    blend = np.clip((np.arange(NU) - top_row) / 6.0, 0, 1)
-    off = off * (1 - blend)
-    # wrinkles: soft diagonal ripples where the towel hangs (front and back), plus two big sags
-    top = int(np.argmax(Pr[rows][:, 1]))
-    hang = np.clip(np.abs(np.arange(NU) - top) / 25.0, 0, 1)
-
-    def wrinkle(i, a):
-        u = S[i]
-        w1 = math.sin((u * 0.8 + a * 0.6) / 0.055 * 2 * math.pi)
-        w2 = math.sin((u * 0.6 - a * 0.8) / 0.09 * 2 * math.pi + 1.3)
-        sag = math.exp(-((u - S[top] - 0.20) / 0.06) ** 2) + math.exp(-((u - S[top] + 0.22) / 0.07) ** 2)
-        env = 1 - (2 * a / W) ** 2
-        return hang[i] * (0.0028 * w1 + 0.0018 * w2) * max(env, 0) + 0.004 * sag * max(env, 0)
-
+            reach[side, i] = abs(A[last])
+    # straight fold lines per side over each run of overhang, ramping out to the edge at 45 deg
+    fold = np.full((2, NU), W / 2)
+    for side in (0, 1):
+        over = reach[side] < W / 2 - 0.006
+        MARGIN = 0.018                                  # fold well inside the hide's ragged edge
+        i = 0
+        while i < NU:
+            if not over[i]:
+                i += 1
+                continue
+            i0 = i
+            while i < NU and over[i]:
+                i += 1
+            i1 = i - 1
+            ssel = S[i0:i1 + 1]
+            r = reach[side, i0:i1 + 1] - MARGIN
+            beta = np.polyfit(ssel, r, 1)[0] if len(ssel) > 2 else 0.0
+            alpha = np.min(r - beta * ssel)                 # the line stays on the hide everywhere
+            line = alpha + beta * S + np.maximum(0, np.maximum(S[i0] - S, S - S[i1]))
+            fold[side] = np.minimum(fold[side], np.clip(line, 0.03, W / 2))
+    # fold: mirror the part beyond the line back over the towel, one layer up
     out = pos.copy()
     folded = 0
-    step = W / (NV - 1)
-    for i, r in enumerate(rows):
-        p, n, b = Vector(Pr[r]), Vector(Nn[r]), Vector(Bn[r])
+    for i in range(NU):
         for j, a in enumerate(A):
-            layer = 0
-            a2 = a
-            while layer < 4:                              # fold over (accordion if needed)
-                lo_, hi_ = -fold[0, i], fold[1, i]
-                if a2 > hi_ + 1e-6:
-                    a2 = 2 * hi_ - a2
-                elif a2 < lo_ - 1e-6:
-                    a2 = 2 * lo_ - a2
-                else:
-                    break
-                layer += 1
-            lim = fold[1, i] if a >= 0 else fold[0, i]
-            q, _ = surface_point(bvh, p, n, b, off[i] + a2)
-            lift = 0.008 * layer
-            # the crease: rounded, half a layer up right at the fold line
-            dist = abs(abs(a) - lim)
-            if lim < W / 2 - 1e-6 and dist < step * 1.5:
-                lift += 0.005 * (1 - dist / (step * 1.5))
-            out[i, j] = np.array(q) + nrm[i] * (lift + wrinkle(i, off[i] + a2))
-            folded += layer > 0
-    holes = 0
+            side = 0 if a < 0 else 1
+            lim = fold[side, i]
+            if abs(a) <= lim + 1e-6:
+                continue
+            a2 = np.sign(a) * (2 * lim - abs(a))
+            a2 = float(np.clip(a2, -fold[0, i], fold[1, i]))
+            r = rows[i]
+            q, _ = surface_point(bvh, Vector(Pr[r]), Vector(Nn[r]), Vector(Bn[r]), a2)
+            out[i, j] = np.array(q) + nrm[i] * 0.008
+            folded += 1
+    # v5.2: wrinkles - soft diagonal ripples where the towel hangs (front and back) and two sags,
+    # on every layer (v5 front read as flat)
+    top = int(np.argmax(np.array([Pr[r][1] for r in rows])))
+    for i in range(NU):
+        hang = min(abs(i - top) / 25.0, 1.0)
+        u = S[i]
+        sag = math.exp(-((u - S[top] - 0.20) / 0.06) ** 2) + math.exp(-((u - S[top] + 0.22) / 0.07) ** 2)
+        for j, a in enumerate(A):
+            env = max(1 - (2 * a / W) ** 2, 0.15)
+            w1 = math.sin((u * 0.8 + a * 0.6) / 0.055 * 2 * math.pi)
+            w2 = math.sin((u * 0.6 - a * 0.8) / 0.09 * 2 * math.pi + 1.3)
+            out[i, j] = out[i, j] + nrm[i] * (hang * (0.0032 * w1 + 0.002 * w2) * env + 0.0045 * sag * env)
+    # the crease: vertices right at the fold line sit half a layer up, so the fold is rounded
+    for i in range(NU):
+        for j, a in enumerate(A):
+            side = 0 if a < 0 else 1
+            if abs(abs(a) - fold[side, i]) < (W / (NV - 1)) * 0.75 and fold[side, i] < W / 2 - 1e-6:
+                out[i, j] = out[i, j] + nrm[i] * 0.006
+    holes = int((~sup & (np.abs(A)[None, :] <= np.minimum(fold[0], fold[1])[:, None])).sum())
     print(f"towel {W:.2f} x {S[-1]:.2f} m: folded {folded} of {NU * NV} vertices, "
           f"{holes} vertices over holes in the hide", flush=True)
     bm = bmesh.new()
