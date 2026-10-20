@@ -65,7 +65,9 @@ def main():
     # within 1.5 cm of the surface it was laid on. v3.4: a fold of the hide behind the neck lay within
     # the bake's ray reach and caught a floating scrap of towel.
     path = np.load(BAKE / f"towel_{SHAPE}_path.npy")
-    C, Nn = path[:, :3], path[:, 3:]
+    C, Nn = path[:, :3], path[:, 3:6]
+    Bn = path[:, 6:9] if path.shape[1] >= 11 else None
+    WL, WR = (path[:, 9], path[:, 10]) if path.shape[1] >= 11 else (None, None)
     pts = np.stack([g["x"], g["y"], g["z"]], -1)[m]
     keep_pt = np.zeros(len(pts), bool)
     for i in range(0, len(pts), 20000):
@@ -75,7 +77,11 @@ def main():
         rel = P - C[j]
         h = np.abs((rel * Nn[j]).sum(1))
         lat = np.sqrt(np.maximum((rel ** 2).sum(1) - h ** 2, 0))
-        keep_pt[i:i + 20000] = (h < 0.015) & (lat < 0.055 + 0.006)
+        if Bn is None:
+            keep_pt[i:i + 20000] = (h < 0.015) & (lat < 0.055 + 0.006)
+        else:
+            t = (rel * Bn[j]).sum(1)                    # signed: left -, right +
+            keep_pt[i:i + 20000] = (h < 0.02) & (t > -WL[j] - 0.012) & (t < WR[j] + 0.012)
     mm = np.zeros_like(m)
     mm[m] = keep_pt
     m = mm

@@ -106,22 +106,22 @@ def shoulder_path(low):
         return loc, nrm
 
     pts = []
-    for k in range(40):                                   # front, bottom -> top
-        t = k / 39
-        y = 1.21 + t * 0.21
-        x = 0.14 + 0.035 * smoothstep(0.3, 1.0, t)
+    for k in range(50):                                   # front, bottom -> top
+        t = k / 49
+        y = 1.06 + t * 0.36
+        x = 0.13 + 0.05 * smoothstep(0.4, 1.0, t)
         loc, n = cast((x, y, 1.0), (0, 0, -1))
         if loc is not None and loc.z > 0:
             pts.append((loc, n))
     for k in range(40):                                   # over the shoulder, front -> back
         z = 0.09 - 0.24 * k / 39
-        loc, n = cast((0.18, 2.0, z), (0, -1, 0))
+        loc, n = cast((0.19, 2.0, z), (0, -1, 0))
         if loc is not None and loc.y > 1.38:
             pts.append((loc, n))
     for k in range(50):                                   # back, top -> bottom
         t = k / 49
-        y = 1.42 - t * 0.37
-        x = 0.175 - 0.03 * smoothstep(0.0, 0.7, t)
+        y = 1.42 - t * 0.38
+        x = 0.18 - 0.04 * smoothstep(0.0, 0.7, t)
         loc, n = cast((x, y, -1.0), (0, 0, 1))
         if loc is not None and loc.z < 0:
             pts.append((loc, n))
@@ -150,13 +150,12 @@ def resample(pts, step=0.004):
     return Pr, Nr, ss, L
 
 
-def sweep(Pr, Nr, ss, L, K=36):
-    bm = bmesh.new()
-    uv_layer = bm.loops.layers.uv.new("UVMap")
-    rings = []
+def frames(Pr, Nr):
+    """Twist-free frame per station: tangent, surface normal n, across b."""
+    Nn, Bn = [], []
     prev_b = None
     for i in range(len(Pr)):
-        p, n = Vector(Pr[i]), Vector(Nr[i])
+        n = Vector(Nr[i])
         t = Vector(Pr[min(i + 1, len(Pr) - 1)] - Pr[max(i - 1, 0)]).normalized()
         b = t.cross(n).normalized()
         if prev_b is not None and b.dot(prev_b) < 0:   # no flips along the strip (no twists)
@@ -165,17 +164,62 @@ def sweep(Pr, Nr, ss, L, K=36):
             b = (b + 2 * prev_b).normalized()           # and no sudden turns
         prev_b = b
         n = b.cross(t).normalized()
+        Nn.append(tuple(n))
+        Bn.append(tuple(b))
+    return np.array(Nn), np.array(Bn)
+
+
+def fit_widths(low, Pr, Nn, Bn, half):
+    """Per station, how far the towel may reach to each side and still lie on outer hide: step out
+    across the strip, cast down onto the hide, stop at a miss, an inside face or a jump (an edge, a
+    hole, the neck opening). The towel is folded under where it would hang off (v4.1)."""
+    bvh = BVHTree.FromObject(low, bpy.context.evaluated_depsgraph_get(), deform=False)
+    centre = Vector((0.0, 1.2, -0.02))
+    wl, wr = np.full(len(Pr), half), np.full(len(Pr), half)
+    for i in range(len(Pr)):
+        p, n, b = Vector(Pr[i]), Vector(Nn[i]), Vector(Bn[i])
+        for side, arr in ((-1, wl), (1, wr)):
+            reach = 0.0
+            d = 0.005
+            while d <= half + 1e-6:
+                q = p + b * (side * d)
+                loc, hn, _, _ = bvh.ray_cast(q + n * 0.06, -n)
+                if loc is None or (loc - q).length > 0.03:
+                    break
+                if hn.dot(n) < 0.2 or hn.dot((loc - centre).normalized()) < 0:
+                    break
+                reach = d
+                d += 0.005
+            arr[i] = max(reach - 0.006, 0.02)
+    # smooth along the strip (no saw teeth), never wider than measured
+    for arr in (wl, wr):
+        sm = arr.copy()
+        for _ in range(8):
+            sm[1:-1] = np.minimum(arr[1:-1], 0.25 * sm[:-2] + 0.5 * sm[1:-1] + 0.25 * sm[2:])
+        arr[:] = sm
+    return wl, wr
+
+
+def sweep(Pr, Nn, Bn, ss, L, wl, wr, half, K=36):
+    bm = bmesh.new()
+    uv_layer = bm.loops.layers.uv.new("UVMap")
+    rings = []
+    for i in range(len(Pr)):
+        p, n, b = Vector(Pr[i]), Vector(Nn[i]), Vector(Bn[i])
         dend = min(ss[i], L - ss[i])
         hem = 0.004 * smoothstep(0.035, 0.02, dend)              # doubled hem at the ends
         taper = 0.6 + 0.4 * smoothstep(0.0, 0.02, dend)
+        fold_l = smoothstep(0.005, 0.03, half - wl[i])          # turned under on a clipped side
+        fold_r = smoothstep(0.005, 0.03, half - wr[i])
         ring = []
         for k in range(K):
             phi = 2 * math.pi * k / K
-            # folded towel: flat-ish oval, a softer rounded fold on one side
             cx = math.cos(phi)
             cy = math.sin(phi)
-            w = WIDTH / 2 * cx
+            w = cx * (wr[i] if cx > 0 else wl[i])
+            fold = (fold_r if cx > 0 else fold_l) * smoothstep(0.55, 0.95, abs(cx))
             h = (THICK / 2) * (1 + cy) * (0.85 + 0.15 * (1 - abs(cx)) ** 0.5) + hem * (1 + cy) / 2
+            h += 0.009 * fold * (1 + cy) / 2                     # the doubled-over fold is thicker
             lump = 0.0015 * noise.noise(Vector((ss[i] * 40, phi * 2, 0.0))) + 0.0007 * noise.noise(p * 300)
             q = p + b * w * taper + n * (h * taper + 0.0015 + lump)
             ring.append(bm.verts.new(q))
@@ -313,10 +357,18 @@ def main():
 
     shape = argv[argv.index("--shape") + 1] if "--shape" in argv else "neck"
     Pr, Nr, ss, L = resample(shoulder_path(low) if shape == "shoulder" else surface_path(low))
-    print(f"towel length {L:.2f} m, {len(Pr)} sections", flush=True)
+    Nn, Bn = frames(Pr, Nr)
+    half = (0.10 if shape == "shoulder" else WIDTH / 2)
+    if shape == "shoulder":
+        wl, wr = fit_widths(low, Pr, Nn, Bn, half)
+    else:
+        wl, wr = np.full(len(Pr), half), np.full(len(Pr), half)
+    print(f"towel length {L:.2f} m, {len(Pr)} sections, width {2 * half:.2f} m "
+          f"(narrowest {float((wl + wr).min()):.2f})", flush=True)
     (HERE / "bake").mkdir(exist_ok=True)
-    np.save(HERE / "bake" / f"towel_{shape}_path.npy", np.hstack([Pr, Nr]))   # centre line on the hide, OBJ space
-    me = sweep(Pr, Nr, ss, L)
+    # centre line on the hide (OBJ space): point, normal, across, reach left/right
+    np.save(HERE / "bake" / f"towel_{shape}_path.npy", np.hstack([Pr, Nn, Bn, wl[:, None], wr[:, None]]))
+    me = sweep(Pr, Nn, Bn, ss, L, wl, wr, half)
     towel = bpy.data.objects.new("towel", me)
     scene.collection.objects.link(towel)
     towel.matrix_world = low.matrix_world.copy()
