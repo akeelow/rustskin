@@ -244,7 +244,7 @@ def build_broken_board(bm, s0, s1, rng, seed):
         for (ya, yb, tip_at) in ((lo_solid - 0.6, lo_end[k], "top"), (hi_end[k], hi_solid + 0.6, "bottom")):
             if yb - ya < 0.5:
                 continue
-            push = rng.uniform(0.6, 2.2) * (1 if rng.random() < 0.8 else -0.6)   # into the locker, or out
+            push = rng.uniform(0.5, 1.7) * (1 if rng.random() < 0.8 else -0.6)   # into the locker, or out
             twist = rng.uniform(-0.3, 0.3)
             # a fibre: a thin box, (2 across) x (nv along) x (bottom, top); bends near the broken end
             nv = 12
@@ -439,7 +439,7 @@ def build_leaves(low, mats, rng):
 def build_cavity(low, mats):
     """Inside the locker, behind the boards: what the bake sees through the broken board."""
     bm = bmesh.new()
-    add_box(bm, (X0, Y0, 20.0), (X1, Y1, 21.0))
+    add_box(bm, (X0, Y0, 23.0), (X1, Y1, 24.0))
     return [new_obj("hp_cavity", bm, mats["cavity"], low)]
 
 
@@ -560,6 +560,13 @@ def load_door():
         else:
             bpy.data.objects.remove(ob)
     door.name = "lowpoly_door_b"
+    # the OBJ's vertex normals are garbage (they point along -y): bake against flat face normals,
+    # or the tangent frame tilts and the whole normal map comes out green
+    bpy.context.view_layer.objects.active = door
+    door.select_set(True)
+    bpy.ops.mesh.customdata_custom_splitnormals_clear()
+    for p in door.data.polygons:
+        p.use_smooth = False
     return door
 
 

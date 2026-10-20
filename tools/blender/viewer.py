@@ -221,7 +221,7 @@ def main():
         centre = Vector((0, 0, max(centre.z, 1.0)))
         radius = max(radius, 0.45)
     ground()
-    focus = to_blender([float(v) for v in FOCUS.split(",")]) if FOCUS else (lo + hi) / 2
+    focus = to_blender([float(v) * UNITS for v in FOCUS.split(",")]) if FOCUS else (lo + hi) / 2
 
     engines = [e.identifier for e in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items]
     scene.render.engine = "BLENDER_EEVEE" if "BLENDER_EEVEE" in engines else "BLENDER_EEVEE_NEXT"

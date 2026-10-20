@@ -77,7 +77,8 @@ def rect(x, y, x0, x1, y0, y1, soft=0.12):
             * smooth(y0 - soft, y0 + soft, y) * smooth(y1 + soft, y1 - soft, y))
 
 
-def main():
+def build():
+    """All v4 maps and the per-texel context (v5 builds on it)."""
     V, T, F = load_obj(ORIG / "locker.obj")
     N = [normal(*(V[i] for i in vi)) for vi, _ in F]
     obj = v1.object_of_faces(ORIG / "locker.obj")
@@ -342,14 +343,24 @@ def main():
     n0[..., 2] = np.sqrt(np.clip(1 - n0[..., 0] ** 2 - n0[..., 1] ** 2, 0, 1))
     nb = np.where(iron[..., None], n0, nb)
 
-    out = dict(m, col=col, nb=nb, spec=spec, gloss=gloss, alpha=alpha)
-    v1.save(out, "v4")
-    q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
-    em = Image.fromarray(q(emit)).resize((1024, 1024), Image.BOX)
-    Image.fromarray(np.dstack([np.asarray(em), np.full((1024, 1024), 255, np.uint8)]), "RGBA").save(OUT / "Locker_v4_emission.png")
-    print("done; back", int(back.sum()), "shelf", int(shelf.sum()), "stile", int(stile.sum()), "frieze", int(frieze.sum()),
+    print("v4: back", int(back.sum()), "shelf", int(shelf.sum()), "stile", int(stile.sum()), "frieze", int(frieze.sum()),
           "sides", int(sides_out.sum()), "back_out", int(back_out.sum()), "top", int(top.sum()), "strip", int(strip.sum()),
           "drawer", int(drawer.sum()), "lamp", int(lamp.sum()))
+    return dict(m, col=col, nb=nb, spec=spec, gloss=gloss, alpha=alpha, emit=emit, h=h, ao=ao, grain=grain,
+                fine=fine, small=small, iron=iron)
+
+
+def save_emission(emit, tag):
+    q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
+    em = Image.fromarray(q(emit)).resize((1024, 1024), Image.BOX)
+    Image.fromarray(np.dstack([np.asarray(em), np.full((1024, 1024), 255, np.uint8)]), "RGBA").save(OUT / f"Locker_{tag}_emission.png")
+
+
+def main():
+    out = build()
+    v1.save(out, "v4")
+    save_emission(out["emit"], "v4")
+    print("done")
 
 
 if __name__ == "__main__":
