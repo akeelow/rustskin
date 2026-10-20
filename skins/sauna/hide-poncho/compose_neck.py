@@ -27,7 +27,7 @@ from uv_zones import read_png, render_views  # noqa: E402
 
 SIZE, OUT = 2048, v.OUT
 SHAPE = sys.argv[1] if len(sys.argv) > 1 else "neck"     # neck | shoulder
-TAG = {"neck": "v3_neck", "shoulder": "v4_shoulder"}[SHAPE]
+TAG = {"neck": "v3_neck", "shoulder": "v4_shoulder", "drape": "v5_shoulder"}[SHAPE]
 v.SIZE = SIZE                      # rasterise the hide at the bake's resolution
 BAKE = HERE / "bake"
 
@@ -64,13 +64,15 @@ def main():
     # only hide texels right under the towel: near its centre line sideways (half width + 6 mm) and
     # within 1.5 cm of the surface it was laid on. v3.4: a fold of the hide behind the neck lay within
     # the bake's ray reach and caught a floating scrap of towel.
-    path = np.load(BAKE / f"towel_{SHAPE}_path.npy")
+    path = np.load(BAKE / f"towel_{SHAPE}_path.npy") if SHAPE != "drape" else None
+    if path is None:                                    # v5 drape: the towel mesh itself is the limit
+        path = np.zeros((1, 11))
     C, Nn = path[:, :3], path[:, 3:6]
     Bn = path[:, 6:9] if path.shape[1] >= 11 else None
     WL, WR = (path[:, 9], path[:, 10]) if path.shape[1] >= 11 else (None, None)
     pts = np.stack([g["x"], g["y"], g["z"]], -1)[m]
     keep_pt = np.zeros(len(pts), bool)
-    for i in range(0, len(pts), 20000):
+    for i in (range(0, len(pts), 20000) if SHAPE != "drape" else []):
         P = pts[i:i + 20000]
         d = np.linalg.norm(P[:, None, :] - C[None, :, :], axis=-1)
         j = d.argmin(1)
@@ -82,9 +84,10 @@ def main():
         else:
             t = (rel * Bn[j]).sum(1)                    # signed: left -, right +
             keep_pt[i:i + 20000] = (h < 0.02) & (t > -WL[j] - 0.012) & (t < WR[j] + 0.012)
-    mm = np.zeros_like(m)
-    mm[m] = keep_pt
-    m = mm
+    if SHAPE != "drape":
+        mm = np.zeros_like(m)
+        mm[m] = keep_pt
+        m = mm
     filt = lambda a, f: np.asarray(Image.fromarray((a * 255).astype(np.uint8)).filter(f)) > 127
     # closing fills pinholes in the hit mask (v3.1: grey specks), opening drops specks and slivers
     # thinner than ~4 texels; the strip's outline stays
@@ -119,8 +122,11 @@ def main():
     # rolled sides darker, from the towel's own profile (baked "shade"). v3.4 used the baked
     # normal's tilt, which is also large where the hide under the towel is dented - those dents
     # came out as dark patches ("a hole") although the normal map already flattens them
-    shade = load("shade")[..., 0]
-    side = 0.68 + 0.32 * np.sqrt(np.clip(shade, 0, 1))
+    if SHAPE == "drape":
+        side = np.ones((SIZE, SIZE))                    # the real folds and AO do the shading
+    else:
+        shade = load("shade")[..., 0]
+        side = 0.68 + 0.32 * np.sqrt(np.clip(shade, 0, 1))
     # dirtier (v3.2): a used towel - greyed and yellowed, blotchy stains, grime in the folds,
     # sweat at the neck, darker lower ends
     rng = np.random.default_rng(43)
@@ -157,7 +163,7 @@ def main():
     fn = np.array(g["N"])[np.clip(fid, 0, None)]
     pos = np.stack([g["x"], g["y"], g["z"]], -1)
     inside = ((fn * (pos - np.array([0.0, 1.2, -0.02]))).sum(-1) < 0) & m     # faces turned to the body
-    if SHAPE == "shoulder":
+    if SHAPE in ("shoulder", "drape"):
         # the inside of the hide is only ever seen through the neck opening or the open sides: no towel
         m = m & ~inside
         inside = inside & m
@@ -174,6 +180,25 @@ def main():
         w = np.maximum(w, (cnt[..., 0] > 0.01).astype(np.float64))
     diffuse = np.where(w[..., None] > 0.5, diffuse, np.array([0.7, 0.66, 0.58]))
     alpha = np.clip((soft - 0.35) / 0.3, 0, 1) * 255
+    if SHAPE == "drape":
+        # holes: where the hide has a hole under the middle of the towel (not at its own edges or
+        # folds), the towel gets a worn hole - darker frayed rim, loose threads across the gap
+        uvp = load("uv")
+        interior = (uvp[..., 1] > 0.07) & (uvp[..., 1] < 0.93) & (uvp[..., 0] > 0.03) & (uvp[..., 0] < 0.97)
+        inner_m = filt(m, ImageFilter.MinFilter(9))
+        band = m & ~inner_m
+        uv_int = filt(interior & m, ImageFilter.MaxFilter(9))
+        rim = band & uv_int
+        rng2 = np.random.default_rng(11)
+        streak = v.blur(rng2.random((SIZE, SIZE)), 0.8)
+        fray = rim & (streak > 0.45)
+        diffuse = np.where(rim[..., None], diffuse * 0.72, diffuse)
+        diffuse = np.where(fray[..., None], diffuse * 0.8 + np.array([0.75, 0.71, 0.63]) * 0.2, diffuse)
+        near_gap = filt(rim, ImageFilter.MaxFilter(7)) & ~m
+        threads = near_gap & (v.blur(rng2.random((SIZE, SIZE)), 0.6) > 0.62)
+        alpha = np.where(threads, 255, alpha)
+        diffuse = np.where(threads[..., None], np.array([0.7, 0.66, 0.58]), diffuse)
+        print("hole rim texels", int(rim.sum()), "threads", int(threads.sum()))
     hx, hy = v.grad_normal(pile, 2.2)
     nb = nrm * 2 - 1
     nb = np.stack([nb[..., 0] + hx, nb[..., 1] + hy, nb[..., 2]], -1)
