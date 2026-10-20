@@ -73,7 +73,20 @@
 
 > ТЗ на пакет для тюрбана, халата, шкафчика + коллекция и чек-лист публикации: [TZ_workshop_pack.md](TZ_workshop_pack.md).
 
-- Названия: `Sauna Stove`, `Sauna Towel Wrap`, … (единый префикс `Sauna`).
+- Названия (решение пользователя 20.10.2026): **имя скина + оригинальное имя предмета в скобках**,
+  чтобы игрок находил скин поиском по предмету («bed», «locker», «furnace»):
+
+  | Предмет | Title в Workshop |
+  |---|---|
+  | Electric Furnace | `Sauna Stove (Electric Furnace)` |
+  | Burlap Headwrap | `Sauna Towel Wrap (Burlap Headwrap)` |
+  | Snow Jacket | `Sauna Robe (Snow Jacket)` |
+  | Locker | `Sauna Changing Locker (Locker)` |
+  | Bed | `Sauna Bench (Bed)` |
+  | Chair | `Sauna Chair (Chair)` → лучше `Sauna Chair` (имя предмета уже в названии) |
+
+  Правило: если оригинальное слово уже есть в имени скина — скобки не нужны. Первая строка описания
+  тоже называет предмет: «A Bed skin from the Sauna set.» Префикс `Sauna` — у всех.
 - Steam-коллекция: **Sauna**.
 - Описание (англ.): короткая история без просьб о лайках, например:
   *"Every Rust life starts naked. Might as well warm up properly. A scrap-built
