@@ -14,6 +14,7 @@ the scene (.blend) to open in Blender and orbit freely.
 _emission.png, _occlusion.png - whatever exists. --wear adds the mannequin (clothing).
 Like the game: back faces are culled, alpha is a hard cut at --cutoff, emission x 3.
 --focus: point (OBJ space: Y up, +Z front) for the close-up, default the item's centre.
+--up z: the OBJ is Z up (3ds Max export, e.g. the bed); --focus is then in that OBJ's x,y,z.
 """
 import math
 import sys
@@ -40,6 +41,7 @@ SIZE = int(opt("--size", "512"))
 SHEET = opt("--sheet")
 BLEND = opt("--blend")
 FOCUS = opt("--focus")
+ZUP = opt("--up", "y").lower() == "z"   # OBJ exported Z up (3ds Max, e.g. the bed)
 
 
 def tex_path(name):
@@ -195,7 +197,7 @@ def camera(scene, target, direction, dist, lens=50):
 
 def to_blender(p):
     x, y, z = p
-    return Vector((x, -z, y))
+    return Vector((x, y, z)) if ZUP else Vector((x, -z, y))
 
 
 def main():
@@ -204,7 +206,10 @@ def main():
     mat = material()
     objs = []
     for p in OBJS:
-        bpy.ops.wm.obj_import(filepath=str(p), forward_axis="NEGATIVE_Z", up_axis="Y")
+        if ZUP:
+            bpy.ops.wm.obj_import(filepath=str(p), forward_axis="Y", up_axis="Z")
+        else:
+            bpy.ops.wm.obj_import(filepath=str(p), forward_axis="NEGATIVE_Z", up_axis="Y")
         for o in bpy.context.selected_objects:
             o.scale = (UNITS, UNITS, UNITS)
             o.data.materials.clear()
