@@ -6,7 +6,7 @@ the deck polished light where people lie, the bottom dark from water running dow
 (toward the stove, -x) smoked and dried out, rust bleeding from the nails along the grain.
 
 Inputs: bake/{normal,ao,curvature,id}.png, originals/bed_{bc,nrm}.png.
-Outputs: export/Bed_v1_{diffuse,normal,specgloss,occlusion}.png
+Outputs (v1.1; v1 in git history): export/Bed_v1.1_{diffuse,normal,specgloss,occlusion}.png
 
     .venv/Scripts/python skins/sauna/bed/texture_v1.py
 """
@@ -31,8 +31,10 @@ IDS = {"base": 0, "slat": 1, "pallet": 2, "apron": 3, "nail": 4, "leaf": 5, "cav
        "headboard": 7, "post": 8, "towel": 9}
 
 hexc, blur, smooth, hash1 = B.hexc, B.blur, B.smooth, B.hash1
-ASPEN = hexc("#B7A07C")          # aspen, a touch greyer than the palette's #C2A77E (in game it reads warmer)
-ASPEN_GREY = hexc("#A89A86")     # weathered silver-grey
+# v1.1: in game (sun) the deck came out (242, 225, 176) from diffuse (161, 141, 111) - lighter and
+# yellower than the game's own wooden platform; aspen darker and greyer
+ASPEN = hexc("#A39176")          # aspen, steam-aged
+ASPEN_GREY = hexc("#958B7E")     # weathered silver-grey
 STEAMED = hexc("#7A5A3C")
 SMOKED = hexc("#45332A")
 LINEN = hexc("#CFC6B4")
@@ -124,8 +126,11 @@ def build():
     baked = pillow | mattress | head | posts          # texels the high-poly stands in for
 
     M = {k: baked & (mid == v) for k, v in IDS.items()}
-    deck = M["slat"] | M["pallet"]
-    apron = M["apron"] | (mattress & (M["base"] | M["cavity"]) & (nrm[..., 2] < 0.6))   # joist ends under the apron
+    top_low = nrm[..., 2] > 0.6
+    # every mattress texel is deck (top) or apron (sides) unless it is a gap, nail or leaf; texels the
+    # bake saw as towel (deck under the towel's edge) or joist ends (under the apron) included
+    deck = mattress & top_low & ~(M["cavity"] | M["nail"] | M["leaf"])
+    apron = mattress & ~top_low & ~M["nail"]
     wood_mat = deck | apron | M["headboard"] | M["post"]
 
     # along / across coordinates for the grain, per part
@@ -144,8 +149,8 @@ def build():
 
     # ---------------- wood base: per-board tone, grey/warm mix, grain
     tone = rnd
-    greyness = np.clip(0.25 + 0.5 * hash1((rnd * 1000).astype(int), SEED + 1) + 0.3 * big, 0, 1)
-    base = ASPEN * (1 - greyness[..., None] * 0.45) + ASPEN_GREY * (greyness[..., None] * 0.45)
+    greyness = np.clip(0.3 + 0.55 * hash1((rnd * 1000).astype(int), SEED + 1) + 0.3 * big, 0, 1)
+    base = ASPEN * (1 - greyness[..., None] * 0.6) + ASPEN_GREY * (greyness[..., None] * 0.6)
     base = base * (0.9 + 0.16 * tone[..., None])
     wood = base * (0.86 + 0.2 * g[..., None]) * (1 + 0.08 * big[..., None])
     hgt += np.where(wood_mat, 0.035 * g, 0)
@@ -171,7 +176,7 @@ def build():
     # ---------------- deck: polished lie zone, worn edges, gaps, foot end smoked, the tub ring
     lie = smooth(0, 1, (1 - np.abs((x + 5) / 70) ** 2.5) * (1 - np.abs(y / 36) ** 3)) * deck
     lie = lie * (0.8 + 0.4 * fbm(x * 0.05, y * 0.05, SEED + 21, 2))
-    wood = wood * (1 + 0.07 * lie[..., None])
+    wood = wood * (1 + 0.05 * lie[..., None])
     wood = wood * (1 - 0.4 * lie[..., None] * (g[..., None] - 0.5) * 0.3)      # grain softer where polished
     convex = smooth(0.52, 0.7, curv)
     concave = smooth(0.48, 0.3, curv)
@@ -225,9 +230,12 @@ def build():
     # the lower board was red in the original; faded blue instead: red chips next to the towel
     # read as blood
     pcol = np.where(upper[..., None], hexc("#5F7350"), hexc("#566A78"))
+    # v1.1: in game the islands read as stickers -> smaller broken chips, paint muted toward the wood
     pn = fbm(y * 0.045 + 11 * upper, z * 0.11, SEED + 81, 5) + 0.12 * (g - 0.5)
-    keep = smooth(0.565, 0.585, pn) * hb
-    chip = smooth(0.545, 0.565, pn) * hb * (1 - keep)                   # bare grey wood ring at the chip edge
+    pn = pn + 0.09 * (vnoise(y * 0.5, z * 0.9, SEED + 83) - 0.5)
+    keep = smooth(0.57, 0.585, pn) * hb
+    chip = smooth(0.55, 0.57, pn) * hb * (1 - keep)                     # bare grey wood ring at the chip edge
+    pcol = pcol * 0.7 + door_wood * 0.3
     door = door * (1 - keep[..., None]) + pcol * (0.82 + 0.25 * g[..., None]) * keep[..., None]
     door = door * (1 - 0.35 * chip[..., None]) + ASPEN_GREY * (0.35 * chip[..., None])
     hgt += np.where(hb, 0.06 * keep, 0)
@@ -290,12 +298,14 @@ def build():
 
     # ---------------- cross slats (joists under the deck): wet dark wood, original detail kept
     detail = 1 + 0.45 * (np.clip(lum / np.maximum(blur(lum, 12), 1e-3), 0.6, 1.3) - 1)
-    jc = STEAMED * 0.78 * (0.88 + 0.2 * grain(x, y + z, SEED + 111)[..., None]) * detail[..., None]
+    # v1.1: in game they came out orange -> dark grey-brown, wet
+    jc = hexc("#4E4034") * (0.88 + 0.22 * grain(x, y + z, SEED + 111)[..., None]) * detail[..., None]
     col = np.where(cross[..., None], jc, col)
     gloss = np.where(cross, 0.3, gloss)
 
     # ---------------- iron: dark steel, rust in joints (AO) and at the bottom, drips
-    rmask = smooth(0.85, 0.45, ao) * 0.8 + smooth(0.0, -0.6, nrm[..., 2]) * 0.5
+    # v1.1: AO-driven rust drew an orange line where the joists sit on the rail -> weaker, deeper AO only
+    rmask = smooth(0.6, 0.25, ao) * 0.5 + smooth(0.0, -0.6, nrm[..., 2]) * 0.5
     rmask = rmask + 0.35 * (fbm(x * 0.08, y * 0.08 + z * 0.08, SEED + 121, 4) - 0.5) * 2
     drips = np.clip((vnoise(x * 0.35 + y * 0.35, z * 0.03, SEED + 125) - 0.7) * 3, 0, 1) * (np.abs(nrm[..., 2]) < 0.5)
     rmask = np.clip(rmask + 0.4 * drips, 0, 1)
@@ -330,10 +340,10 @@ def main():
     col, alpha, n, spec, gloss, occ = build()
     OUT.mkdir(exist_ok=True)
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
-    Image.fromarray(np.dstack([q(col), q(alpha)]), "RGBA").save(OUT / "Bed_v1_diffuse.png")
-    Image.fromarray(q(n * 0.5 + 0.5), "RGB").save(OUT / "Bed_v1_normal.png")
-    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "Bed_v1_specgloss.png")
-    Image.fromarray(q(occ), "L").save(OUT / "Bed_v1_occlusion.png")
+    Image.fromarray(np.dstack([q(col), q(alpha)]), "RGBA").save(OUT / "Bed_v1.1_diffuse.png")
+    Image.fromarray(q(n * 0.5 + 0.5), "RGB").save(OUT / "Bed_v1.1_normal.png")
+    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "Bed_v1.1_specgloss.png")
+    Image.fromarray(q(occ), "L").save(OUT / "Bed_v1.1_occlusion.png")
     print("done")
 
 
