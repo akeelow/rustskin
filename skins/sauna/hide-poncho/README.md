@@ -1,6 +1,6 @@
 # Sauna Towel Poncho (Hide Poncho)
 
-> Статус: 🟡 **v3.5 neck** — полотенце на шее (Blender, запечено), обрывок сзади убран; остаются дыры шкуры (геометрия). Решаем: neck или shoulder. v2 shoulder проверен в игре — «прикольно» ✔. v1 (пончо целиком) — запасной.
+> Статус: 🟡 **v4 shoulder** — выбран вариант на плече; смоделирован в Blender и запечён (махра, швы, подгибки, грязнее), путь в обход дыр. Ждёт проверки в игре. v2 shoulder проверен в игре — «прикольно» ✔. v1 (пончо целиком) — запасной.
 > Сет: [Sauna](../README.md). Халат ушёл на Snow Jacket, поэтому образ пончо пересматриваем.
 
 ## Варианты образа
@@ -28,6 +28,37 @@
 
 Скриншоты: [screenshots/orig_editor_front.webp](screenshots/orig_editor_front.webp), [orig_side](screenshots/orig_side.webp), [orig_back](screenshots/orig_back.webp).
 Развёртка: [uv/poncho/uv_zones.png](uv/poncho/uv_zones.png), [uv/fur/uv_zones.png](uv/fur/uv_zones.png).
+
+## Версия v4: полотенце на плече (Blender)
+
+Выбор пользователя 20.10.2026: оставить полотенце на плече (v2 в игре — «прикольно»), сделать
+так же, как v3 neck: смоделировать и запечь.
+
+```bash
+"C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/hide-poncho/towel_neck_bake.py -- --shape shoulder --blend
+.venv/Scripts/python skins/sauna/hide-poncho/compose_neck.py shoulder
+```
+
+Путь проложен лучами только по наружной шкуре: спереди x ≤ 0.18 до 1.21 м, по плечу x 0.12–0.26
+(вырез ворота до 0.12), сзади до 1.05 м; в стороне от клапана с прищепками и от маленькой дырки
+сзади (0.21, 1.34). Внутренняя сторона шкуры (видна только через вырез ворота и открытые бока)
+полотенцем не красится. Ширина 11 см, толщина 3 см, подгибки с прострочкой на обоих концах,
+строчка по краям, полосы, бахрома, махра, застиранность.
+
+Проверка без игры — [tools/blender/viewer.py](../../../tools/blender/README.md):
+
+![лист](renders/v4_shoulder_sheet.png)
+
+Сцена для вращения: `renders/v4_shoulder_view.blend`.
+
+### Как загрузить в игру
+
+| Слот | Файл / значение |
+|---|---|
+| Diffuse | `export/HidePoncho_v4_shoulder_diffuse.png` (2048), **Color 255/255/255**, **Alpha Cutoff 0.24** |
+| Normal | `export/HidePoncho_v4_shoulder_normal.png` |
+| Specular/Gloss | `export/HidePoncho_v4_shoulder_specgloss.png` |
+| Occlusion | убрать (крестик) |
 
 ## Версия v3 (neck): смоделированное полотенце, запечённое на шкуру
 

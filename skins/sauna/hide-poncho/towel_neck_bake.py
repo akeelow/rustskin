@@ -9,10 +9,10 @@ at both ends with a stitched seam, selvedge stitching along both long edges, bri
 a fringe. Baked onto the poncho (selected to active, rays from 4 cm outside):
   albedo (emission) x ambient occlusion -> diffuse, the hit mask -> alpha, tangent normal.
 
-  "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/hide-poncho/towel_neck_bake.py [-- --blend]
+  "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/hide-poncho/towel_neck_bake.py [-- --shape neck|shoulder --blend]
 
-Writes bake/towel_neck_{albedo,mask,ao,normal}.png (+ bake/towel_neck.blend with --blend);
-then `.venv/Scripts/python skins/sauna/hide-poncho/compose_neck.py` makes the export textures.
+Writes bake/towel_<shape>_{albedo,mask,ao,shade,normal}.png + _path.npy (+ .blend with --blend);
+then `.venv/Scripts/python skins/sauna/hide-poncho/compose_neck.py [shoulder]` makes the export textures.
 """
 import math
 import sys
@@ -88,6 +88,43 @@ def surface_path(low):
         if loc is not None:
             pts.append((loc, n))
     del mw_inv
+    return pts
+
+
+def shoulder_path(low):
+    """Towel over the left shoulder (+x), hanging down the chest and the back. Placed on outer hide
+    only (mapped with ray casts, 20.10.2026): the front panel covers x <= 0.18 down to 1.20 m, the
+    shoulder top x 0.12..0.26 (the neck opening comes to x 0.12), the back x <= 0.21 down to 1.04 m;
+    clear of the toggle flap (x < 0.09 below 1.3 m) and of the small worn hole at the back (0.21, 1.34)."""
+    bvh = BVHTree.FromObject(low, bpy.context.evaluated_depsgraph_get(), deform=False)
+
+    def cast(origin, direction):
+        d = Vector(direction).normalized()
+        loc, nrm, _, _ = bvh.ray_cast(Vector(origin), d)
+        if nrm is not None and nrm.dot(d) > 0:
+            nrm = -nrm
+        return loc, nrm
+
+    pts = []
+    for k in range(40):                                   # front, bottom -> top
+        t = k / 39
+        y = 1.21 + t * 0.21
+        x = 0.14 + 0.035 * smoothstep(0.3, 1.0, t)
+        loc, n = cast((x, y, 1.0), (0, 0, -1))
+        if loc is not None and loc.z > 0:
+            pts.append((loc, n))
+    for k in range(40):                                   # over the shoulder, front -> back
+        z = 0.09 - 0.24 * k / 39
+        loc, n = cast((0.18, 2.0, z), (0, -1, 0))
+        if loc is not None and loc.y > 1.38:
+            pts.append((loc, n))
+    for k in range(50):                                   # back, top -> bottom
+        t = k / 49
+        y = 1.42 - t * 0.37
+        x = 0.175 - 0.03 * smoothstep(0.0, 0.7, t)
+        loc, n = cast((x, y, -1.0), (0, 0, 1))
+        if loc is not None and loc.z < 0:
+            pts.append((loc, n))
     return pts
 
 
@@ -274,10 +311,11 @@ def main():
     low = bpy.context.selected_objects[0]
     low.name = "poncho"
 
-    Pr, Nr, ss, L = resample(surface_path(low))
+    shape = argv[argv.index("--shape") + 1] if "--shape" in argv else "neck"
+    Pr, Nr, ss, L = resample(shoulder_path(low) if shape == "shoulder" else surface_path(low))
     print(f"towel length {L:.2f} m, {len(Pr)} sections", flush=True)
     (HERE / "bake").mkdir(exist_ok=True)
-    np.save(HERE / "bake" / "towel_neck_path.npy", np.hstack([Pr, Nr]))   # centre line on the hide, OBJ space
+    np.save(HERE / "bake" / f"towel_{shape}_path.npy", np.hstack([Pr, Nr]))   # centre line on the hide, OBJ space
     me = sweep(Pr, Nr, ss, L)
     towel = bpy.data.objects.new("towel", me)
     scene.collection.objects.link(towel)
@@ -350,14 +388,14 @@ def main():
         im.file_format = "PNG"
         im.save()
 
-    save_png(np.clip(res["albedo"], 0, 1) ** (1 / 2.2), HERE / "bake" / "towel_neck_albedo.png")   # -> sRGB
-    save_png(res["mask"], HERE / "bake" / "towel_neck_mask.png")
-    save_png(res["ao"], HERE / "bake" / "towel_neck_ao.png")
-    save_png(res["shade"], HERE / "bake" / "towel_neck_shade.png")
-    save_png(res["normal"], HERE / "bake" / "towel_neck_normal.png")
+    save_png(np.clip(res["albedo"], 0, 1) ** (1 / 2.2), HERE / "bake" / f"towel_{shape}_albedo.png")   # -> sRGB
+    save_png(res["mask"], HERE / "bake" / f"towel_{shape}_mask.png")
+    save_png(res["ao"], HERE / "bake" / f"towel_{shape}_ao.png")
+    save_png(res["shade"], HERE / "bake" / f"towel_{shape}_shade.png")
+    save_png(res["normal"], HERE / "bake" / f"towel_{shape}_normal.png")
     if "--blend" in argv:
         (HERE / "bake").mkdir(exist_ok=True)
-        bpy.ops.wm.save_as_mainfile(filepath=str(HERE / "bake" / "towel_neck.blend"))
+        bpy.ops.wm.save_as_mainfile(filepath=str(HERE / "bake" / f"towel_{shape}.blend"))
     print("done", flush=True)
 
 

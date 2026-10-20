@@ -26,12 +26,14 @@ import variants as v  # noqa: E402
 from uv_zones import read_png, render_views  # noqa: E402
 
 SIZE, OUT = 2048, v.OUT
+SHAPE = sys.argv[1] if len(sys.argv) > 1 else "neck"     # neck | shoulder
+TAG = {"neck": "v3_neck", "shoulder": "v4_shoulder"}[SHAPE]
 v.SIZE = SIZE                      # rasterise the hide at the bake's resolution
 BAKE = HERE / "bake"
 
 
 def load(name):
-    return np.asarray(Image.open(BAKE / f"towel_neck_{name}.png").convert("RGB"), np.float64) / 255.0
+    return np.asarray(Image.open(BAKE / f"towel_{SHAPE}_{name}.png").convert("RGB"), np.float64) / 255.0
 
 
 def main():
@@ -62,7 +64,7 @@ def main():
     # only hide texels right under the towel: near its centre line sideways (half width + 6 mm) and
     # within 1.5 cm of the surface it was laid on. v3.4: a fold of the hide behind the neck lay within
     # the bake's ray reach and caught a floating scrap of towel.
-    path = np.load(BAKE / "towel_neck_path.npy")
+    path = np.load(BAKE / f"towel_{SHAPE}_path.npy")
     C, Nn = path[:, :3], path[:, 3:]
     pts = np.stack([g["x"], g["y"], g["z"]], -1)[m]
     keep_pt = np.zeros(len(pts), bool)
@@ -118,7 +120,7 @@ def main():
     rng = np.random.default_rng(43)
     nse = lambda r: v.blur(rng.random((SIZE, SIZE)), r)
     stain = v.smooth(0.52, 0.62, nse(14)) * 0.22 + v.smooth(0.55, 0.65, nse(5)) * 0.12
-    neck = v.smooth(0.07, 0.0, g["d_neck"]) * 0.35
+    neck = v.smooth(0.07, 0.0, g["d_neck"]) * (0.35 if SHAPE == "neck" else 0.15)
     low = v.smooth(1.25, 1.1, g["y"]) * 0.12
     used = np.array([0.86, 0.82, 0.74])
     diffuse = albedo * used * (0.5 + 0.5 * ao[..., None]) * side[..., None] * (0.85 + 0.3 * pile)[..., None]
@@ -149,6 +151,11 @@ def main():
     fn = np.array(g["N"])[np.clip(fid, 0, None)]
     pos = np.stack([g["x"], g["y"], g["z"]], -1)
     inside = ((fn * (pos - np.array([0.0, 1.2, -0.02]))).sum(-1) < 0) & m     # faces turned to the body
+    if SHAPE == "shoulder":
+        # the inside of the hide is only ever seen through the neck opening or the open sides: no towel
+        m = m & ~inside
+        inside = inside & m
+        soft = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2)), np.float64) / 255.0
     diffuse = np.where(inside[..., None], np.clip(diffuse * 1.6, 0, 1), diffuse)
     print("brightened inside texels", int(inside.sum()))
     # pad the colour outwards from the strip, so the soft alpha edge shows towel, not grey
@@ -172,10 +179,10 @@ def main():
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
     full = np.full((SIZE, SIZE), 255, np.uint8)
     OUT.mkdir(exist_ok=True)
-    Image.fromarray(np.dstack([q(diffuse), alpha.round().astype(np.uint8)]), "RGBA").save(OUT / "HidePoncho_v3_neck_diffuse.png")
-    Image.fromarray(np.dstack([q(normal[..., 0]), q(normal[..., 1]), full, full]), "RGBA").save(OUT / "HidePoncho_v3_neck_normal.png")
-    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "HidePoncho_v3_neck_specgloss.png")
-    render_views(g["V"], g["T"], g["F"], g["N"], HERE / "uv" / "v3_neck_views.png", tex=read_png(OUT / "HidePoncho_v3_neck_diffuse.png"))
+    Image.fromarray(np.dstack([q(diffuse), alpha.round().astype(np.uint8)]), "RGBA").save(OUT / f"HidePoncho_{TAG}_diffuse.png")
+    Image.fromarray(np.dstack([q(normal[..., 0]), q(normal[..., 1]), full, full]), "RGBA").save(OUT / f"HidePoncho_{TAG}_normal.png")
+    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / f"HidePoncho_{TAG}_specgloss.png")
+    render_views(g["V"], g["T"], g["F"], g["N"], HERE / "uv" / f"{TAG}_views.png", tex=read_png(OUT / f"HidePoncho_{TAG}_diffuse.png"))
     print("done; towel texels", int(m.sum()))
 
 
