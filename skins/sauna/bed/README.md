@@ -1,7 +1,21 @@
 # Sauna Bench (Bed)
 
-> Статус: 🟡 **v1.2 — три мелочи (поддон, складка полотенца, листья)** (концепт A «голый полок») — проверить в игре. v1 проверен в игре (день и ночь).
+> Статус: 🟢 **v1.2 — готов** (20.10.2026, пользователь: «готово»), концепт A «голый полок». Рендеры для Workshop — [workshop/](workshop/README.md).
 > Сет: [Sauna](../README.md). ТЗ: [TZ.md](TZ.md).
+
+## Итог: как загрузить (финал v1.2)
+
+| Слот | Файл / значение |
+|---|---|
+| Diffuse | `export/Bed_v1.2_diffuse.png`, **Alpha Cutoff 0.50** (по умолчанию) |
+| Normal | `export/Bed_v1.2_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `export/Bed_v1.2_specgloss.png`, Spec Color 255, Glossiness 1.00 |
+| Occlusion | `export/Bed_v1.2_occlusion.png`, Occlusion Scale 1.00 |
+| Emission | не трогать (свечения нет) |
+
+Публикация (название, описание, картинки, чек-лист): [workshop/README.md](workshop/README.md).
+
+![hero](workshop/hero.jpg)
 
 ## Образ
 
@@ -212,6 +226,7 @@ Normal и Occlusion пока оригинальные (на настиле ещ�
 
 ## Заметки
 
+- 20.10.2026: пользователь — «готово». Рендеры для Workshop (`workshop_renders.py`), `workshop/README.md`.
 - 20.10.2026, v1.2 в игре (`screenshots/v1.2_*`, день, сумерки, изножье): доска от поддона — тихая
   тёмная рейка с дырками ✔; складка полотенца видна, полотенце читается сложенным ✔; листья видны
   как листья ✔.
