@@ -52,7 +52,7 @@
 | 4 | Locker | Sauna Changing Locker | Деревянный шкафчик раздевалки с крючками и полотенцами | 1 из 9 | 🟢 [v4.1 по макету дизайнера](locker/README.md) (закрытый v1 — запасной) |
 | 5 | Hide Poncho | — | Пропущено (20.10.2026): полотенце на шкуре не получилось, попытки в [hide-poncho/](hide-poncho/README.md) | 1 из 10 | ⏸️ пропущено |
 | 6 | Bed | Sauna Bench | Полок из реек с подголовником | 1 из 10 | 🟢 [v1.2 готов, проверен в игре](bed/README.md) |
-| 7 | Chair | Sauna Stool | Банная табуретка/лавка | 1 из 16 | ⚪ |
+| 7 | Chair | Sauna Stool | Банная табуретка/лавка | 1 из 16 | ⚪ [ТЗ для агента](chair/TZ.md) |
 | 8 | Wood Storage Box | Sauna Tub | Деревянная кадушка с обручами | 1 из 18 | ⚪ |
 
 \* по [docs/item-selection.md](../../docs/item-selection.md).
@@ -70,6 +70,8 @@
 - Ориентир: каменка ~1 неделя (учимся на ней), остальные по 2–4 дня.
 
 ## Workshop: оформление
+
+> ТЗ на пакет для тюрбана, халата, шкафчика + коллекция и чек-лист публикации: [TZ_workshop_pack.md](TZ_workshop_pack.md).
 
 - Названия: `Sauna Stove`, `Sauna Towel Wrap`, … (единый префикс `Sauna`).
 - Steam-коллекция: **Sauna**.
