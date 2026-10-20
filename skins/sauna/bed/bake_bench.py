@@ -75,10 +75,10 @@ JOISTS = (-100.0, -82.0, -56.0, -27.5, -9.5, 21.5, 40.5, 67.0, 84.0, 100.5)   # 
 # apron (mattress sides bulge to y -54.2 / +56.3 at z 46; ends x -112.3 / +111.6)
 APRON_Z = ((37.6, 46.25), (46.45, 54.7))
 LEAVES = (  # x, y, length, angle (deg), surface z
-    (-74.0, -31.2, 5.0, 12.0, DECK_Z1),
-    (-61.0, 6.4, 4.6, -70.0, DECK_Z1),
-    (-96.0, 27.0, 5.4, 160.0, DECK_Z1),
-    (-35.0, 47.7, 4.4, 95.0, DECK_Z1),
+    (-74.0, -31.2, 6.6, 12.0, DECK_Z1),            # v1.2: a third larger (in game they were dots)
+    (-61.0, 6.4, 6.0, -70.0, DECK_Z1),
+    (-96.0, 27.0, 7.0, 160.0, DECK_Z1),
+    (-35.0, 47.7, 5.8, 95.0, DECK_Z1),
 )
 BENT_NAIL = (-56.0, -22.0)           # x, y: on the joist at x -56, bent over toward -x
 
@@ -360,7 +360,7 @@ def build_towel(low, pp, mats):
             f = ((z - 54.0) / 3.2) % 1.0
             d -= 0.7 * math.exp(-((min(f, 1 - f) / 0.12) ** 2))
         if n.z > 0.4:
-            d -= 2.0 * math.exp(-(((x - FOLD_X) / 1.6) ** 2))           # the fold between bolster and stack
+            d -= 3.0 * math.exp(-(((x - FOLD_X) / 1.9) ** 2))           # the fold between bolster and stack (v1.2 deeper)
             d += 0.7 * math.exp(-(((x - ROLL_X) / 4.5) ** 2))           # the bolster rounder
             d += 0.25 * math.exp(-(((abs(y) - 41.0) / 0.6) ** 2))      # hems near the towel's ends
             d -= 0.5 * math.exp(-(((x - 90.0) / 2.2) ** 2)) * (0.6 + 0.4 * noise.noise(Vector((y * 0.08, 3.0, 0.0))))

@@ -6,7 +6,7 @@ the deck polished light where people lie, the bottom dark from water running dow
 (toward the stove, -x) smoked and dried out, rust bleeding from the nails along the grain.
 
 Inputs: bake/{normal,ao,curvature,id}.png, originals/bed_{bc,nrm}.png.
-Outputs (v1.1; v1 in git history): export/Bed_v1.1_{diffuse,normal,specgloss,occlusion}.png
+Outputs (v1.2; earlier in git history): export/Bed_v1.2_{diffuse,normal,specgloss,occlusion}.png
 
     .venv/Scripts/python skins/sauna/bed/texture_v1.py
 """
@@ -43,7 +43,7 @@ GAP = hexc("#2A2018")
 IRON = hexc("#2E2A27")
 RUST = hexc("#8C4A26")
 MINERAL = hexc("#D9D4C8")
-LEAF_GREEN, LEAF_DRY = hexc("#5C6A39"), hexc("#8A7440")
+LEAF_GREEN, LEAF_DRY = hexc("#4F5C30"), hexc("#6E5A30")      # v1.2 darker: in game they were yellow dots
 
 
 # ---------------------------------------------------------------- noise
@@ -157,7 +157,8 @@ def build():
 
     # pallet slat: darker, browner, rougher, old nail holes in groups of three at stringer pitch
     pal = M["pallet"]
-    wood = np.where(pal[..., None], wood * np.array([0.8, 0.74, 0.68]), wood)
+    # v1.2: in game it read as a bright orange stripe across the deck -> half a tone off, greyer
+    wood = np.where(pal[..., None], wood * np.array([0.86, 0.83, 0.8]), wood)
     holes = np.zeros((SIZE, SIZE))
     if pal.any():
         yc = np.median(y[pal & top])
@@ -283,11 +284,15 @@ def build():
     # ---------------- towel: washed linen, brick stripes near both ends, damp underneath
     tw = pillow & ((mid == IDS["towel"]) | (mid == IDS["base"]))
     ay = np.abs(y)
-    stripes = (smooth(0.0, 0.25, 1.25 - np.abs(ay - 38.6)) + smooth(0.0, 0.2, 0.45 - np.abs(ay - 35.9)))
+    # v1.2: the wide stripe wider (2.5 -> 3.4 cm) so the bolster's end reads as a rolled towel
+    stripes = (smooth(0.0, 0.25, 1.7 - np.abs(ay - 38.8)) + smooth(0.0, 0.2, 0.5 - np.abs(ay - 35.6)))
     stripes = np.clip(stripes, 0, 1) * (0.75 + 0.25 * vnoise(x * 0.6, z * 0.6, SEED + 101))
     weave = 0.5 + 0.25 * np.sin(x * 9.0) * np.sin(z * 9.0 + y * 9.0)
     tcol = LINEN * (0.95 + 0.06 * weave[..., None]) * (1 + 0.04 * big[..., None])
     tcol = tcol * (1 - 0.85 * stripes[..., None]) + BRICK * (0.85 * stripes[..., None])
+    # v1.2: shade in the fold between the bolster and the stack (x 72), on the top only
+    fold = np.exp(-((x - 72.0) / 1.6) ** 2) * (nrm[..., 2] > 0.3) * tw
+    tcol = tcol * (1 - 0.32 * fold[..., None])
     damp = smooth(57.5, 54.0, z) * tw
     tcol = tcol * (1 - 0.18 * damp[..., None])
     tcol = tcol * (1 - 0.25 * concave[..., None])
@@ -340,10 +345,10 @@ def main():
     col, alpha, n, spec, gloss, occ = build()
     OUT.mkdir(exist_ok=True)
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
-    Image.fromarray(np.dstack([q(col), q(alpha)]), "RGBA").save(OUT / "Bed_v1.1_diffuse.png")
-    Image.fromarray(q(n * 0.5 + 0.5), "RGB").save(OUT / "Bed_v1.1_normal.png")
-    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "Bed_v1.1_specgloss.png")
-    Image.fromarray(q(occ), "L").save(OUT / "Bed_v1.1_occlusion.png")
+    Image.fromarray(np.dstack([q(col), q(alpha)]), "RGBA").save(OUT / "Bed_v1.2_diffuse.png")
+    Image.fromarray(q(n * 0.5 + 0.5), "RGB").save(OUT / "Bed_v1.2_normal.png")
+    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "Bed_v1.2_specgloss.png")
+    Image.fromarray(q(occ), "L").save(OUT / "Bed_v1.2_occlusion.png")
     print("done")
 
 
