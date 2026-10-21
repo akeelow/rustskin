@@ -4,14 +4,11 @@
 
 ## Название и описание (англ.)
 
-**Title:** `Sauna Chair` — по правилу сета в скобках оригинальное имя предмета, но «Chair» уже есть в
-названии, скобки не нужны (`../../README.md`, «Workshop: оформление»).
+**Title:** `Sauna Chair` (правило сета: без скобок и оригинальных имён, `../../README.md`, «Workshop: оформление»).
 
 **Description** (вставить на странице Steam после публикации):
 
 ```
-A Chair skin from the Sauna set.
-
 Every Rust life starts naked. Might as well warm up properly.
 
 An old armchair on a steel-channel frame, dragged from the same roadside

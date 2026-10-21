@@ -4,13 +4,11 @@
 
 ## Название и описание (англ.)
 
-**Title:** `Sauna Bench (Bed)`
+**Title:** `Sauna Bench`
 
 **Description** (вставить на странице Steam после публикации):
 
 ```
-A Bed skin from the Sauna set.
-
 Every Rust life starts naked. Might as well warm up properly.
 
 A roadside bed frame dragged into a scrap-built sauna: the mattress went

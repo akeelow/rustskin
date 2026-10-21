@@ -4,13 +4,11 @@
 
 ## Название и описание (англ.)
 
-**Title:** `Sauna Stove (Electric Furnace)`
+**Title:** `Sauna Stove`
 
 **Description** (вставить на странице Steam после публикации):
 
 ```
-An Electric Furnace skin from the Sauna set.
-
 Every Rust life starts naked. Might as well warm up properly.
 
 An old kitchen cooker turned into a sauna stove: clad in aspen slats nailed
