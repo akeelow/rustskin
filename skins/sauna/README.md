@@ -53,7 +53,7 @@
 | 5 | Hide Poncho | — | Пропущено (20.10.2026): полотенце на шкуре не получилось, попытки в [hide-poncho/](hide-poncho/README.md) | 1 из 10 | ⏸️ пропущено |
 | 6 | Bed | Sauna Bench | Полок из реек с подголовником | 1 из 10 | 🟢 [v1.2 готов, проверен в игре](bed/README.md) |
 | 7 | Chair | Sauna Chair | Кресло из предбанника: вагонка, полотенце через спинку | 1 из 16 | 🟢 [v1.4 готов, проверен в игре](chair/README.md) |
-| 8 | Wood Storage Box | Sauna Stone Box (рабочее) | Открытый ящик у каменки: обручи, на железном противне камни, ночью между ними тлеют угли (крышка вырезана альфой) | 1 из 18 | 🟡 [v1.3, проверка в игре](wood-storage-box/README.md) |
+| 8 | Wood Storage Box | Sauna Stone Box | Открытый ящик у каменки: обручи, на железном противне камни, ночью между ними тлеют угли, край со стороны печи выгорел и тлеет (крышка и край вырезаны альфой) | 1 из 18 | 🟢 [v1.3 готов, проверен в игре](wood-storage-box/README.md) |
 
 \* по [docs/item-selection.md](../../docs/item-selection.md).
 
@@ -84,6 +84,7 @@
   | Locker | `Sauna Changing Locker` |
   | Bed | `Sauna Bench` |
   | Chair | `Sauna Chair` |
+  | Wood Storage Box | `Sauna Stone Box` |
 
 - Steam-коллекция: **Sauna**.
 - Описание (англ.): короткая история без просьб о лайках, например:

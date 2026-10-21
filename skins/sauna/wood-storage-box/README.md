@@ -1,9 +1,24 @@
-# Sauna box (Wood Storage Box)
+# Sauna Stone Box (Wood Storage Box)
 
-> Статус: 🟡 **v1.3 (край выгорел — альфа, линия жара) — жду скриншотов из игры** (21.10.2026). Концепт D «Sauna Stone Box», открытый верх.
-> Сет: [Sauna](../README.md). ТЗ: [TZ.md](TZ.md). Эталоны процесса — [../chair/](../chair/README.md), [../bed/](../bed/README.md).
+> Статус: 🟢 **v1.3 — готов** (21.10.2026, пользователь: «v1.3 — финал»), концепт D, открытый верх, выгоревший край.
+> Рендеры и описание для Workshop — [workshop/](workshop/README.md).
+> Сет: [Sauna](../README.md). ТЗ: [TZ.md](TZ.md) (писалось как «Sauna Tub»). Эталоны — [../chair/](../chair/README.md), [../bed/](../bed/README.md).
 
-![концепты](renders/concept_board.png)
+## Итог: как загрузить (финал v1.3)
+
+| Слот | Файл / значение |
+|---|---|
+| Diffuse | `export/Box_v1.3_diffuse.png`, **Color 255/255/255**, **Alpha Cutoff 0.50** |
+| Normal | `export/Box_v1.3_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `export/Box_v1.3_specgloss.png`, **Spec Color 255/255/255**, Glossiness 1.00 |
+| Occlusion | `export/Box_v1.3_occlusion.png`, Occlusion Scale 1.00 |
+| Emission | `export/Box_v1.3_emission.png`, **Emission Color 255/255/255** |
+
+Публикация (название `Sauna Stone Box`, описание, картинки, чек-лист): [workshop/README.md](workshop/README.md).
+
+![hero](workshop/hero.jpg)
+
+![night](workshop/night.jpg)
 
 ## Решение (21.10.2026)
 
@@ -385,6 +400,7 @@ Drowned Treasure Chest, Easter Chicks Box, Sheet Metal Storage Box (пример
   v1.3: край выгорел (альфа), жар — линией по кромке.
 - 21.10.2026, v1.3 в игре (`screenshots/v1.3_*`: сумерки спереди и со стороны печи, день): пользователь —
   «вроде хорошо». Выгоревший край читается силуэтом, линия жара ночью видна, днём — тонкая каёмка.
+- 21.10.2026: пользователь — «v1.3 — финал». Рендеры для Workshop (`workshop_renders.py`), `workshop/README.md`.
 - 21.10.2026: оригиналы получены (OBJ, 4 карты, панель EDIT, кадры снаружи и изнутри). Модель разобрана:
   оси как у кресла, +z — торец с прорезью; наружные грани уникальны, изнанка заимствует тексели снаружи;
   щели и прорези сквозные. Концепты A/B/C + мой D, 3 варианта свечения, ряд из 6. Жду выбора.
