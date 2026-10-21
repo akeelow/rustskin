@@ -7,12 +7,12 @@ them with ash flecks, the steel tray's rim, the wooden floor's margin; baked nor
 Glow: the embers - charcoal deep between the stones (low baked AO), hottest mid-pile, dying out
 towards the tray. v1.1: the rim too - the survivor shovels the coals in over the rim on the stove side
 (+x), the shovel knocks on it: that rim and the corners next to it are charred, smouldering in the
-crackle; on the other rims only a few scorch spots where a coal fell. The handle slots don't glow.
+crackle (v1.2: nothing on the other rims). The handle slots don't glow.
 The lid is cut with alpha (Alpha Cutoff 0.50).
 
     .venv/Scripts/python skins/sauna/wood-storage-box/texture_v1.py
 Inputs: bake/{normal,ao,id}.png, originals/Wooden_Box_{nrm.png}, wooden_box_ao.png.
-Outputs: export/Box_v1.1_{diffuse (RGBA), normal, specgloss (512), occlusion, emission}.png (1024).
+Outputs: export/Box_v1.2_{diffuse (RGBA), normal, specgloss (512), occlusion, emission}.png (1024).
 """
 import sys
 from pathlib import Path
@@ -28,10 +28,10 @@ from concepts import (EMBER_CORE, EMBER_EDGE, IRON, ORIG, RUST, SIZE, SOOT, Box,
 
 BAKE = HERE / "bake"
 OUT = HERE / "export"
-VERSION = "v1.1"
+VERSION = "v1.2"
 IDS = {"base": 0, "stone": 1, "coal": 2, "tray": 3, "hoop": 4, "rivet": 5}    # bake_box.IDS
-BASALT = hexc("#2E2F32")
-BASALT_WARM = hexc("#3A3430")
+BASALT = hexc("#26272A")              # v1: #2E2F32 - still pale in direct sun (v1.1 shots)
+BASALT_WARM = hexc("#302B28")
 CHARCOAL = hexc("#141211")
 ASH = hexc("#7E7872")
 FLOOR_WOOD = hexc("#3B2E25")
@@ -66,8 +66,11 @@ def crackle(u, v, s, seed):
 
 
 def rim(b, col, spec, gloss):
-    """Charred, smouldering rim on the stove side (+x) and the corners next to it; scorch spots elsewhere.
-    Outer faces near the top (the inner ones wear them in game) and the wall tops. Returns the heat too."""
+    """Charred, smouldering rim on the stove side (+x) and the corners next to it - nowhere else (v1.1's
+    scorch spots on the other rims read as evenly spaced bites). Outer faces 3-8 cm down from the top (the
+    inner ones wear them in game) and the wall tops. Black charcoal with grey ash on the crackle cells; the
+    glow only in the thin cracks, near the top (v1.1: a dim glow over the whole zone tinted it rust-red by
+    day). Returns the heat too."""
     x, y, z = b.x, b.y, b.z
     top = (y > 0.525) & (b.nrm[..., 1] > 0.7) & ~b.lid
     # side of every texel by the nearest wall (the tops face up, so the normal can't tell)
@@ -77,32 +80,29 @@ def rim(b, col, spec, gloss):
                     [0.48 - z, 0.34 - x, z + 0.47, x + 0.36], 0)          # along the wall, from its +x/front end
     from_stove = np.select([side == 0, side == 1, side == 2, side == 3],
                            [0 * x, 0.34 - x, 9 + 0 * x, 0.34 - x], 9)       # metres from the stove-side rim
-    w = np.where(side == 0, 1.0, smooth(0.22, 0.0, from_stove))
-    w = w * (0.75 + 0.25 * b.noise)
-    seg = np.floor((run + side * 3.1) / 0.09)
-    spot_c = (seg + 0.5) * 0.09 - side * 3.1
-    spot = (hash1(seg, 31) > 0.82) * smooth(0.035, 0.01, np.abs(run - spot_c))
-    w = np.maximum(w, spot * 0.7)
+    w = np.where(side == 0, 1.0, smooth(0.22, 0.0, from_stove)) * (0.8 + 0.2 * b.noise)
     h = RIM_Y - y                                                           # depth below the rim
-    depth = 0.012 + 0.045 * w * (0.6 + 0.4 * b.blotch * 0.3 + 0.4 * b.noise)
+    depth = 0.03 + 0.05 * w * np.clip(0.6 + 0.15 * b.blotch, 0.3, 1)
     jag = 0.006 * b.blotch                                                  # wide waves, not texel noise (stair-steps)
-    face = b.walls & (h < 0.1)
+    face = b.walls & (h < 0.12)
     a = np.where(top, smooth(0.05, 0.3, w), face * smooth(depth + 0.008, depth - 0.008, h + jag) * (w > 0.05))
     a = np.where(face | top, blur(a, 1.0), a)
     v = np.where(top, np.select([side == 0, side == 2], [x, x], z), y)
     cr = crackle(run, v, CRACKLE, 41)
-    # colour: charred black, a little grey ash on the crackle cells, a brown scorch at the zone's edge
-    char = CHAR * (0.85 + 0.25 * (1 - cr[..., None])) * (0.9 + 0.2 * b.noise[..., None])
-    char = char * (1 - 0.6 * cr[..., None])
+    # colour: charcoal black, grey ash on the crackle cells, the cracks darkest, brown scorch at the zone's edge
+    ashy = smooth(0.4, 0.8, b.noise + 0.1 * b.blotch) * (1 - cr)
+    char = CHAR * (0.85 + 0.2 * b.noise[..., None]) * (1 - 0.6 * cr[..., None])
+    char = char * (1 - 0.3 * ashy[..., None]) + ASH * 0.3 * ashy[..., None]
     scorch = smooth(0.05, 0.45, a) * (1 - smooth(0.45, 0.85, a))
     col = col * (1 - 0.65 * scorch[..., None]) + SCORCH * 0.65 * scorch[..., None]
     col = np.where((a > 0.45)[..., None], char, col * (1 - 0.6 * a[..., None]) + CHAR * 0.6 * a[..., None])
     spec = np.where(a > 0.45, 0.03, spec)
     gloss = np.where(a > 0.45, 0.07, gloss)
-    # smoulder: in the cracks, deep in the charred zone, hottest at the very top on the stove side
-    near_top = np.where(top, 1.0, smooth(depth, 0.0, h))
-    heat = cr * smooth(0.5, 0.95, a) * near_top * (0.3 + 0.7 * w) * smooth(0.3, 0.7, b.noise + 0.2 * b.blotch * 0.3)
-    return col, spec, gloss, np.clip(heat * 0.75, 0, 1)
+    # smoulder: thin bright cracks, hottest at the very top; weak heat cut to nothing (no red wash by day)
+    near_top = np.where(top, 1.0, smooth(depth, 0.0, h) ** 0.7)
+    flick = smooth(0.3, 0.7, b.noise + 0.06 * b.blotch)
+    heat = cr ** 2 * smooth(0.5, 0.95, a) * near_top * w * flick           # cr ** 3: too faint at night
+    return col, spec, gloss, smooth(0.1, 0.65, heat)
 
 
 def main():
@@ -137,7 +137,7 @@ def main():
     warm = rnd > 0.7
     s = np.where(warm[..., None], BASALT_WARM, BASALT) * (0.8 + 0.4 * rnd[..., None])
     s = s * (0.9 + 0.2 * b.noise[..., None])
-    dust = smooth(0.85, 1.0, up) * smooth(0.55, 0.9, ao) * 0.18          # a little ash settled on top
+    dust = smooth(0.85, 1.0, up) * smooth(0.55, 0.9, ao) * 0.08          # a little ash on top (0.18: snowballs in the sun)
     s = s * (1 - dust[..., None]) + ASH * dust[..., None]
     fleck = smooth(0.66, 0.74, b.noise)                                  # grey ash flecks on the charcoal
     edge = np.minimum.reduce([fx + 0.335, 0.325 - fx, fz + 0.44, 0.445 - fz])
