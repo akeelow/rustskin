@@ -1,5 +1,7 @@
 # ТЗ для ИИ-агента: Workshop-пакет сета Sauna (тюрбан, халат, шкафчик) + коллекция и план публикации
 
+> ✅ **Выполнено 21.10.2026:** пакеты в `burlap-headwrap/workshop/`, `snow-jacket/workshop/`, `locker/workshop/`; коллекция и чек-лист — [workshop_collection.md](workshop_collection.md).
+
 > Составлено 20.10.2026. Репозиторий: `C:/Users/akeel/OneDrive/rustskin`. Общайся с пользователем **по-русски**.
 > Прочитай сначала: [README.md](README.md) (сет: идея, правила, палитра, сроки, «Workshop: оформление»),
 > **образцы готовых пакетов:** [electric-furnace/workshop/README.md](electric-furnace/workshop/README.md) +

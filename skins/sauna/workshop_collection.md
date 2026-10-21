@@ -1,0 +1,84 @@
+# Sauna — коллекция в Steam Workshop и план публикации
+
+> Подготовлено 21.10.2026. Публикует **только пользователь** из игрового редактора Rust и на страницах Steam.
+> Пакеты предметов — в `<предмет>/workshop/README.md` (таблица загрузки, название, описание, картинки).
+
+## Состав коллекции
+
+| # | Название | Предмет в редакторе | Пакет | Ползунки, которые чаще всего забывают |
+|---|---|---|---|---|
+| 1 | `Sauna Stove` | Electric Furnace | [electric-furnace/workshop](electric-furnace/workshop/README.md) | Diffuse = `_diffuse_cutout`, **Alpha Cutoff 1.00** |
+| 2 | `Sauna Towel Wrap` | Burlap Headwrap | [burlap-headwrap/workshop](burlap-headwrap/workshop/README.md) | **Fuzz 0.58**, Alpha Cutoff 0.79 (не сбрасывать) |
+| 3 | `Sauna Robe` | Snow Jacket | [snow-jacket/workshop](snow-jacket/workshop/README.md) | **Fuzz 0.5** |
+| 4 | `Sauna Changing Locker` | Locker | [locker/workshop](locker/workshop/README.md) | **Alpha Cutoff 0.50**, **Emission Color 255** |
+| 5 | `Sauna Bench` | Bed | [bed/workshop](bed/workshop/README.md) | Alpha Cutoff 0.50 (по умолчанию — не сбрасывать) |
+| 6 | `Sauna Chair` | Chair | [chair/workshop](chair/workshop/README.md) | — (всё по умолчанию) |
+| 7 | `Sauna Stone Box` | Wood Storage Box | [wood-storage-box/workshop](wood-storage-box/workshop/README.md) | **Alpha Cutoff 0.50**, **Emission Color 255**, Color 255, Spec Color 255 |
+
+Hide Poncho пропущено (20.10.2026).
+
+## Картинка коллекции
+
+`workshop/collection.png` (1024×1024; JPG — `workshop/collection.jpg`): вечер в бане, все семь
+предметов в одной комнате — шкафчик с подсветкой, халат и тюрбан на стойке-манекене, кресло, полок
+изножьем к каменке, ящик с углями выгоревшим краем к печи. Скрипт — [workshop_collection.py](workshop_collection.py):
+
+```bash
+"C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/workshop_collection.py -- --samples 192 --size 1024
+```
+
+![collection](workshop/collection.jpg)
+
+Старая `electric-furnace/workshop/collection.png` (одна каменка) больше не нужна.
+
+## Описание коллекции (англ.)
+
+**Title:** `Sauna`
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+A sauna scrap-built by a survivor: an old cooker clad in aspen slats with
+glowing rocks in the firebox, a bed frame turned into a slatted bench, an
+armchair from the changing room, a crate of hot stones and embers by the
+stove, a changing locker with lit niches and a door for your lock - and a
+towel wrap and a waffle robe for the dash into the snow.
+
+Seven skins, one house.
+```
+
+Без просьб о лайках, без текста на текстурах (правила сета и советы Facepunch).
+
+## Порядок и даты
+
+- **Все семь — в один день**, затем сразу коллекция: голоса и просмотры не размазываются, и каждая
+  страница ссылается на остальные через коллекцию.
+- **Срок — до конца ноября 2026.** Snow Jacket принимают только в декабре–феврале: опубликованный в
+  ноябре халат попадает в очередь к сезону.
+- **Предлагаемая дата: суббота, 14.11.2026** — до неё неделя на скриншоты из игры, после неё две
+  недели запаса, если Steam или Facepunch что-то попросят исправить.
+- До даты пользователю **снять в игре** (рендеры их не заменят):
+  1. шкафчик v5 **с кодовым замком** на средней дверце (днём, 3/4) и ночью;
+  2. халат + тюрбан вместе на игроке — **в снегу**, вечер;
+  3. по желанию — «дом»: полок, кресло, каменка, ящик с углями и шкафчик рядом, вечер (для всех страниц).
+
+## Чек-лист публикации (в день публикации)
+
+Для **каждого** из семи предметов (порядок: каменка, полок, кресло, ящик, шкафчик, тюрбан, халат):
+
+1. Rust → Workshop → **Create a new item** → предмет → EDIT.
+2. Загрузить карты из пакета, **выставить ползунки по таблице пакета** (колонка выше — самые частые ошибки).
+3. Посмотреть в редакторе днём и ночью (тумблер времени) — то же, что на скриншотах.
+4. Вкладка **ITEM**: имя из колонки «Название» (без скобок, без оригинального имени).
+5. Вкладка **PUBLISH** → Publish. Иконку **не заменять** — редактор делает её сам.
+6. На открывшейся странице Steam: **описание** из пакета, **картинки** (рендеры JPG + скриншоты из
+   игры; `.webp` пересохранить в JPG/PNG), видимость — Public.
+7. Ссылку на страницу записать в `<предмет>/README.md` и в таблицу сета `README.md`.
+
+Один раз:
+
+8. Принять **Workshop Contributor Agreement** (без него принятый скин не станет публичным в магазине).
+9. Steam → Workshop Rust → **Create Collection** → название `Sauna`, картинка `workshop/collection.jpg`,
+   описание выше → добавить все семь предметов → Public.
+10. В описание каждого предмета можно добавить ссылку на коллекцию (последней строкой перед
+    «Part of the Sauna set.»).

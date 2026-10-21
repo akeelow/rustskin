@@ -46,14 +46,14 @@
 
 | # | Предмет | Название в Workshop | Образ | Шанс* | Статус |
 |---|---|---|---|---:|---|
-| 1 | Electric Furnace | Sauna Stove | Каменка: обшивка рейками, раскалённые камни в окне | 1 из 6 | 🟢 [v2.6 готов, проверен в игре](electric-furnace/README.md) |
-| 2 | Burlap Headwrap | Sauna Towel Wrap | Полотенце, накрученное тюрбаном, или войлочная банная шапка с «рожками» (см. references) | 1 из 10 | 🟢 [v1 готов, проверен в игре](burlap-headwrap/README.md) |
-| 3 | Snow Jacket | Sauna Robe | Короткий вафельный халат с запахом и поясом (тулуп отложен) | 1 из 9 | 🟢 сезонный, [v2.1 халат готов](snow-jacket/README.md) |
-| 4 | Locker | Sauna Changing Locker | Деревянный шкафчик раздевалки с крючками и полотенцами | 1 из 9 | 🟢 [v5 — финал](locker/README.md) (глухая средняя дверца под замок; v4.1 — запасной) |
+| 1 | Electric Furnace | Sauna Stove | Каменка: обшивка рейками, раскалённые камни в окне | 1 из 6 | 🟢 [v2.6 готов, проверен в игре](electric-furnace/README.md) · [пакет Workshop](electric-furnace/workshop/README.md) |
+| 2 | Burlap Headwrap | Sauna Towel Wrap | Полотенце, накрученное тюрбаном, или войлочная банная шапка с «рожками» (см. references) | 1 из 10 | 🟢 [v1 готов, проверен в игре](burlap-headwrap/README.md) · [пакет Workshop](burlap-headwrap/workshop/README.md) |
+| 3 | Snow Jacket | Sauna Robe | Короткий вафельный халат с запахом и поясом (тулуп отложен) | 1 из 9 | 🟢 сезонный, [v2.1 халат готов](snow-jacket/README.md) · [пакет Workshop](snow-jacket/workshop/README.md) |
+| 4 | Locker | Sauna Changing Locker | Деревянный шкафчик раздевалки с крючками и полотенцами | 1 из 9 | 🟢 [v5 — финал](locker/README.md) (глухая средняя дверца под замок; v4.1 — запасной) · [пакет Workshop](locker/workshop/README.md) |
 | 5 | Hide Poncho | — | Пропущено (20.10.2026): полотенце на шкуре не получилось, попытки в [hide-poncho/](hide-poncho/README.md) | 1 из 10 | ⏸️ пропущено |
-| 6 | Bed | Sauna Bench | Полок из реек с подголовником | 1 из 10 | 🟢 [v1.2 готов, проверен в игре](bed/README.md) |
-| 7 | Chair | Sauna Chair | Кресло из предбанника: вагонка, полотенце через спинку | 1 из 16 | 🟢 [v1.4 готов, проверен в игре](chair/README.md) |
-| 8 | Wood Storage Box | Sauna Stone Box | Открытый ящик у каменки: обручи, на железном противне камни, ночью между ними тлеют угли, край со стороны печи выгорел и тлеет (крышка и край вырезаны альфой) | 1 из 18 | 🟢 [v1.3 готов, проверен в игре](wood-storage-box/README.md) |
+| 6 | Bed | Sauna Bench | Полок из реек с подголовником | 1 из 10 | 🟢 [v1.2 готов, проверен в игре](bed/README.md) · [пакет Workshop](bed/workshop/README.md) |
+| 7 | Chair | Sauna Chair | Кресло из предбанника: вагонка, полотенце через спинку | 1 из 16 | 🟢 [v1.4 готов, проверен в игре](chair/README.md) · [пакет Workshop](chair/workshop/README.md) |
+| 8 | Wood Storage Box | Sauna Stone Box | Открытый ящик у каменки: обручи, на железном противне камни, ночью между ними тлеют угли, край со стороны печи выгорел и тлеет (крышка и край вырезаны альфой) | 1 из 18 | 🟢 [v1.3 готов, проверен в игре](wood-storage-box/README.md) · [пакет Workshop](wood-storage-box/workshop/README.md) |
 
 \* по [docs/item-selection.md](../../docs/item-selection.md).
 
@@ -71,7 +71,7 @@
 
 ## Workshop: оформление
 
-> ТЗ на пакет для тюрбана, халата, шкафчика + коллекция и чек-лист публикации: [TZ_workshop_pack.md](TZ_workshop_pack.md).
+> **Коллекция, описание, порядок, дата и чек-лист публикации всех семи: [workshop_collection.md](workshop_collection.md)** (картинка — `workshop/collection.png`, скрипт `workshop_collection.py`; общие настройки рендеров — `showcase.py`). ТЗ, по которому делалось: [TZ_workshop_pack.md](TZ_workshop_pack.md).
 
 - Названия (решение пользователя 21.10.2026): **без скобок и без оригинальных имён предметов**,
   только имя скина с префиксом `Sauna`; описание сразу начинается с истории:

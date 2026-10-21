@@ -1,6 +1,7 @@
 # Sauna Towel Wrap (Burlap Headwrap)
 
 > Статус: 🟢 v1 проверен в игре (19.10.2026) — полотенце готово. Workshop-материалы — позже, вместе с сетом.
+> Публикация в Workshop (название, описание, таблица загрузки, рендеры): [workshop/](workshop/README.md).
 > Сет: [Sauna](../README.md). Предыдущий предмет: [Sauna Stove](../electric-furnace/README.md).
 
 ## Образ
