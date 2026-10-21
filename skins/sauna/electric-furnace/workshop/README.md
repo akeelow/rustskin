@@ -50,10 +50,14 @@ through.»
 
 ![hero](hero.jpg)
 
-Плюс **скриншоты из игры** (Facepunch смотрит на презентацию — «Try to present your
-workshop page nicely», [Getting Your Skin Accepted](https://wiki.facepunch.com/rust/Getting_Skin_Accepted)):
-лучшие на сейчас — `../screenshots/v2.6_front_day.webp`, `v2.6_front_night.webp`,
-`v2.6_top_day.webp`, `v2.5_back_day.webp` — JPG для загрузки уже пересохранены в `ingame/` (те же имена, quality 92).
+Плюс **скриншоты из редактора Workshop** — сняты пользователем 21.10.2026 на весь экран (F12), исходники в `../screenshots/editor_16x9/`; для загрузки — `ingame/` (1920×1080, панель редактора обрезана). Порядок на странице: рендер `hero`, затем скриншоты в этом порядке, затем остальные рендеры.
+
+| Файл | Что |
+|---|---|
+| `ingame/three_quarter_day.jpg` | 3/4 днём |
+| `ingame/front_night.jpg` | анфас ночью |
+| `ingame/top_night.jpg` | сверху в сумерках: камни на конфорках, свет топки |
+| `ingame/back_day.jpg` | сзади днём |
 
 ## Вырез альфой — допустимо ли
 
