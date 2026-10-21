@@ -119,6 +119,12 @@ def position_map(V, T, F):
     return pos, nrm
 
 
+def is_lid(P):
+    """A lid face (corners P, 3 x 3): reaches above the wall tops (y 0.533), or lies wholly above y 0.515
+    and is not a wall's top edge (those face up) - the lid's sides and underside."""
+    return P[:, 1].max() > 0.538 or (P[:, 1].min() > 0.515 and normal(*P)[1] < 0.9)
+
+
 class Box:
     """Texel geometry and the shared wood base all concepts start from."""
 
@@ -148,6 +154,15 @@ class Box:
         self.blotch = blur(rng.random((SIZE, SIZE)), 14)
         self.blotch = (self.blotch - self.blotch.mean()) / max(self.blotch.std(), 1e-6)
         self.noise = blur(rng.random((SIZE, SIZE)), 2.5)
+
+    def inner_floor(self):
+        """(mask, x, z) of the inner floor in its own coordinates: it shares texels with the outer bottom,
+        mirrored front to back, so the position map (outer faces win) can't be used to place things on it."""
+        Va = np.array(self.V)
+        fl = [f for f in self.F if Va[list(f[0])][:, 1].max() < 0.035 and normal(*Va[list(f[0])])[1] > 0.7]
+        pos, _ = position_map(self.V, self.T, fl)
+        m = self.face_mask(lambda P: P[:, 1].max() < 0.035 and normal(*P)[1] > 0.7, grow=0)
+        return m, pos[..., 0], pos[..., 2]
 
     def face_mask(self, pred, grow=1):
         """Texels of every face whose corners P (3 x 3) pass pred(P) - all of them, shared or not (an alpha
@@ -414,12 +429,12 @@ def felt_pad(b, col, gloss, x0, x1, z0, z1):
 def stones_inside(b, col, emis):
     """Open top: basalt stones on the floor inside, embers glowing in the gaps between them.
     The inner floor shares texels only with the outer bottom, which nobody sees."""
-    floor = (b.y < 0.035) & (np.abs(b.nrm[..., 1]) > 0.7) & (np.abs(b.x) < 0.335) & (np.abs(b.z) < 0.445)
+    floor, fx, fz = b.inner_floor()
     rng = np.random.default_rng(5)
     c = np.column_stack([rng.uniform(-0.34, 0.34, 90), rng.uniform(-0.45, 0.45, 90)])
     size = rng.uniform(0.8, 1.25, 90)
     ys, xs = np.nonzero(floor)
-    px = np.column_stack([b.x[ys, xs], b.z[ys, xs]])
+    px = np.column_stack([fx[ys, xs], fz[ys, xs]])
     d = np.linalg.norm(px[:, None, :] - c[None, :, :], axis=2) / size[None, :]
     o = np.argsort(d, axis=1)
     d1 = d[np.arange(len(d)), o[:, 0]]
@@ -492,9 +507,6 @@ def concept_d(b, lid_cut=None):
     col, emis = stones_inside(b, col, emis)
     keep = {"all": lambda x: False, "plank": lambda x: x < 0.2535,
             "three": lambda x: not (x > 0.2535 or -0.0615 < x < 0.0405 or -0.2665 < x < -0.164)}[lid_cut]
-    # a lid face: reaches above the wall tops (y 0.533), or lies wholly above y 0.515 and is not a wall's
-    # top edge (those face up) - the lid's sides and underside
-    is_lid = lambda P: P[:, 1].max() > 0.538 or (P[:, 1].min() > 0.515 and normal(*P)[1] < 0.9)
     cut = b.face_mask(lambda P: is_lid(P) and not keep(P[:, 0].mean()))
     name = {"all": "D_open", "plank": "D_slot", "three": "D_three"}[lid_cut]
     save(name, col, spec, gloss, emis, alpha=~cut)
