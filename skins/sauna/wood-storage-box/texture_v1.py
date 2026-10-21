@@ -7,12 +7,13 @@ them with ash flecks, the steel tray's rim, the wooden floor's margin; baked nor
 Glow: the embers - charcoal deep between the stones (low baked AO), hottest mid-pile, dying out
 towards the tray. v1.1: the rim too - the survivor shovels the coals in over the rim on the stove side
 (+x), the shovel knocks on it: that rim and the corners next to it are charred, smouldering in the
-crackle (v1.2: nothing on the other rims). The handle slots don't glow.
+crackle (v1.2: nothing on the other rims); v1.3: that rim burnt away with alpha, the embers a line along
+the burnt edge. The handle slots don't glow.
 The lid is cut with alpha (Alpha Cutoff 0.50).
 
     .venv/Scripts/python skins/sauna/wood-storage-box/texture_v1.py
 Inputs: bake/{normal,ao,id}.png, originals/Wooden_Box_{nrm.png}, wooden_box_ao.png.
-Outputs: export/Box_v1.2_{diffuse (RGBA), normal, specgloss (512), occlusion, emission}.png (1024).
+Outputs: export/Box_v1.3_{diffuse (RGBA), normal, specgloss (512), occlusion, emission}.png (1024).
 """
 import sys
 from pathlib import Path
@@ -28,7 +29,7 @@ from concepts import (EMBER_CORE, EMBER_EDGE, IRON, ORIG, RUST, SIZE, SOOT, Box,
 
 BAKE = HERE / "bake"
 OUT = HERE / "export"
-VERSION = "v1.2"
+VERSION = "v1.3"
 IDS = {"base": 0, "stone": 1, "coal": 2, "tray": 3, "hoop": 4, "rivet": 5}    # bake_box.IDS
 BASALT = hexc("#26272A")              # v1: #2E2F32 - still pale in direct sun (v1.1 shots)
 BASALT_WARM = hexc("#302B28")
@@ -65,44 +66,59 @@ def crackle(u, v, s, seed):
     return np.clip(1 - (d2 - d1) / (0.12 * s), 0, 1)
 
 
+def wave(t, seed, freqs=(9.0, 23.0, 57.0), amps=(0.5, 0.3, 0.2)):
+    """Smooth 1D noise along t (m), 0..1."""
+    rng = np.random.default_rng(seed)
+    out = sum(a * np.sin(t * f * 2 * np.pi / 3 + rng.uniform(0, 2 * np.pi)) for f, a in zip(freqs, amps))
+    return 0.5 + 0.5 * out / sum(amps)
+
+
 def rim(b, col, spec, gloss):
-    """Charred, smouldering rim on the stove side (+x) and the corners next to it - nowhere else (v1.1's
-    scorch spots on the other rims read as evenly spaced bites). Outer faces 3-8 cm down from the top (the
-    inner ones wear them in game) and the wall tops. Black charcoal with grey ash on the crackle cells; the
-    glow only in the thin cracks, near the top (v1.1: a dim glow over the whole zone tinted it rust-red by
-    day). Returns the heat too."""
+    """The rim on the stove side (+x) and the corners next to it, where the coals are shovelled in: burnt away
+    0-3 cm (alpha, smooth so the cut-off contour is smooth), a wavering line of embers right along the burnt
+    edge, charcoal under it fading into brown scorch. v1.1/v1.2 drew the char as a band of even depth with
+    glowing crackle: in game a leather strip with orange stitches, a string of red dots at dusk.
+    Outer faces (the inner ones wear them in game, alpha too) and the wall tops.
+    Returns colour, spec, gloss, heat and alpha (1 = keep)."""
     x, y, z = b.x, b.y, b.z
     top = (y > 0.525) & (b.nrm[..., 1] > 0.7) & ~b.lid
-    # side of every texel by the nearest wall (the tops face up, so the normal can't tell)
     dist = np.stack([0.34 - x, z + 0.46, x + 0.36, 0.47 - z])               # right, back, left, front
     side = np.where(b.walls, np.select([b.right, b.back, b.left, b.front], [0, 1, 2, 3], 0), dist.argmin(0))
     run = np.select([side == 0, side == 1, side == 2, side == 3],
-                    [0.48 - z, 0.34 - x, z + 0.47, x + 0.36], 0)          # along the wall, from its +x/front end
+                    [0.48 - z, 0.34 - x, z + 0.47, x + 0.36], 0)
     from_stove = np.select([side == 0, side == 1, side == 2, side == 3],
-                           [0 * x, 0.34 - x, 9 + 0 * x, 0.34 - x], 9)       # metres from the stove-side rim
-    w = np.where(side == 0, 1.0, smooth(0.22, 0.0, from_stove)) * (0.8 + 0.2 * b.noise)
+                           [0 * x, 0.34 - x, 9 + 0 * x, 0.34 - x], 9)
+    w = np.where(side == 0, 1.0, smooth(0.2, 0.0, from_stove))            # how burnt: 1 on the stove side
+    # continuous coordinate round the burnt stretch: back corner -> stove side -> front corner
+    s_ = np.select([side == 1, side == 0, side == 3], [-from_stove, run, 0.95 + from_stove], 0)
     h = RIM_Y - y                                                           # depth below the rim
-    depth = 0.03 + 0.05 * w * np.clip(0.6 + 0.15 * b.blotch, 0.3, 1)
-    jag = 0.006 * b.blotch                                                  # wide waves, not texel noise (stair-steps)
-    face = b.walls & (h < 0.12)
-    a = np.where(top, smooth(0.05, 0.3, w), face * smooth(depth + 0.008, depth - 0.008, h + jag) * (w > 0.05))
-    a = np.where(face | top, blur(a, 1.0), a)
-    v = np.where(top, np.select([side == 0, side == 2], [x, x], z), y)
-    cr = crackle(run, v, CRACKLE, 41)
-    # colour: charcoal black, grey ash on the crackle cells, the cracks darkest, brown scorch at the zone's edge
-    ashy = smooth(0.4, 0.8, b.noise + 0.1 * b.blotch) * (1 - cr)
-    char = CHAR * (0.85 + 0.2 * b.noise[..., None]) * (1 - 0.6 * cr[..., None])
-    char = char * (1 - 0.3 * ashy[..., None]) + ASH * 0.3 * ashy[..., None]
-    scorch = smooth(0.05, 0.45, a) * (1 - smooth(0.45, 0.85, a))
-    col = col * (1 - 0.65 * scorch[..., None]) + SCORCH * 0.65 * scorch[..., None]
-    col = np.where((a > 0.45)[..., None], char, col * (1 - 0.6 * a[..., None]) + CHAR * 0.6 * a[..., None])
-    spec = np.where(a > 0.45, 0.03, spec)
-    gloss = np.where(a > 0.45, 0.07, gloss)
-    # smoulder: thin bright cracks, hottest at the very top; weak heat cut to nothing (no red wash by day)
-    near_top = np.where(top, 1.0, smooth(depth, 0.0, h) ** 0.7)
-    flick = smooth(0.3, 0.7, b.noise + 0.06 * b.blotch)
-    heat = cr ** 2 * smooth(0.5, 0.95, a) * near_top * w * flick           # cr ** 3: too faint at night
-    return col, spec, gloss, smooth(0.1, 0.65, heat)
+    cut = w * (0.004 + 0.026 * wave(s_, 51) ** 1.5)                       # burnt away: 0.4..3 cm
+    for c0, wid, dep in ((0.18, 0.05, 0.02), (0.55, 0.035, 0.015), (0.8, 0.06, 0.012)):   # tongues
+        cut = cut + w * dep * np.exp(-((s_ - c0) / wid) ** 2)
+    face = b.walls & (h < 0.15)
+    keep = np.where(face, smooth(cut - 0.0025, cut + 0.0025, h), 1.0)
+    keep = np.where(top, smooth(0.35, 0.15, w), keep)                       # the wall top is gone where burnt
+    below = h - cut                                                         # depth under the burnt edge
+    char_d = w * (0.012 + 0.03 * wave(s_, 52))
+    a = np.where(face, smooth(char_d + 0.02, char_d * 0.4, below), np.where(top, w, 0)) * (w > 0.03)
+    a = blur(np.clip(a, 0, 1), 1.0)
+    # colour: charcoal at the edge, brown scorch below it, no hard line
+    ashy = smooth(0.45, 0.8, b.noise + 0.1 * b.blotch)
+    char = CHAR * (0.85 + 0.2 * b.noise[..., None])
+    char = char * (1 - 0.25 * ashy[..., None]) + ASH * 0.25 * ashy[..., None]
+    scorch = smooth(0.0, 0.35, a) * (1 - smooth(0.35, 0.8, a))
+    col = col * (1 - 0.7 * scorch[..., None]) + SCORCH * 0.7 * scorch[..., None]
+    k = smooth(0.35, 0.8, a)
+    col = col * (1 - k[..., None]) + char * k[..., None]
+    spec = np.where(k > 0.5, 0.03, spec)
+    gloss = np.where(k > 0.5, 0.07, gloss)
+    # embers: a line right under the burnt edge, its brightness wandering along the rim; a few cracks down
+    line = np.exp(-((below - 0.005) / 0.0045) ** 2) * (below > -0.002)
+    hot = 0.35 + 0.65 * wave(s_, 53, (17.0, 41.0, 90.0), (0.5, 0.3, 0.2)) ** 2
+    cr = crackle(run, y, CRACKLE, 41) ** 3 * smooth(0.025, 0.004, below) * (below > 0)
+    heat = (line * hot + 0.5 * cr * hot) * w * face
+    heat = np.where(top, 0, heat)
+    return col, spec, gloss, np.clip(heat, 0, 1), np.clip(keep, 0, 1)
 
 
 def main():
@@ -128,7 +144,7 @@ def main():
     spec = np.where(hoop, 0.2, spec)
     gloss = np.where(hoop, np.where(riv, 0.35, 0.25), gloss)
 
-    col, spec, gloss, rim_heat = rim(b, col, spec, gloss)
+    col, spec, gloss, rim_heat, rim_keep = rim(b, col, spec, gloss)
 
     # ---------------- floor
     stone, coal, tray = floor & M["stone"], floor & M["coal"], floor & M["tray"]
@@ -168,10 +184,10 @@ def main():
     n /= np.linalg.norm(n, axis=-1, keepdims=True) + 1e-9
     occ = np.where(floor | hoop, 0.35 + 0.65 * ao, occ_orig)
 
-    alpha = ~b.face_mask(is_lid)
+    alpha = np.minimum(~b.face_mask(is_lid), rim_keep)
     OUT.mkdir(exist_ok=True)
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
-    Image.fromarray(np.dstack([q(col), q(alpha.astype(float))]), "RGBA").save(OUT / f"Box_{VERSION}_diffuse.png")
+    Image.fromarray(np.dstack([q(col), q(alpha)]), "RGBA").save(OUT / f"Box_{VERSION}_diffuse.png")
     Image.fromarray(q(n * 0.5 + 0.5), "RGB").save(OUT / f"Box_{VERSION}_normal.png")
     Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").resize(
         (512, 512), Image.LANCZOS).save(OUT / f"Box_{VERSION}_specgloss.png")
