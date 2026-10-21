@@ -9,7 +9,7 @@ arms' front ends polished by hands; every leg darkest at the floor with mineral 
 rusty at the joints and at the bottom. A linen towel with a brick stripe over the top of the backrest.
 
 Inputs: bake/{normal,ao,curvature,id}.png, originals/chair_{bc,nrm}.png.
-Outputs: export/Chair_v1.2_{diffuse,normal,specgloss,occlusion}.png (1024, like the originals;
+Outputs: export/Chair_v1.3_{diffuse,normal,specgloss,occlusion}.png (1024, like the originals;
 earlier versions in git history).
 
     .venv/Scripts/python skins/sauna/chair/texture_v1.py
@@ -32,9 +32,9 @@ BAKE = HERE / "bake"
 OUT = HERE / "export"
 SIZE, OUT_SIZE = B.SIZE, B.OUT_SIZE
 SEED = 12
-VERSION = "v1.2"
+VERSION = "v1.3"
 IDS = {"base": 0, "slat": 1, "cavity": 2, "lining": 3, "back": 4, "batten": 5, "frame": 6, "nail": 7,
-       "towel": 8, "wire": 9, "staple": 10, "handle": 11, "joist": 12}
+       "towel": 8, "wire": 9, "staple": 10, "handle": 11, "joist": 12, "leaf": 13}
 
 hexc, blur, smooth, hash1 = B.hexc, B.blur, B.smooth, B.hash1
 ASPEN, ASPEN_GREY, STEAMED = B.ASPEN, B.ASPEN_GREY, B.STEAMED
@@ -165,8 +165,16 @@ def build():
     sit = sit * (0.8 + 0.4 * fbm(x * 0.05, z * 0.05, SEED + 21, 2))
     wood = wood * (1 + 0.06 * sit[..., None])
     wood = wood * (1 - 0.4 * sit[..., None] * (g[..., None] - 0.5) * 0.3)      # grain softer where polished
+    # v1.3: the front edge darker and greasy where legs and hands rub (was lighter, "polished")
     front = smooth(26.0, 31.0, z) * (slat | (frame & (iid == 0) & (y < 53)))
-    wood = wood * (1 + 0.07 * front[..., None])
+    wood = wood * (1 - 0.1 * front[..., None])
+    # v1.3: water stands along the slats' edges by the gaps: damp darker borders
+    za = np.zeros_like(z) + 1e3
+    for (a, b) in L.SLATS:
+        a2, b2 = a + L.SEAT_GAP / 2, b - L.SEAT_GAP / 2
+        za = np.where((z >= a) & (z < b), np.minimum(z - a2, b2 - z), za)
+    damp_gap = smooth(1.4, 0.2, za) * slat * (0.55 + 0.45 * fbm(x * 0.12, z * 0.3, SEED + 59, 3))
+    wood = wood * (1 - 0.2 * damp_gap[..., None])
     # wet patch from the wash basin - darker and glossier than the bench's dry mineral ring
     # (v0 in game: a 22 % ring did not read at all)
     cx, cz = L.RING_C
@@ -205,7 +213,8 @@ def build():
     wood = np.where(bat[..., None], (STEAMED * 0.55 + ASPEN_GREY * 0.45) * (0.86 + 0.22 * g[..., None]), wood)
     arms = np.isin(iid, (7, 9)) & frame & (nrm[..., 1] > 0.5)
     hand = smooth(8.0, 22.0, z) * arms
-    wood = wood * (1 + 0.1 * hand[..., None])
+    # v1.3: hands darken and grease the arms' front ends (was lighter)
+    wood = wood * (1 - 0.13 * hand[..., None]) + STEAMED * (0.05 * hand[..., None])
 
     # ---------------- shovel handle: denser brown wood, polished, a little darker toward the floor
     hd = M["handle"]
@@ -221,6 +230,9 @@ def build():
     streak = np.clip((fbm(np.arctan2(z - 28, x + 27) * 6 + x * 0.3, 2.0, SEED + 71, 3) - 0.5) * 2.5, 0, 1) * wet
     wood = wood * (1 - 0.4 * wet[..., None])
     wood = wood * (1 - 0.25 * streak[..., None]) + MINERAL * (0.25 * streak[..., None]) * smooth(2.0, 8.0, y)[..., None]
+    # v1.3: water running down the legs: thin darker streaks from the seat down, wettest at the floor
+    run = smooth(0.62, 0.78, vnoise((x + z) * 1.4, y * 0.035, SEED + 73)) * smooth(42.0, 6.0, y) * legs
+    wood = wood * (1 - 0.22 * run[..., None])
 
     # v1.1: board edges worn lighter on the frame and lining too (the wings read moulded without them)
     fl = frame | lining | back
@@ -229,8 +241,8 @@ def build():
     # warmer, and matter outside the polished seat and arm ends
     wood = wood * np.array([0.95, 0.93, 0.89])
     col = np.where(wood_mat[..., None], wood, col)
-    gloss = np.where(wood_mat, 0.15 + 0.13 * sit + 0.22 * disc + 0.04 * lean + 0.12 * hand
-                     + 0.12 * hd + 0.08 * wet, gloss)
+    gloss = np.where(wood_mat, 0.15 + 0.13 * sit + 0.22 * disc + 0.04 * lean + 0.18 * hand
+                     + 0.12 * hd + 0.08 * wet + 0.12 * front + 0.12 * damp_gap + 0.1 * run, gloss)
 
     # ---------------- gaps and cavities
     cav = baked & M["cavity"]
@@ -272,24 +284,45 @@ def build():
     # the towel by position too: under the rail's front edge a few texels saw the rail / the cavity
     # (a dark notch and dashes along the towel's top on the first v1 sheet)
     in_x = (x > L.TOWEL_X[0] + 0.4) & (x < L.TOWEL_X[1] - 0.4)
-    forced = baked & in_x & ~M["towel"] & (((iid == 0) & (y > L.hem_front(x) + 1.0) & (nrm[..., 2] > 0.2))
+    forced = baked & in_x & ~M["towel"] & ~M["leaf"] & (((iid == 0) & (y > L.hem_front(x) + 1.0) & (nrm[..., 2] > 0.2))
                                           | (iid == 2) | ((iid == 5) & (y > L.hem_back(x) + 1.0) & (y > 52)))
     tw = M["towel"] | forced
     ao = np.where(forced, np.maximum(ao, 0.85), ao)
     on_front = tw & (nrm[..., 2] > 0.2) & (y < L.RAIL_AXIS[0])
     d = np.where(on_front, y - L.hem_front(x), 99.0)
     stripes = L.towel_stripes(d) * (0.8 + 0.2 * vnoise(x * 0.6, y * 0.6, SEED + 101))
-    weave = 0.5 + 0.25 * np.sin(x * 9.0) * np.sin(y * 9.0 + z * 9.0)
-    tcol = LINEN * (0.95 + 0.06 * weave[..., None]) * (1 + 0.04 * big[..., None])
+    # v1.3: coarse linen: warp and weft threads 0.7 cm (4 texels at 1024 - finer moirés), slubs
+    tv = y + z
+    slub = fbm(x * 0.4, tv * 3.0, SEED + 103, 2) - 0.5
+    weave = 0.5 + 0.22 * np.sin(x * 2 * np.pi / 0.7 + 1.5 * slub) + 0.22 * np.sin(tv * 2 * np.pi / 0.7)
+    tcol = LINEN * (0.94 + 0.08 * weave[..., None]) * (1 + 0.04 * big[..., None])
     tcol = tcol * (1 - 0.88 * stripes[..., None]) + BRICK * (0.88 * stripes[..., None])
     hem_line = np.exp(-((d - 2.0) / 0.25) ** 2) + np.where(tw & ~on_front & (y < L.RAIL_AXIS[0]),
                                                             np.exp(-((y - L.hem_back(x) - 2.0) / 0.25) ** 2), 0)
     tcol = tcol * (1 - 0.12 * hem_line[..., None])
     tcol = tcol * (1 - 0.3 * concave[..., None]) * (1 + 0.05 * convex[..., None])
+    # v1.3: one damp patch where the towel lies on the rail (wet hands hung it there)
+    tdamp = smooth(8.0, 2.0, np.hypot(x + 5.0, (y - 109.0) * 0.9) * (1 + 0.25 * vnoise(x * 0.5, y * 0.5, SEED + 105))) * tw
+    # (13 % on the first v1.3 sheet read as a grey stain - half, wider)
+    tcol = tcol * (1 - 0.065 * tdamp[..., None]) * (1 - 0.03 * tdamp[..., None] * np.array([0, 0.3, 1.0]))
     col = np.where(tw[..., None], tcol, col)
     spec = np.where(tw, 0.04, spec)
-    gloss = np.where(tw, 0.1, gloss)
-    hgt += np.where(tw, 0.02 * weave, 0)
+    gloss = np.where(tw, 0.1 + 0.1 * tdamp, gloss)
+    hgt += np.where(tw, 0.05 * weave, 0)
+
+    # ---------------- v1.3: leaves off the bath broom, each in a wet halo (darker, glossier)
+    lf = M["leaf"]
+    on_seat, on_towel = lf & (y < 56), lf & (y > 85) & isin([0])
+    lcol = np.where(on_seat[..., None], hexc("#6B5A2E"),                            # steamed oak
+                    np.where(on_towel[..., None], hexc("#5C6A39"), hexc("#8C7A3C")))  # fresh / yellowed birch
+    lcol = lcol * (0.85 + 0.25 * vnoise(x * 1.2, y * 1.2 + z, SEED + 95)[..., None]) * (1 - 0.3 * concave[..., None])
+    col = np.where(lf[..., None], lcol, col)
+    spec = np.where(lf, 0.06, spec)
+    gloss = np.where(lf, 0.38, gloss)
+    lm = lf.astype(np.float64)
+    lhalo = np.clip(blur(lm, 9) * 2.5, 0, 1) * (1 - lm)
+    col = col * (1 - np.where(tw, 0.14, 0.28)[..., None] * lhalo[..., None])
+    gloss = np.where(lf, gloss, gloss + 0.22 * lhalo)
 
     # ---------------- iron: dark steel, rust in joints (AO), at the bottom and at the seat joint
     # v0 in game: orange patches -> rust a mix toward iron, weaker
@@ -304,6 +337,16 @@ def build():
     col = np.where((iron & isin([6, 8]))[..., None], col * (1 - 0.3 * smooth(16.0, 0.0, y))[..., None], col)
     spec = np.where(ironm, 0.32 - 0.22 * rmask, spec)
     gloss = np.where(ironm, 0.4 - 0.25 * rmask, gloss)
+
+    # ---------------- v1.3: rust running down the wings from their nails
+    rdrip = np.zeros((SIZE, SIZE))
+    face = wings & (nrm[..., 2] > 0.2)
+    for nx, ny in L.wing_nails():
+        t = np.clip((ny - y) / 7.0, 0, 1)
+        w = 0.22 + 0.15 * t
+        rdrip = np.maximum(rdrip, face * (np.abs(x - nx) < w) * (y < ny - 0.3) * (1 - t) ** 1.5)
+    rdrip = blur(rdrip, 1.2)
+    col = col * (1 - 0.35 * rdrip[..., None]) + RUST * 0.75 * (0.35 * rdrip[..., None])
 
     # ---------------- AO into colour (the game's AO only darkens ambient light)
     # (v1.1: softer on the lining - the wings' AO darkened its sides into smears)

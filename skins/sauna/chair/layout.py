@@ -131,6 +131,17 @@ def arm_nails():
     return [(side * ax + rng.uniform(-0.3, 0.3), ARM_NAIL_Z + rng.uniform(-0.8, 0.8)) for side in (-1, 1) for ax in ARM_X]
 
 
+# ---------------------------------------------------------------- leaves off the bath broom (v1.3)
+# Three, not more: an oak leaf on the seat by its front edge next to the wet patch, a birch leaf stuck
+# to the towel's front hang, a birch leaf on the right arm. Oak sets the chair apart from the bench
+# (four birch leaves). (where, x, y-or-z, length cm, angle deg, kind, colour)
+LEAVES = (
+    ("seat", -5.5, 21.5, 9.0, 28.0, "oak", "steamed"),        # (x, z) on the slats
+    ("towel", -9.5, 95.5, 6.2, -62.0, "birch", "fresh"),      # (x, y) on the front hang
+    ("arm", 29.6, 6.0, 5.6, 104.0, "birch", "yellow"),        # (x, z) on the right arm's top
+)
+
+
 # ---------------------------------------------------------------- shovel-handle leg and its wire
 POLE_BOTTOM = (-28.5, 3.6, 28.4)             # axis point (x, y, z) at the bottom of the round leg
 POLE_TOP = (-26.25, 42.0, 26.4)

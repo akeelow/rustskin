@@ -9,6 +9,7 @@ Concept C "changing-room chair", no alpha. Modelled (positions from layout.py):
             rail by rays toward its axis; drape folds growing toward the hem, a hem band, rounded edges
   nails     forged heads at both ends of every slat (into the side rails), on the battens
   wire      a helix of wire round the split end of the shovel-handle leg and its old rubber tip
+  leaves    (v1.3) off the bath broom: an oak leaf on the seat, birch leaves on the towel and an arm
   wings     (v1.1) three straight off-cuts per side butted together: joint grooves, a step, nails;
             two nails across each arm's front end
 Arms, rail, the block leg and the handle are the low-poly's own shape, subdivided with slight
@@ -55,12 +56,12 @@ add_box, setup_cycles = _locker.add_box, _locker.setup_cycles
 forged_nail, new_obj = _locker.forged_nail, _locker.new_obj
 
 IDS = {"base": 0, "slat": 1, "cavity": 2, "lining": 3, "back": 4, "batten": 5, "frame": 6, "nail": 7,
-       "towel": 8, "wire": 9, "staple": 10, "handle": 11, "joist": 12}
+       "towel": 8, "wire": 9, "staple": 10, "handle": 11, "joist": 12, "leaf": 13}
 _locker.IDS = IDS                    # id_material/set_pass read the module's IDS
 _locker.VIEW_COL.update({"slat": (0.64, 0.57, 0.46), "lining": (0.64, 0.57, 0.46), "back": (0.58, 0.55, 0.5),
                          "batten": (0.48, 0.35, 0.24), "frame": (0.6, 0.53, 0.42), "towel": (0.8, 0.77, 0.7),
                          "wire": (0.2, 0.2, 0.2), "staple": (0.2, 0.2, 0.2), "handle": (0.54, 0.42, 0.3),
-                         "joist": (0.35, 0.27, 0.2)})
+                         "joist": (0.35, 0.27, 0.2), "leaf": (0.45, 0.5, 0.2)})
 id_material, set_pass = _locker.id_material, _locker.set_pass
 
 # islands (uv/islands.md)
@@ -510,6 +511,66 @@ def build_wings(low, reg, mats, rng):
     return [ob, new_obj("hp_frame_nails", nails, mats["nail"], low)]
 
 
+def leaf(nb, length, kind, angle):
+    """A leaf in a local frame (z up from the surface): birch - toothed oval with a point (as the bench
+    and the locker); oak - obovate, 5 deep rounded lobes a side. A grid along / across the leaf, curled
+    up at the sides, a midrib groove and a stalk. (first v1.3 try: a triangle fan from the centre gave
+    starburst creases, and the oak came out narrow as a feather)"""
+    ca, sa = math.cos(math.radians(angle)), math.sin(math.radians(angle))
+    half = length / 2
+
+    def hw(u):
+        if kind == "oak":
+            env = math.sqrt(max(1 - u * u, 0)) * (0.8 + 0.35 * u)
+            lobe = 0.45 + 0.55 * abs(math.cos(2.5 * math.pi * (u + 1) / 2)) ** 0.6
+            return 0.78 * env * lobe
+        w = 0.62 * math.sqrt(max(1 - u * u, 0)) * (1.15 - 0.45 * u)
+        return w * (1 + 0.05 * math.sin(u * 46.0))                                # teeth
+
+    nu, nv = 60, 16
+    g = []
+    for i in range(nu + 1):
+        u = -1 + 2 * i / nu
+        w = max(hw(u), 0.004)
+        row = []
+        for j in range(nv + 1):
+            v = (-1 + 2 * j / nv) * w
+            lx, ly = u * half, v * half
+            h = 0.06 + 0.07 * length * v * v - 0.05 * math.exp(-(v / 0.03) ** 2) * (u < 0.92)   # curl, midrib
+            row.append(nb.verts.new((ca * lx - sa * ly, sa * lx + ca * ly, h)))
+        g.append(row)
+    for i in range(nu):                    # counter-clockwise seen from +z (first bake: faced into the wood)
+        for j in range(nv):
+            nb.faces.new((g[i][j], g[i + 1][j], g[i + 1][j + 1], g[i][j + 1]))
+    x0, x1, wdt = -half * 1.4, -half, 0.09                                          # stalk
+    rot = lambda x, y: (ca * x - sa * y, sa * x + ca * y)
+    q = [nb.verts.new((*rot(x0, wdt), 0.06)), nb.verts.new((*rot(x1, wdt), 0.06)),
+         nb.verts.new((*rot(x1, -wdt), 0.06)), nb.verts.new((*rot(x0, -wdt), 0.06))]
+    qt = [nb.verts.new(v.co + Vector((0, 0, 0.1))) for v in q]
+    nb.faces.new(qt)
+    for i in range(4):
+        nb.faces.new((q[i], q[(i + 1) % 4], qt[(i + 1) % 4], qt[i]))
+
+
+def build_leaves(low, reg, mats, seat, towel):
+    """v1.3: three leaves off the bath broom (layout.LEAVES), laid on the modelled slats / towel / arm."""
+    dg = bpy.context.evaluated_depsgraph_get()
+    targets = {"seat": (BVHTree.FromObject(seat, dg), lambda a, b: ((a, 90.0, b), (0, -1, 0))),
+               "towel": (BVHTree.FromObject(towel, dg), lambda a, b: ((a, b, 60.0), (0, 0, -1))),
+               "arm": (region_bvh(low, reg, {7}), lambda a, b: ((a, 150.0, b), (0, -1, 0)))}
+    bm = bmesh.new()
+    for where, a, b, length, ang, kind, _ in L.LEAVES:
+        bvh, ray = targets[where]
+        o, d = ray(a, b)
+        hit, n, _, _ = bvh.ray_cast(Vector(o), Vector(d), 200.0)
+        if hit is None:
+            print("leaf missed:", where, flush=True)
+            continue
+        # place() turns the local x toward a tangent of its own choosing; the angle is then relative
+        place(bm, lambda nb: leaf(nb, length, kind, ang), hit, n)
+    return [new_obj("hp_leaves", bm, mats["leaf"], low)]
+
+
 def build(low, reg, seed=7):
     rng = random.Random(seed)
     mats = {k: id_material(k) for k in IDS}
@@ -524,6 +585,8 @@ def build(low, reg, seed=7):
     hp += build_towel(low, reg, mats)
     hp += build_wire(low, reg, mats)
     hp += build_wings(low, reg, mats, rng)
+    hp += build_leaves(low, reg, mats, next(o for o in hp if o.name == "hp_seat"),
+                       next(o for o in hp if o.name == "hp_towel"))
     return hp, mats
 
 
