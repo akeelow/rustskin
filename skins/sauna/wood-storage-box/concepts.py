@@ -8,7 +8,7 @@ UV tiles: the inner faces and the lid underside reuse the outer planks' texels (
 so every outer face is painted last and wins.
 
     .venv/Scripts/python skins/sauna/wood-storage-box/concepts.py
-Writes renders/concepts/<A|B|C|C_slots|C_corner|C_grate|D>_{diffuse,specgloss,normal,occlusion[,emission]}.png
+Writes renders/concepts/<A|B|C|C_slots|C_corner|C_grate|D|D_open|D_slot>_{diffuse,specgloss,normal,occlusion[,emission]}.png
 for viewer.py and renders/concepts/row6.obj (six boxes side by side, for the row test).
 """
 import shutil
@@ -237,9 +237,11 @@ def venik(b, col, cx, z0, z1, width):
     return np.where(wrap[..., None], TWINE, col)
 
 
-def save(name, col, spec, gloss, emis=None):
+def save(name, col, spec, gloss, emis=None, alpha=None):
     OUT.mkdir(parents=True, exist_ok=True)
     rgb = (np.clip(col, 0, 1) * 255).astype(np.uint8)
+    if alpha is not None:
+        rgb = np.dstack([rgb, (np.clip(alpha, 0, 1) * 255).astype(np.uint8)])
     Image.fromarray(rgb).save(OUT / f"{name}_diffuse.png")
     sg = np.dstack([np.repeat((np.clip(spec, 0, 1) * 255).astype(np.uint8)[..., None], 3, 2),
                     (np.clip(gloss, 0, 1) * 255).astype(np.uint8)])
@@ -391,7 +393,38 @@ def felt_pad(b, col, gloss, x0, x1, z0, z1):
     return col, gloss
 
 
-def concept_d(b):
+def stones_inside(b, col, emis):
+    """Open top: basalt stones on the floor inside, embers glowing in the gaps between them.
+    The inner floor shares texels only with the outer bottom, which nobody sees."""
+    floor = (b.y < 0.035) & (np.abs(b.nrm[..., 1]) > 0.7) & (np.abs(b.x) < 0.335) & (np.abs(b.z) < 0.445)
+    rng = np.random.default_rng(5)
+    c = np.column_stack([rng.uniform(-0.34, 0.34, 90), rng.uniform(-0.45, 0.45, 90)])
+    size = rng.uniform(0.8, 1.25, 90)
+    ys, xs = np.nonzero(floor)
+    px = np.column_stack([b.x[ys, xs], b.z[ys, xs]])
+    d = np.linalg.norm(px[:, None, :] - c[None, :, :], axis=2) / size[None, :]
+    o = np.argsort(d, axis=1)
+    d1 = d[np.arange(len(d)), o[:, 0]]
+    d2 = d[np.arange(len(d)), o[:, 1]]
+    edge = d2 - d1                                          # 0 on the gap between two stones
+    tone = hash1(o[:, 0], 21)
+    dome = np.clip(1 - d1 / 0.06, 0, 1)                     # lighter towards the top of each stone
+    stone = hexc("#3D3E41") * (0.75 + 0.35 * tone[:, None]) * (0.8 + 0.45 * dome[:, None])
+    gap = np.clip(1 - edge / 0.012, 0, 1) ** 2
+    stone = stone * (1 - 0.8 * gap[:, None])
+    col[ys, xs] = stone
+    # embers: in the gaps, hotter in the middle and towards the stove side (+x)
+    hot = gap * np.clip(0.35 + 0.65 * (1 - np.hypot(px[:, 0] - 0.08, px[:, 1] * 0.7) / 0.4), 0, 1)
+    hot = hot * (0.5 + 0.5 * hash1(o[:, 0] * 7 + o[:, 1], 22))
+    heat = np.zeros(b.x.shape)
+    heat[ys, xs] = hot
+    heat = blur(heat, 0.7)
+    core = smooth(0.3, 0.9, heat)
+    emis = np.maximum(emis, (EMBER_EDGE * (1 - core[..., None]) + EMBER_CORE * core[..., None]) * heat[..., None])
+    return col, emis
+
+
+def concept_d(b, lid_cut=None):
     """D (mine). Sauna Stone Box: the box by the stove where spare stones and embers are kept hot,
     bound with two iron bands; a felt pad on the lid (it doubles as a seat); the stones glow through
     the handle slots and the gaps on the stove side."""
@@ -429,7 +462,16 @@ def concept_d(b):
     core = smooth(0.3, 0.9, heat)
     emis = (EMBER_EDGE * (1 - core[..., None]) + EMBER_CORE * core[..., None]) * heat[..., None]
     col = np.where((heat > 0.2)[..., None], col * 0.6 + SOOT * 0.4, col)
-    save("D", col, spec, gloss, emis)
+    if lid_cut is None:
+        save("D", col, spec, gloss, emis)
+        return
+    # lid_cut "all": the whole lid cut out with alpha. Its texels are also the inner left wall and half of
+    # the inner back wall (uv/islands.md), so those vanish with it - the preview shows exactly that.
+    # lid_cut "plank": only the outermost right plank (island 3, x 0.252..0.371) is gone: it shares
+    # texels with nothing but its own underside, so every inner wall stays; embers show through the slot.
+    col, emis = stones_inside(b, col, emis)
+    cut = b.lid if lid_cut == "all" else b.lid & (b.x > 0.2535)
+    save("D_open" if lid_cut == "all" else "D_slot", col, spec, gloss, emis, alpha=~cut)
 
 
 def row_obj(n=6, step=0.715):
@@ -463,6 +505,8 @@ def main():
     for glow in (None, "slots", "corner", "grate"):
         concept_c(b, glow)
     concept_d(b)
+    concept_d(b, lid_cut="all")
+    concept_d(b, lid_cut="plank")
     row_obj()
 
 

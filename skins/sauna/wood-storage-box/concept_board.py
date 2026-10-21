@@ -13,7 +13,8 @@ CELL = 512                      # viewer.py sheet: 6 columns x (day, night) of 5
 ROWS = [("orig", "ванила"), ("concept_A", "A · ушат"), ("concept_B", "B · короб для веников"),
         ("concept_C", "C · ящик у каменки"), ("concept_C_slots", "C + свечение 1 · ручки и щели"),
         ("concept_C_corner", "C + свечение 2 · тлеющий угол"), ("concept_C_grate", "C + свечение 3 · поддувало"),
-        ("concept_D", "D (мой) · ящик для камней")]
+        ("concept_D", "D (мой) · ящик для камней"), ("concept_D_open", "D · вся крышка прозрачная"),
+        ("concept_D_slot", "D · снята одна доска")]
 SHOW = 300
 
 
