@@ -8,7 +8,7 @@ UV tiles: the inner faces and the lid underside reuse the outer planks' texels (
 so every outer face is painted last and wins.
 
     .venv/Scripts/python skins/sauna/wood-storage-box/concepts.py
-Writes renders/concepts/<A|B|C|C_slots|C_corner|C_grate|D|D_open|D_slot>_{diffuse,specgloss,normal,occlusion[,emission]}.png
+Writes renders/concepts/<A|B|C|C_slots|C_corner|C_grate|D|D_open|D_slot|D_three>_{diffuse,specgloss,normal,occlusion[,emission]}.png
 for viewer.py and renders/concepts/row6.obj (six boxes side by side, for the row test).
 """
 import shutil
@@ -124,6 +124,7 @@ class Box:
 
     def __init__(self):
         V, T, F = load_obj(ORIG / "box.wooden.obj")
+        self.V, self.T, self.F = V, T, F
         self.pos, self.nrm = position_map(V, T, F)
         x, y, z = self.pos[..., 0], self.pos[..., 1], self.pos[..., 2]
         self.x, self.y, self.z = x, y, z
@@ -147,6 +148,23 @@ class Box:
         self.blotch = blur(rng.random((SIZE, SIZE)), 14)
         self.blotch = (self.blotch - self.blotch.mean()) / max(self.blotch.std(), 1e-6)
         self.noise = blur(rng.random((SIZE, SIZE)), 2.5)
+
+    def face_mask(self, pred, grow=1):
+        """Texels of every face whose corners P (3 x 3) pass pred(P) - all of them, shared or not (an alpha
+        cut must take the lid's thin edge faces too), grown by a texel."""
+        Va, Ta = np.array(self.V), np.array(self.T)
+        m = Image.new("L", (SIZE, SIZE), 0)
+        from PIL import ImageDraw
+        d = ImageDraw.Draw(m)
+        for vi, ti in self.F:
+            if not pred(Va[list(vi)]):
+                continue
+            uv = Ta[list(ti)][:, :2].copy()
+            uv -= np.floor(uv.min(0))
+            d.polygon([(u * SIZE, (1 - v) * SIZE) for u, v in uv], fill=255)
+        if grow:
+            m = m.filter(ImageFilter.MaxFilter(2 * grow + 1))
+        return np.asarray(m) > 127
 
     def wood(self, base, grey_share=0.3, spread=0.12, grain=0.7):
         face = np.select([self.front, self.right, self.back, self.left], [0, 1, 2, 3], 4)
@@ -469,9 +487,17 @@ def concept_d(b, lid_cut=None):
     # the inner back wall (uv/islands.md), so those vanish with it - the preview shows exactly that.
     # lid_cut "plank": only the outermost right plank (island 3, x 0.252..0.371) is gone: it shares
     # texels with nothing but its own underside, so every inner wall stays; embers show through the slot.
+    # lid_cut "three": planks 3, 9 and 19 are gone (the lid half taken apart for kindling): the inner left
+    # wall stays whole, only the middle of the inner back wall (planks 9 and 19's texels) goes.
     col, emis = stones_inside(b, col, emis)
-    cut = b.lid if lid_cut == "all" else b.lid & (b.x > 0.2535)
-    save("D_open" if lid_cut == "all" else "D_slot", col, spec, gloss, emis, alpha=~cut)
+    keep = {"all": lambda x: False, "plank": lambda x: x < 0.2535,
+            "three": lambda x: not (x > 0.2535 or -0.0615 < x < 0.0405 or -0.2665 < x < -0.164)}[lid_cut]
+    # a lid face: reaches above the wall tops (y 0.533), or lies wholly above y 0.515 and is not a wall's
+    # top edge (those face up) - the lid's sides and underside
+    is_lid = lambda P: P[:, 1].max() > 0.538 or (P[:, 1].min() > 0.515 and normal(*P)[1] < 0.9)
+    cut = b.face_mask(lambda P: is_lid(P) and not keep(P[:, 0].mean()))
+    name = {"all": "D_open", "plank": "D_slot", "three": "D_three"}[lid_cut]
+    save(name, col, spec, gloss, emis, alpha=~cut)
 
 
 def row_obj(n=6, step=0.715):
@@ -507,6 +533,7 @@ def main():
     concept_d(b)
     concept_d(b, lid_cut="all")
     concept_d(b, lid_cut="plank")
+    concept_d(b, lid_cut="three")
     row_obj()
 
 

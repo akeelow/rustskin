@@ -7,7 +7,7 @@ the scene (.blend) to open in Blender and orbit freely.
 
   "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P tools/blender/viewer.py --
       --obj <a.obj> [--obj <b.obj> ...] --tex <prefix> [--cutoff 0.24] [--wear] [--units m|cm]
-      [--focus x,y,z] [--sheet out.png] [--blend out.blend] [--size 512]
+      [--focus x,y,z] [--sheet out.png] [--blend out.blend] [--size 512] [--views corners]
 
 <prefix> + _diffuse.png (RGBA: alpha -> Alpha Cutoff), _normal.png (OpenGL), _specgloss.png
 (clothing: RGB spec colour, A gloss) or _metalgloss.png (deployables: R metal, A gloss),
@@ -42,6 +42,7 @@ SHEET = opt("--sheet")
 BLEND = opt("--blend")
 FOCUS = opt("--focus")
 ZUP = opt("--up", "y").lower() == "z"   # OBJ exported Z up (3ds Max, e.g. the bed)
+VIEWS = opt("--views", "default")       # "corners": six high views from every side (open boxes)
 
 
 def tex_path(name):
@@ -238,6 +239,10 @@ def main():
     shots = [("front", (0.0, -1, 0.15), 2.6, centre), ("three_quarter", (0.7, -1, 0.3), 2.6, centre),
              ("side", (1, 0.0, 0.1), 2.6, centre), ("back", (-0.2, 1, 0.25), 2.6, centre),
              ("top", (0.15, -0.35, 1), 2.6, centre), ("close", (0.35, -1, 0.35), 1.0, focus)]
+    if VIEWS == "corners":      # looking down into an open item from every side
+        shots = [("front_right", (1, -1, 1.1), 2.6, centre), ("front_left", (-1, -1, 1.1), 2.6, centre),
+                 ("back_left", (-1, 1, 1.1), 2.6, centre), ("back_right", (1, 1, 1.1), 2.6, centre),
+                 ("front_high", (0, -1, 1.2), 2.6, centre), ("right_high", (1, 0, 1.2), 2.6, centre)]
     if SHEET:
         out = Path(SHEET).resolve()
         tiles = []
