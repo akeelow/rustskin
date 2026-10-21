@@ -9,7 +9,7 @@ arms' front ends polished by hands; every leg darkest at the floor with mineral 
 rusty at the joints and at the bottom. A linen towel with a brick stripe over the top of the backrest.
 
 Inputs: bake/{normal,ao,curvature,id}.png, originals/chair_{bc,nrm}.png.
-Outputs: export/Chair_v1.3_{diffuse,normal,specgloss,occlusion}.png (1024, like the originals;
+Outputs: export/Chair_v1.4_{diffuse,normal,specgloss,occlusion}.png (1024, like the originals;
 earlier versions in git history).
 
     .venv/Scripts/python skins/sauna/chair/texture_v1.py
@@ -32,7 +32,7 @@ BAKE = HERE / "bake"
 OUT = HERE / "export"
 SIZE, OUT_SIZE = B.SIZE, B.OUT_SIZE
 SEED = 12
-VERSION = "v1.3"
+VERSION = "v1.4"
 IDS = {"base": 0, "slat": 1, "cavity": 2, "lining": 3, "back": 4, "batten": 5, "frame": 6, "nail": 7,
        "towel": 8, "wire": 9, "staple": 10, "handle": 11, "joist": 12, "leaf": 13}
 
@@ -313,9 +313,22 @@ def build():
     # ---------------- v1.3: leaves off the bath broom, each in a wet halo (darker, glossier)
     lf = M["leaf"]
     on_seat, on_towel = lf & (y < 56), lf & (y > 85) & isin([0])
-    lcol = np.where(on_seat[..., None], hexc("#6B5A2E"),                            # steamed oak
-                    np.where(on_towel[..., None], hexc("#5C6A39"), hexc("#8C7A3C")))  # fresh / yellowed birch
-    lcol = lcol * (0.85 + 0.25 * vnoise(x * 1.2, y * 1.2 + z, SEED + 95)[..., None]) * (1 - 0.3 * concave[..., None])
+    # v1.4: in game (v1.3, sun) the oak and the yellowed birch were bright yellow blobs (182,151,71 and
+    # 213,191,92) - the bench had the same in v1.1: its darker leaf colours, and veins so the shape reads
+    lcol = np.where(on_seat[..., None], hexc("#5E4A2C"),                            # steamed oak, brown
+                    np.where(on_towel[..., None], B.hexc("#4F5C30"), hexc("#6E5A30")))  # green / dry birch
+    lcol = lcol * (0.88 + 0.2 * vnoise(x * 1.2, y * 1.2 + z, SEED + 95)[..., None]) * (1 - 0.3 * concave[..., None])
+    vein = np.zeros((SIZE, SIZE))
+    for where, a, b, length, ang, kind, _ in L.LEAVES:
+        # the leaf's own frame as bake_chair.place() lays it: seat / arm (up): x, -z; towel (front): y, -x
+        lx, ly = (y - b, -(x - a)) if where == "towel" else (x - a, -(z - b))
+        ca, sa = np.cos(np.radians(ang)), np.sin(np.radians(ang))
+        u, v = ca * lx + sa * ly, -sa * lx + ca * ly
+        near = lf & (np.hypot(u, v) < length * 0.75)
+        mid = np.exp(-(v / 0.07) ** 2) * (np.abs(u) < length * 0.48)
+        side = np.exp(-((np.mod(u - 0.8 * np.abs(v), length / 7.0) - length / 14.0) / 0.05) ** 2) * (np.abs(v) > 0.12)
+        vein = np.maximum(vein, near * np.maximum(mid, 0.6 * side))
+    lcol = lcol * (1 - 0.3 * vein[..., None])
     col = np.where(lf[..., None], lcol, col)
     spec = np.where(lf, 0.06, spec)
     gloss = np.where(lf, 0.38, gloss)
