@@ -512,9 +512,50 @@ def concept_d(b, lid_cut=None):
     save(name, col, spec, gloss, emis, alpha=~cut)
 
 
-def row_obj(n=6, step=0.715):
-    """n boxes side by side along x (long sides touching), the way they stand in a base."""
+def game_obj(b):
+    """The box as the Rust client draws it, for previews: the in-game test (screenshots/test_openlid_*)
+    showed every inner wall wearing its own outer side's texture and the inner floor its own texels -
+    not what the downloaded OBJ's inner UVs give (they land on the lid, which then cuts the walls away).
+    In game the marks on an inner wall sit where they are outside (as if seeing the outer plank from
+    behind), so here every inner wall face gets the UV of the outer face of the same wall at the same spot.
+    Writes renders/concepts/box_game.obj."""
     lines = (ORIG / "box.wooden.obj").read_text(encoding="utf8").splitlines()
+    V = np.array([list(map(float, l.split()[1:4])) for l in lines if l.startswith("v ")])
+    nvt = sum(1 for l in lines if l.startswith("vt "))
+    sides = {}
+    for name, m, axis in (("left", b.left, 2), ("right", b.right, 2), ("front", b.front, 0), ("back", b.back, 0)):
+        ys, xs = np.nonzero(m)
+        sides[name] = (np.column_stack([b.y[ys, xs], b.pos[ys, xs, axis]]), xs, ys, axis)
+    new_vt, out = [], []
+    for l in lines:
+        if not l.startswith("f "):
+            out.append(l)
+            continue
+        idx = [c.split("/") for c in l.split()[1:]]
+        P = V[[int(i[0]) - 1 for i in idx]]
+        n, cen = np.array(normal(*P[:3])), P.mean(0)
+        side = None
+        if abs(cen[0]) > 0.32 and abs(n[0]) > 0.7 and np.sign(n[0]) != np.sign(cen[0]) and cen[1] < 0.533:
+            side = "right" if cen[0] > 0 else "left"
+        elif abs(cen[2]) > 0.43 and abs(n[2]) > 0.7 and np.sign(n[2]) != np.sign(cen[2]) and cen[1] < 0.533:
+            side = "front" if cen[2] > 0 else "back"
+        if side:
+            pts, xs, ys, axis = sides[side]
+            for i, q in zip(idx, P):
+                q = q + (cen - q) * 0.02                      # a hair inside the face: no edge texels
+                k = np.argmin(((pts - np.array([q[1], q[axis]])) ** 2).sum(1))
+                new_vt.append(f"vt {(xs[k] + 0.5) / SIZE:.6f} {1 - (ys[k] + 0.5) / SIZE:.6f}")
+                i[1] = str(nvt + len(new_vt))
+            l = "f " + " ".join("/".join(i) for i in idx)
+        out.append(l)
+    last_vt = max(k for k, l in enumerate(out) if l.startswith("vt "))
+    out[last_vt + 1:last_vt + 1] = new_vt
+    (OUT / "box_game.obj").write_text("\n".join(out) + "\n", encoding="utf8")
+
+
+def row_obj(n=6, step=0.715, src=ORIG / "box.wooden.obj", name="row6.obj"):
+    """n boxes side by side along x (long sides touching), the way they stand in a base."""
+    lines = src.read_text(encoding="utf8").splitlines()
     V = [l for l in lines if l.startswith("v ")]
     VT = [l for l in lines if l.startswith("vt ")]
     VN = [l for l in lines if l.startswith("vn ")]
@@ -533,7 +574,7 @@ def row_obj(n=6, step=0.715):
                 i[0] = str(int(i[0]) + off)
                 parts.append("/".join(i))
             out.append("f " + " ".join(parts))
-    (OUT / "row6.obj").write_text("\n".join(out) + "\n", encoding="utf8")
+    (OUT / name).write_text("\n".join(out) + "\n", encoding="utf8")
 
 
 def main():
@@ -547,6 +588,8 @@ def main():
     concept_d(b, lid_cut="plank")
     concept_d(b, lid_cut="three")
     row_obj()
+    game_obj(b)
+    row_obj(src=OUT / "box_game.obj", name="row6_game.obj")
 
 
 if __name__ == "__main__":
