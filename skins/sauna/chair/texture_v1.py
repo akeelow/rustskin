@@ -9,8 +9,8 @@ arms' front ends polished by hands; every leg darkest at the floor with mineral 
 rusty at the joints and at the bottom. A linen towel with a brick stripe over the top of the backrest.
 
 Inputs: bake/{normal,ao,curvature,id}.png, originals/chair_{bc,nrm}.png.
-Outputs: export/Chair_v1.1_{diffuse,normal,specgloss,occlusion}.png (1024, like the originals;
-v1 in git history).
+Outputs: export/Chair_v1.2_{diffuse,normal,specgloss,occlusion}.png (1024, like the originals;
+earlier versions in git history).
 
     .venv/Scripts/python skins/sauna/chair/texture_v1.py
 """
@@ -32,7 +32,7 @@ BAKE = HERE / "bake"
 OUT = HERE / "export"
 SIZE, OUT_SIZE = B.SIZE, B.OUT_SIZE
 SEED = 12
-VERSION = "v1.1"
+VERSION = "v1.2"
 IDS = {"base": 0, "slat": 1, "cavity": 2, "lining": 3, "back": 4, "batten": 5, "frame": 6, "nail": 7,
        "towel": 8, "wire": 9, "staple": 10, "handle": 11, "joist": 12}
 
@@ -178,7 +178,8 @@ def build():
     disc = smooth(edge + 1.5, edge - 3.5, rc) * slat
     drag = smooth(4.0, -10.0, x - cx)
     disc = disc * (0.55 + 0.3 * drag + 0.15 * fbm(x * 0.2, z * 0.2, SEED + 53, 2))
-    wood = wood * (1 - 0.3 * disc[..., None]) + STEAMED * (0.08 * disc[..., None])
+    # (v1.2: 0.3 -> 0.4, in game v1.1 the patch hardly showed)
+    wood = wood * (1 - 0.4 * disc[..., None]) + STEAMED * (0.1 * disc[..., None])
     # the crack: dark in the groove
     crack = np.exp(-((z - L.crack_z(x)) / 0.12) ** 2) * (x > L.CRACK_X[0]) * smooth(L.CRACK_X[1], L.CRACK_X[1] - 3, x)
     wood = wood * (1 - 0.6 * (crack * slat)[..., None])
@@ -197,8 +198,9 @@ def build():
     wood = wood * (1 - 0.6 * joint[..., None]) * (1 - 0.1 * under[..., None])
     # arms' front ends: end grain, darker, rings round the bar's middle
     endg = isin([7, 9]) & (nrm[..., 2] > 0.6) & (z > 15)
-    rings = 0.5 + 0.5 * np.sin(np.hypot(y - 71.5, (np.abs(x) - 29.5) * 1.3) * 4.5 + 2 * vnoise(x, y, SEED + 55))
-    wood = np.where(endg[..., None], wood * (0.74 + 0.1 * rings[..., None]), wood)
+    # (v1.2: in game v1.1 the rings read as a target - off-centre pith, fewer and fainter rings)
+    rings = 0.5 + 0.5 * np.sin(np.hypot(y - 69.0, (np.abs(x) - 31.0) * 1.3) * 2.2 + 1.2 * vnoise(x * 0.6, y * 0.6, SEED + 55))
+    wood = np.where(endg[..., None], wood * (0.76 + 0.05 * rings[..., None]), wood)
     bat = M["batten"]
     wood = np.where(bat[..., None], (STEAMED * 0.55 + ASPEN_GREY * 0.45) * (0.86 + 0.22 * g[..., None]), wood)
     arms = np.isin(iid, (7, 9)) & frame & (nrm[..., 1] > 0.5)
@@ -232,7 +234,18 @@ def build():
 
     # ---------------- gaps and cavities
     cav = baked & M["cavity"]
+    # v1.2: cavity where it is not a gap between boards (in game v1.1): the step at y 81 on the back
+    # (top of the old back plate under the lining) and its sides; the wings' back edges outside the
+    # lining (dashed dark outlines); the seat's front lip round the slats' ends (a black-outlined block)
+    ledge = isin([5]) & (((nrm[..., 1] > 0.9) & (np.abs(y - 81.0) < 1.5)) | ((np.abs(nrm[..., 0]) > 0.9) & (y > 50)))
+    stray = cav & ((np.abs(x) > L.PANEL_X[1]) & isin([0, 5]) & (y > 53.5) | isin([0]) & (y < 53.5) & (z > 30.0))
+    edge_wood = ASPEN * np.array([0.95, 0.93, 0.89]) * 0.8 * (0.86 + 0.2 * g[..., None])
     col = np.where(cav[..., None], GAP * (0.8 + 0.3 * rnd[..., None]), col)
+    col = np.where((stray | ledge)[..., None], edge_wood, col)
+    ao = np.where(stray | ledge, np.maximum(ao, 0.85), ao)          # the ledge sits in the overhang's AO
+    # the seat's front lip in the front slat's tone (v1.1: a lighter separate-looking block)
+    lip = frame & isin([0]) & (y < 53.5)
+    col = np.where(lip[..., None], col * 0.9, col)
 
     # ---------------- nails, staple, wire: dark iron, rust bleeding into the wood round the nails
     nail = M["nail"] | M["staple"]
@@ -305,6 +318,7 @@ def build():
     # the handle's end caps (under the seat, on the floor): the cage rays met the seat / nothing there
     n[isin([15, 16])] = (0, 0, 1)
     n[forced] = (0, 0, 1)
+    n[stray | ledge] = (0, 0, 1)
     n /= np.linalg.norm(n, axis=-1, keepdims=True) + 1e-9
     occ = 0.35 + 0.65 * ao
     return col, n, spec, gloss, occ
