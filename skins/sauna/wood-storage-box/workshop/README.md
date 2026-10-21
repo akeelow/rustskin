@@ -58,8 +58,7 @@ Part of the Sauna set.
 ![night](night.jpg)
 
 Плюс **скриншоты из игры**: `../screenshots/v1.3_day.webp`, `v1.3_dusk_front.webp`, `v1.3_dusk_stove_side.webp`
-(Steam принимает JPG/PNG — пересохранить). Хорошо бы снять кадр в «живой» сцене: ящик у каменки Sauna Stove
-вечером, рядом полок или кресло.
+JPG для загрузки уже пересохранены — `ingame/` (те же имена, quality 92).
 
 ## Альфа: крышка и выгоревший край
 

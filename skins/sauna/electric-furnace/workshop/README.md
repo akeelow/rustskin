@@ -53,9 +53,7 @@ through.»
 Плюс **скриншоты из игры** (Facepunch смотрит на презентацию — «Try to present your
 workshop page nicely», [Getting Your Skin Accepted](https://wiki.facepunch.com/rust/Getting_Skin_Accepted)):
 лучшие на сейчас — `../screenshots/v2.6_front_day.webp`, `v2.6_front_night.webp`,
-`v2.6_top_day.webp`, `v2.5_back_day.webp` (Steam принимает JPG/PNG — пересохранить при
-необходимости). Хорошо бы снять ещё 1–2 кадра в «живой» сцене: каменка в доме,
-ночь, игрок рядом.
+`v2.6_top_day.webp`, `v2.5_back_day.webp` — JPG для загрузки уже пересохранены в `ingame/` (те же имена, quality 92).
 
 ## Вырез альфой — допустимо ли
 

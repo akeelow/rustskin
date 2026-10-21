@@ -55,8 +55,7 @@ Part of the Sauna set.
 ![hero](hero.jpg)
 
 Плюс **скриншоты из игры**: `../screenshots/v1.4_front.webp`, `v1.4_side.webp`, `v1.3_dusk.webp`
-(Steam принимает JPG/PNG — пересохранить). Хорошо бы снять кадр в «живой» сцене: кресло в доме
-рядом с полоком и каменкой Sauna Stove, вечером.
+JPG для загрузки уже пересохранены — `ingame/` (те же имена, quality 92).
 
 ## Без альфы
 

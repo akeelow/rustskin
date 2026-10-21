@@ -52,8 +52,7 @@ Part of the Sauna set.
 ![hero](hero.jpg)
 
 Плюс **скриншоты из игры**: `../screenshots/v1.2_34_day.webp`, `v1.2_34_dusk.webp`,
-`v1.2_foot_day.webp` (Steam принимает JPG/PNG — пересохранить). Хорошо бы снять кадр в «живой»
-сцене: полок в доме рядом с каменкой Sauna Stove, ночью.
+`v1.2_foot_day.webp`. JPG для загрузки уже пересохранены — `ingame/` (те же имена, quality 92).
 
 ## Вырез альфой
 
