@@ -4,12 +4,13 @@ Story: an old armchair on a steel-channel frame from the same roadside house as 
 changing room where people cool off after the steam room. Backrest clad in lining off-cuts, seat in
 aspen slats across, a shovel handle for the missing front leg with wire round its split end, a staple
 across the cracked front slat. The seat is polished where people sit and the front edge where legs
-rub; a wet ring where the wash basin stood; the lining a touch darker where sweaty backs lean; the
+rub; a wet patch where the wash basin stood; the lining a touch darker where sweaty backs lean; the
 arms' front ends polished by hands; every leg darkest at the floor with mineral streaks; the channel
 rusty at the joints and at the bottom. A linen towel with a brick stripe over the top of the backrest.
 
 Inputs: bake/{normal,ao,curvature,id}.png, originals/chair_{bc,nrm}.png.
-Outputs: export/Chair_v1_{diffuse,normal,specgloss,occlusion}.png (1024, like the originals).
+Outputs: export/Chair_v1.1_{diffuse,normal,specgloss,occlusion}.png (1024, like the originals;
+v1 in git history).
 
     .venv/Scripts/python skins/sauna/chair/texture_v1.py
 """
@@ -31,7 +32,7 @@ BAKE = HERE / "bake"
 OUT = HERE / "export"
 SIZE, OUT_SIZE = B.SIZE, B.OUT_SIZE
 SEED = 12
-VERSION = "v1"
+VERSION = "v1.1"
 IDS = {"base": 0, "slat": 1, "cavity": 2, "lining": 3, "back": 4, "batten": 5, "frame": 6, "nail": 7,
        "towel": 8, "wire": 9, "staple": 10, "handle": 11, "joist": 12}
 
@@ -133,8 +134,12 @@ def build():
     arm_i = isin([7, 9, 12, 20])
     across_x = isin([2]) | (isin([0]) & (y < 53.5))
     along = np.where(slat, x, np.where(lining | back, y, np.where(arm_i, z, np.where(across_x, x, y))))
-    across = np.where(slat, z, np.where(lining | back, x, np.where(arm_i, x + y, np.where(across_x, y + z, z + x))))
+    across = np.where(slat, z, np.where(lining | back, x, np.where(arm_i, x + y, np.where(across_x, y + z, x))))
+    # v1.1: wings are three off-cuts per side (layout.WING_JOINTS), arms one bar each: own tone per piece
+    wings = isin([0]) & frame & (y >= 53.5)
+    seg = L.wing_segment(y)
     board = np.where(slat, k_seat, np.where(lining | back, k_board + 10, -1))
+    board = np.where(wings, 20 + seg + 3 * (x > 0), np.where(arm_i, 30 + (x > 0), board))
     brnd = np.where(board >= 0, hash1(board + 50, SEED), rnd)
     across = across + 37.0 * brnd
     g = grain(along, across, SEED)
@@ -155,35 +160,45 @@ def build():
     wood = base * (0.86 + 0.2 * g[..., None]) * (1 + 0.08 * big[..., None])
     hgt += np.where(wood_mat, 0.035 * g, 0)
 
-    # ---------------- seat: polished where people sit, front edge rubbed by legs, the basin ring
+    # ---------------- seat: polished where people sit, front edge rubbed by legs, the basin's wet patch
     sit = smooth(0, 1, (1 - np.abs((x + 2) / 24) ** 2.5) * (1 - np.abs((z - 6) / 22) ** 3)) * slat
     sit = sit * (0.8 + 0.4 * fbm(x * 0.05, z * 0.05, SEED + 21, 2))
     wood = wood * (1 + 0.06 * sit[..., None])
     wood = wood * (1 - 0.4 * sit[..., None] * (g[..., None] - 0.5) * 0.3)      # grain softer where polished
     front = smooth(26.0, 31.0, z) * (slat | (frame & (iid == 0) & (y < 53)))
     wood = wood * (1 + 0.07 * front[..., None])
-    # wet ring from the wash basin - darker and glossier than the bench's dry mineral ring
+    # wet patch from the wash basin - darker and glossier than the bench's dry mineral ring
     # (v0 in game: a 22 % ring did not read at all)
     cx, cz = L.RING_C
     ang = np.arctan2(z - cz, x - cx)
     rc = np.hypot(x - cx, z - cz) * (1 + 0.035 * np.sin(ang * 3 + 1.0))
-    brk = smooth(0.25, 0.5, vnoise(ang * 2.0 + 7, 0.5, SEED + 51))
-    # (first v1 sheet: a 0.9 cm dark ring read as a drawn circle from above -> wider, softer, more disc)
-    ring = np.exp(-((rc - L.RING_R) / 1.4) ** 2) * brk * slat
-    disc = smooth(L.RING_R, L.RING_R - 3.0, rc) * slat * (0.7 + 0.3 * fbm(x * 0.15, z * 0.15, SEED + 53, 2))
-    wood = wood * (1 - 0.2 * disc[..., None]) * (1 - 0.28 * ring[..., None])
-    wood = wood * (1 - 0.15 * ring[..., None]) + STEAMED * (0.15 * ring[..., None])
+    # v1.1: no rim line at all - in game (v1) any ring read as a drawn circle. A wet patch where the
+    # basin stood: soft broken edge, wetter on the side it was dragged off (toward -x), water in the gaps
+    edge = L.RING_R + 2.5 * (fbm(ang * 1.2 + 3, 0.5, SEED + 57, 3) - 0.5) * 2
+    disc = smooth(edge + 1.5, edge - 3.5, rc) * slat
+    drag = smooth(4.0, -10.0, x - cx)
+    disc = disc * (0.55 + 0.3 * drag + 0.15 * fbm(x * 0.2, z * 0.2, SEED + 53, 2))
+    wood = wood * (1 - 0.3 * disc[..., None]) + STEAMED * (0.08 * disc[..., None])
     # the crack: dark in the groove
     crack = np.exp(-((z - L.crack_z(x)) / 0.12) ** 2) * (x > L.CRACK_X[0]) * smooth(L.CRACK_X[1], L.CRACK_X[1] - 3, x)
     wood = wood * (1 - 0.6 * (crack * slat)[..., None])
     wood = wood * (1 + 0.12 * convex[..., None]) * (1 - 0.25 * concave[..., None])
 
     # ---------------- lining: a touch darker and smoother where backs lean; back side greyer, rougher
+    # v1.1: the lean zone softer (v1 in game: with the wings' AO it read as a dirty smear)
     lean = smooth(0.0, 1.0, 1 - np.hypot(x / 15.0, (y - 72.0) / 11.0)) * lining
-    wood = wood * (1 - 0.1 * lean[..., None])
+    wood = wood * (1 - 0.05 * lean[..., None])
     wood = np.where(back[..., None], wood * 0.9 * np.array([0.96, 0.98, 1.0]), wood)
     # the frame's seat front edge, wings, arms, rail, block leg, left arm post
     wood = np.where(frame[..., None], wood * 0.9, wood)
+    # v1.1: joints between the wing off-cuts: a dark hairline, a shade under the proud piece
+    joint = sum(np.exp(-((y - jy) / 0.16) ** 2) for jy in L.WING_JOINTS) * wings
+    under = sum(smooth(jy - 1.2, jy, y) * (y < jy) for jy in L.WING_JOINTS) * wings
+    wood = wood * (1 - 0.6 * joint[..., None]) * (1 - 0.1 * under[..., None])
+    # arms' front ends: end grain, darker, rings round the bar's middle
+    endg = isin([7, 9]) & (nrm[..., 2] > 0.6) & (z > 15)
+    rings = 0.5 + 0.5 * np.sin(np.hypot(y - 71.5, (np.abs(x) - 29.5) * 1.3) * 4.5 + 2 * vnoise(x, y, SEED + 55))
+    wood = np.where(endg[..., None], wood * (0.74 + 0.1 * rings[..., None]), wood)
     bat = M["batten"]
     wood = np.where(bat[..., None], (STEAMED * 0.55 + ASPEN_GREY * 0.45) * (0.86 + 0.22 * g[..., None]), wood)
     arms = np.isin(iid, (7, 9)) & frame & (nrm[..., 1] > 0.5)
@@ -205,8 +220,14 @@ def build():
     wood = wood * (1 - 0.4 * wet[..., None])
     wood = wood * (1 - 0.25 * streak[..., None]) + MINERAL * (0.25 * streak[..., None]) * smooth(2.0, 8.0, y)[..., None]
 
+    # v1.1: board edges worn lighter on the frame and lining too (the wings read moulded without them)
+    fl = frame | lining | back
+    wood = wood * (1 + 0.14 * (convex * fl)[..., None])
+    # v1.1: in game v1 was lighter than the bench and caught the sky (blue sheen): a shade darker,
+    # warmer, and matter outside the polished seat and arm ends
+    wood = wood * np.array([0.95, 0.93, 0.89])
     col = np.where(wood_mat[..., None], wood, col)
-    gloss = np.where(wood_mat, 0.2 + 0.14 * sit + 0.3 * ring + 0.12 * disc + 0.06 * lean + 0.12 * hand
+    gloss = np.where(wood_mat, 0.15 + 0.13 * sit + 0.22 * disc + 0.04 * lean + 0.12 * hand
                      + 0.12 * hd + 0.08 * wet, gloss)
 
     # ---------------- gaps and cavities
@@ -272,7 +293,8 @@ def build():
     gloss = np.where(ironm, 0.4 - 0.25 * rmask, gloss)
 
     # ---------------- AO into colour (the game's AO only darkens ambient light)
-    col = col * (0.55 + 0.45 * ao[..., None]) ** 0.8
+    # (v1.1: softer on the lining - the wings' AO darkened its sides into smears)
+    col = col * np.where(lining[..., None], 0.7 + 0.3 * ao[..., None], (0.55 + 0.45 * ao[..., None]) ** 0.8)
     col[iid < 0] = STEAMED * 0.8
 
     # ---------------- normal: baked + grain where modelled, original on the iron

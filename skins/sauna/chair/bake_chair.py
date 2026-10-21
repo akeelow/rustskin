@@ -9,7 +9,9 @@ Concept C "changing-room chair", no alpha. Modelled (positions from layout.py):
             rail by rays toward its axis; drape folds growing toward the hem, a hem band, rounded edges
   nails     forged heads at both ends of every slat (into the side rails), on the battens
   wire      a helix of wire round the split end of the shovel-handle leg and its old rubber tip
-Wings, arms, rail, the block leg and the handle are the low-poly's own shape, subdivided with slight
+  wings     (v1.1) three straight off-cuts per side butted together: joint grooves, a step, nails;
+            two nails across each arm's front end
+Arms, rail, the block leg and the handle are the low-poly's own shape, subdivided with slight
 waves (hand-planed); iron parts (rear legs, posts, brackets) stay as they are and keep the original
 normal map in texture_v1.py.
 
@@ -128,9 +130,10 @@ def load_low():
     return low
 
 
-def copy_regions(low, reg, keep, name, mat, push=0.0, subdiv=0, wave=0.0, seed=0.0):
+def copy_regions(low, reg, keep, name, mat, push=0.0, subdiv=0, wave=0.0, seed=0.0, shape=None):
     """A copy of the low-poly with only the polygons whose region is in `keep`; optionally pushed
-    along the normals (negative: inward), subdivided and waved (hand-planed wood)."""
+    along the normals (negative: inward), subdivided and waved (hand-planed wood); shape(co) adds
+    its own displacement along the normal."""
     me = low.data.copy()
     ob = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(ob)
@@ -143,10 +146,12 @@ def copy_regions(low, reg, keep, name, mat, push=0.0, subdiv=0, wave=0.0, seed=0
     for _ in range(subdiv):
         bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=1, use_grid_fill=True)
     bm.normal_update()
-    if push or wave:
+    if push or wave or shape:
         moves = []
         for v in bm.verts:
             d = push + wave * noise.noise(Vector((v.co.x * 0.08, v.co.y * 0.08 + seed, v.co.z * 0.08)))
+            if shape:
+                d += shape(v.co)
             moves.append((v, v.normal * d))
         for v, m in moves:
             v.co += m
@@ -310,7 +315,11 @@ def build_seat(low, reg, mats, rng):
         conform(slats, bvh, xs, zs, lambda x, z: (x, 90.0, z), (0, -1, 0), off, ok=lambda n: n.y > 0.6)
     ob = new_obj("hp_seat", slats, mats["slat"], low)
     sb = BVHTree.FromObject(ob, bpy.context.evaluated_depsgraph_get())
-    for x, z in L.seat_nails():
+    for side, z, inset in L.seat_nails():
+        x = 0.0                                            # walk out to the slat's end
+        while sb.ray_cast(Vector((x + side * 0.5, 90.0, z)), Vector((0, -1, 0)), 100.0)[0] is not None and abs(x) < 35:
+            x += side * 0.5
+        x -= side * inset
         hit, n, _, _ = sb.ray_cast(Vector((x, 90.0, z)), Vector((0, -1, 0)), 100.0)
         if hit is not None:
             proud = rng.random() < 0.12
@@ -475,19 +484,46 @@ def build_wire(low, reg, mats):
     return [new_obj("hp_wire", bm, mats["wire"], low)]
 
 
+def build_wings(low, reg, mats, rng):
+    """v1.1: the side wings as three straight off-cuts butted together (layout.WING_JOINTS): a groove at
+    each joint, the middle piece 1.5 mm proud, the lowest 0.5 mm; nails both sides of each joint;
+    two nails across each arm's front end into its post. (v1 in game: wings and arms read as plastic.)"""
+    def shape(co):
+        seg = int(L.wing_segment(co.y))
+        d = (0.0, 0.15, 0.05)[seg]
+        for jy in L.WING_JOINTS:
+            d -= 0.3 * math.exp(-((co.y - jy) / 0.22) ** 2)
+        return d
+
+    ob = copy_regions(low, reg, {"wing"}, "hp_wings", mats["frame"], subdiv=5, wave=0.05, seed=3.0, shape=shape)
+    nails = bmesh.new()
+    wv = region_bvh(low, reg, {"wing"})
+    for x, y in L.wing_nails():
+        hit, n, _, _ = wv.ray_cast(Vector((x, y, 60.0)), Vector((0, 0, -1)), 200.0)
+        if hit is not None:
+            place(nails, lambda nb: forged_nail(nb, 0, 0, 0.17, rng, r=rng.uniform(0.38, 0.46)), hit, n)
+    av = region_bvh(low, reg, set(ARMS))
+    for x, z in L.arm_nails():
+        hit, n, _, _ = av.ray_cast(Vector((x, 150.0, z)), Vector((0, -1, 0)), 200.0)
+        if hit is not None:
+            place(nails, lambda nb: forged_nail(nb, 0, 0, 0.0, rng, r=rng.uniform(0.4, 0.5)), hit, n)
+    return [ob, new_obj("hp_frame_nails", nails, mats["nail"], low)]
+
+
 def build(low, reg, seed=7):
     rng = random.Random(seed)
     mats = {k: id_material(k) for k in IDS}
     set_pass(mats.values(), "view")
     hp = [copy_regions(low, reg, set(IRON), "hp_iron", mats["base"]),
           copy_regions(low, reg, {"under"}, "hp_joists", mats["joist"]),
-          copy_regions(low, reg, {"wing", "seat_edge", RAIL, *ARMS, POST_L, BLOCK}, "hp_frame", mats["frame"],
+          copy_regions(low, reg, {"seat_edge", RAIL, *ARMS, POST_L, BLOCK}, "hp_frame", mats["frame"],
                        subdiv=3, wave=0.05, seed=1.0),
           copy_regions(low, reg, {POLE, POLE_TOP, TIP_END}, "hp_handle", mats["handle"], subdiv=2, wave=0.03, seed=2.0)]
     hp += build_seat(low, reg, mats, rng)
     hp += build_backrest(low, reg, mats, rng)
     hp += build_towel(low, reg, mats)
     hp += build_wire(low, reg, mats)
+    hp += build_wings(low, reg, mats, rng)
     return hp, mats
 
 

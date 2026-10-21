@@ -82,15 +82,18 @@ def crack_z(x):
 
 
 def seat_nails():
-    """Forged nails into the side rails: two per slat near each end (x -25.5 / +21.0), a few missing."""
+    """Forged nails into the side rails: two per slat, 3 cm in from each end (the seat narrows toward
+    the back, so bake_chair.py finds each slat's end by rays), a few missing. Returns (side, z, inset).
+    (v1: fixed x -25.5 / +21.0 - half the rays missed, the rear slats and the right ends had no nails)"""
     rng = random.Random(SEED + 5)
     out = []
     for i, (z0, z1) in enumerate(SLATS):
-        for xs in (-25.5, 21.0):
+        for side in (-1, 1):
             for j in (-1, 1):
                 if rng.random() < 0.15:
                     continue
-                out.append((xs + rng.uniform(-0.6, 0.6), (z0 + z1) / 2 + j * (z1 - z0) * 0.24 + rng.uniform(-0.4, 0.4)))
+                out.append((side, (z0 + z1) / 2 + j * (z1 - z0) * 0.24 + rng.uniform(-0.4, 0.4),
+                            3.0 + rng.uniform(-0.6, 0.6)))
     return out
 
 
@@ -99,6 +102,33 @@ def batten_nails():
     rng = random.Random(SEED + 6)
     return [((x0 + x1) / 2 + rng.uniform(-0.8, 0.8), (y0 + y1) / 2 + rng.uniform(-0.6, 0.6))
             for (y0, y1) in BATTENS for (x0, x1) in BOARDS]
+
+
+# ---------------------------------------------------------------- frame: wings pieced from off-cuts, arms
+# v1 in game: the curved side wings and the arms read as moulded plastic. The survivor did not bend
+# wood: each wing is three straight off-cuts butted together - joints across at y 95 and y 80 (where
+# the wing turns forward under the arm), the lower piece a touch proud, two nails each side.
+WING_JOINTS = (95.0, 80.0)
+WING_X = 27.8                                # middle of the wing's front face, |x|
+ARM_X = (27.4, 31.6)                         # two nails across each arm's front end, |x|
+ARM_NAIL_Z = 21.0
+
+
+def wing_segment(y):
+    return np.where(y > WING_JOINTS[0], 0, np.where(y > WING_JOINTS[1], 1, 2))
+
+
+def wing_nails():
+    """(x, y): on the wings' front faces, both sides of each joint."""
+    rng = random.Random(SEED + 7)
+    return [(side * (WING_X + rng.uniform(-0.8, 0.8)), jy + dy + rng.uniform(-0.3, 0.3))
+            for side in (-1, 1) for jy in WING_JOINTS for dy in (-2.0, 2.0)]
+
+
+def arm_nails():
+    """(x, z): two nails across each arm's front end, into the arm post."""
+    rng = random.Random(SEED + 8)
+    return [(side * ax + rng.uniform(-0.3, 0.3), ARM_NAIL_Z + rng.uniform(-0.8, 0.8)) for side in (-1, 1) for ax in ARM_X]
 
 
 # ---------------------------------------------------------------- shovel-handle leg and its wire
