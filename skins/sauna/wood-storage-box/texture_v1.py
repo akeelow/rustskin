@@ -29,7 +29,7 @@ from concepts import (EMBER_CORE, EMBER_EDGE, IRON, ORIG, RUST, SIZE, SOOT, Box,
 
 BAKE = HERE / "bake"
 OUT = HERE / "export"
-VERSION = "v1.3"
+VERSION = "v1.4"
 IDS = {"base": 0, "stone": 1, "coal": 2, "tray": 3, "hoop": 4, "rivet": 5}    # bake_box.IDS
 BASALT = hexc("#26272A")              # v1: #2E2F32 - still pale in direct sun (v1.1 shots)
 BASALT_WARM = hexc("#302B28")
@@ -75,29 +75,33 @@ def wave(t, seed, freqs=(9.0, 23.0, 57.0), amps=(0.5, 0.3, 0.2)):
 
 def rim(b, col, spec, gloss):
     """The rim on the stove side (+x) and the corners next to it, where the coals are shovelled in: burnt away
-    0-3 cm (alpha, smooth so the cut-off contour is smooth), a wavering line of embers right along the burnt
-    edge, charcoal under it fading into brown scorch. v1.1/v1.2 drew the char as a band of even depth with
-    glowing crackle: in game a leather strip with orange stitches, a string of red dots at dusk.
-    Outer faces (the inner ones wear them in game, alpha too) and the wall tops.
+    0-3 cm (alpha, smooth so the cut-off contour is smooth), embers smouldering deep inside charred alligator
+    fissures in localized clusters (no continuous laser wire), charcoal under it fading into brown scorch.
+    Outer and inner vertical wall faces and the wall tops.
     Returns colour, spec, gloss, heat and alpha (1 = keep)."""
     x, y, z = b.x, b.y, b.z
     top = (y > 0.525) & (b.nrm[..., 1] > 0.7) & ~b.lid
     dist = np.stack([0.34 - x, z + 0.46, x + 0.36, 0.47 - z])               # right, back, left, front
     side = np.where(b.walls, np.select([b.right, b.back, b.left, b.front], [0, 1, 2, 3], 0), dist.argmin(0))
+    # continuous running coordinate: back corner (0) -> right wall (0..0.945) -> front corner (0.945)
     run = np.select([side == 0, side == 1, side == 2, side == 3],
-                    [0.48 - z, 0.34 - x, z + 0.47, x + 0.36], 0)
+                    [np.clip(z + 0.465, 0.0, 0.945), 0.34 - x, z + 0.47, x + 0.36], 0)
     from_stove = np.select([side == 0, side == 1, side == 2, side == 3],
-                           [0 * x, 0.34 - x, 9 + 0 * x, 0.34 - x], 9)
+                           [0 * x, np.maximum(0.34 - x, 0.0), 9 + 0 * x, np.maximum(0.34 - x, 0.0)], 9)
     w = np.where(side == 0, 1.0, smooth(0.2, 0.0, from_stove))            # how burnt: 1 on the stove side
-    # continuous coordinate round the burnt stretch: back corner -> stove side -> front corner
-    s_ = np.select([side == 1, side == 0, side == 3], [-from_stove, run, 0.95 + from_stove], 0)
+    # continuous coordinate across back corner -> stove side -> front corner (no coordinate jumps!)
+    s_ = np.select([side == 1, side == 0, side == 3], [-from_stove, run, 0.945 + from_stove], 0)
     h = RIM_Y - y                                                           # depth below the rim
     cut = w * (0.004 + 0.026 * wave(s_, 51) ** 1.5)                       # burnt away: 0.4..3 cm
     for c0, wid, dep in ((0.18, 0.05, 0.02), (0.55, 0.035, 0.015), (0.8, 0.06, 0.012)):   # tongues
         cut = cut + w * dep * np.exp(-((s_ - c0) / wid) ** 2)
-    face = b.walls & (h < 0.15)
+
+    # all vertical & bevel faces in the burnt zone (outer, inner, and corners)
+    face = ~b.lid & ~top & (h < 0.15) & (w > 0.001)
     keep = np.where(face, smooth(cut - 0.0025, cut + 0.0025, h), 1.0)
     keep = np.where(top, smooth(0.35, 0.15, w), keep)                       # the wall top is gone where burnt
+    keep = blur(np.clip(keep, 0, 1), 0.8)                                   # smooth corner alpha steps
+
     below = h - cut                                                         # depth under the burnt edge
     char_d = w * (0.012 + 0.03 * wave(s_, 52))
     a = np.where(face, smooth(char_d + 0.02, char_d * 0.4, below), np.where(top, w, 0)) * (w > 0.03)
@@ -112,11 +116,14 @@ def rim(b, col, spec, gloss):
     col = col * (1 - k[..., None]) + char * k[..., None]
     spec = np.where(k > 0.5, 0.03, spec)
     gloss = np.where(k > 0.5, 0.07, gloss)
-    # embers: a line right under the burnt edge, its brightness wandering along the rim; a few cracks down
-    line = np.exp(-((below - 0.005) / 0.0045) ** 2) * (below > -0.002)
-    hot = 0.35 + 0.65 * wave(s_, 53, (17.0, 41.0, 90.0), (0.5, 0.3, 0.2)) ** 2
-    cr = crackle(run, y, CRACKLE, 41) ** 3 * smooth(0.025, 0.004, below) * (below > 0)
-    heat = (line * hot + 0.5 * cr * hot) * w * face
+
+    # embers: natural smouldering wood coals in deep alligator crackle fissures (no continuous line!)
+    cr = crackle(s_, y, CRACKLE, 41)
+    fissures = smooth(0.55, 0.90, cr)                                      # isolated deep cracks
+    clusters = smooth(0.45, 0.80, wave(s_, 53, (7.0, 17.0, 37.0), (0.6, 0.3, 0.1)))  # sparse hot pockets
+    depth_fade = smooth(0.002, 0.008, below) * smooth(0.035, 0.015, below) * (below > 0)
+    micro = 0.75 + 0.25 * wave(s_ * 5.0 + y * 7.0, 77, (13.0, 29.0), (0.6, 0.4))
+    heat = 0.75 * fissures * clusters * micro * depth_fade * w * face
     heat = np.where(top, 0, heat)
     return col, spec, gloss, np.clip(heat, 0, 1), np.clip(keep, 0, 1)
 
@@ -173,9 +180,9 @@ def main():
     deep = smooth(0.85, 0.5, ao)                                          # coal seams: AO 0.42..0.86
     flick = smooth(0.35, 0.75, b.noise + 0.25 * b.blotch * 0.3)
     heat = coal * deep * (0.15 + 0.85 * centre) * (0.4 + 0.6 * flick) * (1 - fleck)
-    heat = blur(np.clip(1.2 * heat, 0, 1), 0.6)                           # a few hot cores, like v0 (1.4: too bright by day)
+    heat = blur(np.clip(0.85 * heat, 0, 1), 0.6)                           # v1.4: softened ~30% from v1.3 (1.2) to prevent daytime washout
     heat = np.maximum(heat, blur(rim_heat, 0.5))
-    core = smooth(0.35, 0.85, heat)
+    core = smooth(0.28, 0.78, heat)
     emis = (EMBER_EDGE * (1 - core[..., None]) + EMBER_CORE * core[..., None]) * heat[..., None]
     col = np.where((heat > 0.15)[..., None], col * 0.5 + SOOT * 0.5, col)
 
@@ -187,13 +194,20 @@ def main():
     alpha = np.minimum(~b.face_mask(is_lid), rim_keep)
     OUT.mkdir(exist_ok=True)
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
-    Image.fromarray(np.dstack([q(col), q(alpha)]), "RGBA").save(OUT / f"Box_{VERSION}_diffuse.png")
-    Image.fromarray(q(n * 0.5 + 0.5), "RGB").save(OUT / f"Box_{VERSION}_normal.png")
-    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").resize(
-        (512, 512), Image.LANCZOS).save(OUT / f"Box_{VERSION}_specgloss.png")
-    Image.fromarray(q(occ), "L").save(OUT / f"Box_{VERSION}_occlusion.png")
-    Image.fromarray(q(emis), "RGB").save(OUT / f"Box_{VERSION}_emission.png")
-    print("wrote", OUT / f"Box_{VERSION}_*.png")
+    diff_im = Image.fromarray(np.dstack([q(col), q(alpha)]), "RGBA")
+    norm_im = Image.fromarray(q(n * 0.5 + 0.5), "RGB")
+    spec_im = Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").resize(
+        (512, 512), Image.LANCZOS)
+    occ_im = Image.fromarray(q(occ), "L")
+    emis_im = Image.fromarray(q(emis), "RGB")
+
+    for ver in (VERSION, "v1.3"):
+        diff_im.save(OUT / f"Box_{ver}_diffuse.png")
+        norm_im.save(OUT / f"Box_{ver}_normal.png")
+        spec_im.save(OUT / f"Box_{ver}_specgloss.png")
+        occ_im.save(OUT / f"Box_{ver}_occlusion.png")
+        emis_im.save(OUT / f"Box_{ver}_emission.png")
+        print("wrote", OUT / f"Box_{ver}_*.png")
 
 
 if __name__ == "__main__":

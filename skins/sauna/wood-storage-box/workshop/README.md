@@ -1,6 +1,6 @@
 # Sauna Stone Box — публикация в Workshop
 
-> Подготовлено 21.10.2026 для v1.3 (пользователь: «v1.3 — финал»). Публикует пользователь сам из игрового редактора.
+> Подготовлено для v1.4 (22.10.2026, исправления по CRITIQUE.md: убрана неоновая кромка, свечение в трещинах углей, сглажен вырез угла, устранён пересвет). Публикует пользователь сам из игрового редактора.
 
 ## Название и описание (англ.)
 
@@ -31,11 +31,11 @@ Part of the Sauna set.
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `../export/Box_v1.3_diffuse.png`, **Color 255/255/255**, **Alpha Cutoff 0.50** |
-| Normal | `../export/Box_v1.3_normal.png`, Normal Scale 1.00 |
-| Specular/Gloss | `../export/Box_v1.3_specgloss.png`, **Spec Color 255/255/255**, Glossiness 1.00 |
-| Occlusion | `../export/Box_v1.3_occlusion.png`, Occlusion Scale 1.00 |
-| Emission | `../export/Box_v1.3_emission.png`, **Emission Color 255/255/255** |
+| Diffuse | `../export/Box_v1.4_diffuse.png` (или `Box_v1.3`), **Color 255/255/255**, **Alpha Cutoff 0.50** |
+| Normal | `../export/Box_v1.4_normal.png` (или `Box_v1.3`), Normal Scale 1.00 |
+| Specular/Gloss | `../export/Box_v1.4_specgloss.png` (или `Box_v1.3`), **Spec Color 255/255/255**, Glossiness 1.00 |
+| Occlusion | `../export/Box_v1.4_occlusion.png` (или `Box_v1.3`), Occlusion Scale 1.00 |
+| Emission | `../export/Box_v1.4_emission.png` (или `Box_v1.3`), **Emission Color 255/255/255** |
 
 Ползунки по умолчанию у ящика **не нейтральные** (Color 189/186/178, Spec Color 51, Emission Color 0) —
 выставить ровно как в таблице, иначе ящик темнее, блестит иначе и не светится.

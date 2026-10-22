@@ -19,7 +19,7 @@ from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 OBJ = HERE / "renders" / "concepts" / "box_game.obj"
-PREFIX = HERE / "export" / "Box_v1.3"
+PREFIX = HERE / "export" / "Box_v1.4"
 STOVE_OBJ = HERE.parent / "electric-furnace" / "originals" / "electric.furnace.obj"
 STOVE_PREFIX = HERE.parent / "electric-furnace" / "export" / "ElectricFurnace_v2"
 OUT = HERE / "workshop"
