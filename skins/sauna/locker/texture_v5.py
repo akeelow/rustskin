@@ -232,12 +232,12 @@ def main():
     gcol = frost_tone * (1 - clear[..., None]) + INSIDE * clear[..., None]
     gcol = gcol * (1 - 0.18 * beads[..., None] * glass[..., None]) + 0.18 * beads[..., None] * np.array([1.0, 0.97, 0.9])
     c = np.where(glass[..., None], gcol, c)
-    em_k = np.where(glass, 0.42 + 0.5 * clear + 0.1 * beads, em_k)
+    em_k = np.where(glass, 0.16 + 0.22 * clear + 0.05 * beads, em_k)
     spec = np.where(glass, 0.45, spec)
     gloss = np.where(glass, 0.55 + 0.4 * np.maximum(clear, beads), gloss)
     # window light falling on the sill and the frame's inner edge at night
     near_w = np.exp(-np.maximum.reduce([gx0 - x, x - gx1, gy0 - y, y - gy1, np.zeros_like(x)]) / 1.8)
-    sill_glow = (sill | frame) * near_w * 0.18
+    sill_glow = (sill | frame) * near_w * 0.08
 
     # ---------------------------------------------------------------- burned map (right of the window)
     mx0, mx1, my0, my1 = MAP
@@ -368,7 +368,7 @@ def main():
     # ---------------------------------------------------------------- broken board: the dark inside, and its light
     cav_light = np.exp(-((x - 21.3) ** 2 / (2 * 3.0 ** 2) + (y - 92.0) ** 2 / (2 * 12.0 ** 2)))
     c = np.where(cavity[..., None], hexc("#120A05") * (1 + 1.2 * cav_light[..., None]), c)
-    em_k = np.where(cavity, 0.04 + 0.3 * cav_light ** 2, em_k)
+    em_k = np.where(cavity, 0.03 + 0.20 * cav_light ** 2, em_k)
     # splinter ends near the hole: fresh, lighter wood
     fresh = board & (x > 16.8) & (((y > 66) & (y < 83)) | ((y > 98) & (y < 116))) & (np.clip(edge, 0, 1) > 0.1)
     c = np.where(fresh[..., None], c * 1.25, c)
@@ -411,6 +411,15 @@ def main():
     out = dict(m, col=col, nb=nb, spec=spec, gloss=gloss, alpha=alpha)
     v1.save(out, "v5")
     v4.save_emission(emit, "v5")
+
+    # Solid fallback for curators (no alpha cuts on left/right doors)
+    m1 = v1.build()
+    left_right = (oid == ids["locker_door_a_LOD0"]) | (oid == ids["locker_door_c_LOD0"])
+    col_solid = np.where(left_right[..., None], m1["col"], col)
+    q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
+    full = np.full((SIZE, SIZE), 255, np.uint8)
+    Image.fromarray(np.dstack([q(col_solid), full]), "RGBA").save(v1.OUT / "Locker_v5_diffuse_solid.png")
+    print("saved Locker_v5_diffuse_solid.png")
     print("done; door front", int(front.sum()), {k: int(is_(k).sum()) for k in IDS})
 
 
