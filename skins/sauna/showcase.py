@@ -27,7 +27,7 @@ ITEMS = {
     "chair": dict(obj=SAUNA / "chair/originals/chair.obj", up="y", scale=1.0, lift=0.018,
                   prefix=SAUNA / "chair/export/Chair_v1.4", cutoff=0.0, gloss="specgloss"),
     "box": dict(obj=SAUNA / "wood-storage-box/renders/concepts/box_game.obj", up="y", scale=1.0, lift=0.0,
-                prefix=SAUNA / "wood-storage-box/export/Box_v1.3", cutoff=0.5, gloss="specgloss"),
+                prefix=SAUNA / "wood-storage-box/export/Box_v1.4", cutoff=0.5, gloss="specgloss"),
     "locker": dict(obj=SAUNA / "locker/originals/locker.obj", up="y", scale=0.01, lift=0.0,
                    prefix=SAUNA / "locker/export/Locker_v5", cutoff=0.5, gloss="specgloss",
                    ao=(SAUNA / "locker/originals/locker_ao.png", 0.75)),

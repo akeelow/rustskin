@@ -23,18 +23,24 @@ def main():
     size = int(argv[argv.index("--size") + 1]) if "--size" in argv else 1024
     scene = sc.fresh()
     sc.add("locker", (-2.0, WALL - 0.37, 0))
-    sc.add("bench", (0.2, WALL - 0.75, 0), rot_z=180)  # headrest to the left, foot end to the stove
+    # Bench moved slightly forward and angled so the slats, leaves and rolled towel are fully visible
+    sc.add("bench", (0.18, WALL - 0.92, 0), rot_z=174)
     stove = (1.9, WALL - 0.4)
     sc.add("stove", (*stove, 0))
-    sc.add("box", (1.3, -1.5, 0), rot_z=60)          # burnt rim (+x) turned to the stove
-    sc.add("chair", (0.05, -1.95, 0), rot_z=10)
-    sc.figure(robe=True, wrap=True, location=(-1.35, -1.4, 0), rot_z=20)
+    sc.add("box", (1.35, -1.5, 0), rot_z=55)          # solid 3D box, glowing embers towards stove/center
+    # Chair shifted to the left changing area in 3/4 view, unblocking the bench
+    sc.add("chair", (-0.72, -1.75, 0), rot_z=-18)
+    sc.figure(robe=True, wrap=True, location=(-1.52, -1.28, 0), rot_z=24)
     sc.wall(WALL, width=16.0, height=4.0)
     sc.floor()
     sc.lights(scene, "night")
-    sc.stove_glow(stove, 110)
-    sc.lamp((-0.6, -1.9, 2.6), 70, color=(1.0, 0.8, 0.6), size=1.0)   # a dim warm bulb over the changing area
-    sc.camera(scene, (-0.05, -0.55, 0.98), (0.08, -1.0, 0.3), 4.6, 32, fstop=11)
+    sc.stove_glow(stove, 115)
+    # Dim warm lamp over the left changing area
+    sc.lamp((-0.9, -1.8, 2.6), 65, color=(1.0, 0.8, 0.6), size=1.0)
+    # Warm spotlight over the bench deck (eliminates central dark void, brings out wood grain and towel)
+    sc.lamp((0.2, -0.2, 2.5), 85, color=(1.0, 0.88, 0.72), size=1.1)
+    # Camera: slightly elevated perspective to show bench slats and bucket imprint
+    sc.camera(scene, (-0.05, -0.48, 0.88), (0.05, -1.0, 0.35), 4.5, 32, fstop=11)
     sc.render(scene, OUT / "collection.png", samples, (size, size))
 
 
