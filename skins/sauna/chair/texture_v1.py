@@ -337,6 +337,16 @@ def build():
     col = col * (1 - np.where(tw, 0.14, 0.28)[..., None] * lhalo[..., None])
     gloss = np.where(lf, gloss, gloss + 0.22 * lhalo)
 
+    # ---------------- CRITIQUE.md (3.6): soft drop shadow under birch leaf on towel
+    # The towel front hangs vertically (nrm_z > 0.2, Y is height).
+    # Overhead light (daylight/room lamp) casts a soft shadow downwards (-y, +rows) onto the towel cloth.
+    tm = on_towel.astype(np.float64)
+    contact_t = blur(np.roll(tm, 2, axis=0), 2.5) * (1 - tm)
+    soft_t = blur(np.roll(np.roll(tm, 7, axis=0), 2, axis=1), 6.0) * (1 - tm)
+    towel_shadow = np.clip(contact_t * 0.75 + soft_t * 0.55, 0, 1) * tw
+    col = col * (1 - 0.48 * towel_shadow[..., None])
+    ao = np.maximum(0.0, ao - 0.28 * towel_shadow)
+
     # ---------------- iron: dark steel, rust in joints (AO), at the bottom and at the seat joint
     # v0 in game: orange patches -> rust a mix toward iron, weaker
     rmask = smooth(0.6, 0.25, ao) * 0.4 + 0.5 * smooth(10.0, 0.0, y) + 0.35 * np.exp(-((y - 45.0) / 5.0) ** 2)
