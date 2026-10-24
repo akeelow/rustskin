@@ -34,7 +34,7 @@ ITEMS = {
     "robe": dict(obj=SAUNA / "snow-jacket/originals/jacket.snow.obj", up="y", scale=1.0, lift=0.0,
                  prefix=SAUNA / "snow-jacket/export/SnowJacket_v2", cutoff=0.0, gloss="specgloss", cloth="ghost"),
     "wrap": dict(obj=SAUNA / "burlap-headwrap/originals/burlap.headwrap.obj", up="y", scale=1.0, lift=0.0,
-                 prefix=SAUNA / "burlap-headwrap/export/BurlapHeadwrap_v1", cutoff=0.79, gloss=None, cloth="cull"),
+                 prefix=SAUNA / "burlap-headwrap/export/BurlapHeadwrap_v1", cutoff=0.79, gloss="specgloss", cloth="cull"),
     # (cull back faces like the game: the outer side shows, the inside only through the eye slit)
     # (the wrap's original occlusion is not multiplied in: the game shades only ambient light with it,
     #  baked into the colour it turns the light linen olive)
