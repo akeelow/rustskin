@@ -150,12 +150,12 @@ def build():
     lc = LIME_OLD * (0.95 + 0.1 * fine[..., None])
     col = np.where((lamp & (frame_i < 0.5))[..., None], lc, col)
     col = np.where((lamp & (slat > 0.5))[..., None], LIME_LIGHT * (0.95 + 0.1 * fine[..., None]), col)
-    col = np.where((lamp & (gapg > 0.5))[..., None], np.array([0.98, 0.86, 0.62]), col)
+    col = np.where((lamp & (gapg > 0.5))[..., None], np.array([0.88, 0.72, 0.48]), col)
     h = np.where(lamp, 1.2 * (frame_o - frame_i) + 0.7 * slat + 0.2 * gapg, h)
-    emit_k = np.where(lamp, 0.75 * gapg, emit_k)
+    emit_k = np.where(lamp, 0.35 * gapg, emit_k)
     gloss = np.where(lamp & (gapg > 0.5), 0.6, gloss)
     halo = np.exp(-((xu - lx) ** 2 + (y - ly) ** 2) / (2 * 17.0 ** 2)) * back * (y > 165) * (frame_o < 0.5)
-    wash = np.maximum(wash, 0.75 * halo)
+    wash = np.maximum(wash, 0.22 * halo)
 
     # hanger rail with three pegs, middle section
     rail = back & (rect(xu, y, -24, 24, 146, 150) > 0.5)
@@ -241,7 +241,7 @@ def build():
     hm = frieze & (holes > 0.5)
     col = np.where(hm[..., None], GROOVE, col)
     h = np.where(frieze, h - 0.8 * holes, h)
-    emit_k = np.where(hm, 0.3, emit_k)
+    emit_k = np.where(hm, 0.15, emit_k)
 
     pc = THERMO * (0.86 + 0.24 * grain[..., None])
     col = np.where(plinth[..., None], pc, col)
@@ -251,7 +251,7 @@ def build():
     pm = plinth & (slots > 0.5)
     col = np.where(pm[..., None], GROOVE, col)
     h = np.where(plinth, -0.6 * slots, h)
-    emit_k = np.where(pm, 0.3, emit_k)
+    emit_k = np.where(pm, 0.15, emit_k)
 
     # drawer: frame + bevelled raised panel; the handle is steel geometry
     dfr = rect(x, y, -20.0, 20.0, 19.5, 44.5, soft=0.3)
@@ -322,8 +322,8 @@ def build():
     # ---------------------------------------------------------------- light
     # LED strips: shelf front edges and the slit under the frieze (front of the ceiling)
     strip = (shelf_edge | (shelf & (z > 17)) | (ceiling & (z > 15))) & ~small
-    emit_k = np.where(strip, 0.9, emit_k)
-    col = np.where(strip[..., None], np.array([0.96, 0.86, 0.68]), col)
+    emit_k = np.where(strip, 0.35, emit_k)
+    col = np.where(strip[..., None], LIME_LIGHT * 1.05 * (0.86 + 0.24 * grain[..., None]), col)
     # light on the wood below every LED row, on the back wall and the niche sides
     below = np.zeros(cov.shape)
     for L in LIGHTS:
@@ -331,8 +331,8 @@ def build():
     # the niche side walls share their UVs with the outside of the locker (v4 in game: the outer
     # side glowed at night), so they get no light; the back wall carries the glow (v4.1: a bit less,
     # the emission also brightens the niches by day)
-    wash = np.maximum(wash, 0.52 * below * back)
-    wash = np.maximum(wash, 0.38 * shelf * smooth(-25, 15, z) + 0.25 * floor + 0.2 * ceiling)
+    wash = np.maximum(wash, 0.15 * below * back)
+    wash = np.maximum(wash, 0.15 * shelf * smooth(-25, 15, z) + 0.10 * floor + 0.08 * ceiling)
     emit = emit_k[..., None] * LED + (wash[..., None] * col * WARM)
     spec = np.where(emit_k > 0.5, 0.3, spec)
     gloss = np.where(emit_k > 0.5, 0.55, gloss)
