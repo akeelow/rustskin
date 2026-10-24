@@ -1,4 +1,4 @@
-"""Sauna Robe v2 (Snow Jacket): a short waffle bathrobe painted onto the parka.
+"""Sauna Robe v2.2 (Snow Jacket): a short waffle bathrobe painted onto the parka.
 
 The user's reference (references/sauna/robe/waffle_robe_kimono.png): beige waffle-cotton kimono
 robe, wrap closure with a shawl collar running diagonally, a tie belt, patch pockets, wide
@@ -7,6 +7,9 @@ cuffs. The parka's geometry stays (short, stand collar, zip flap), so the robe i
     chest to the belt, the under panel's band shows above the crossing (like a gi top);
   - belt: a band round the waist where the parka has its drawstring (y 0.46-0.54), a knot in
     front with two hanging tails;
+  - brick-red stripes (#8E3A30): signature set identity along the shawl collar wrap and the
+    hanging ends of the belt tails (matching the towels on Bed, Chair, Locker, and Wrap);
+  - pocket flap & zipper suppression: softened diffuse/normal to prevent parka seams showing;
   - wide turned-up cuffs, a hem seam, two patch pockets;
   - waffle weave in the normal (grid of recessed cells), the bands in plain smoother weave.
 Regions are chosen per texel by its 3D point (OBJ space: Y up, +Z front, arms along X).
@@ -27,19 +30,21 @@ from blocking import ORIG, OUT, SIZE, blur, hexc, position_map, smooth  # noqa: 
 from uv_zones import load_obj, normal, read_png, render_views  # noqa: E402
 
 SEED = 13
-CLOTH = hexc("#BFA67F")      # beige waffle cotton (reference), a little washed out
-BAND = hexc("#B79E78")       # collar / belt / cuffs: same cloth, denser weave reads a touch darker
-SEAM = hexc("#8C775A")
-SHADOW = hexc("#5A4A38")
-DAMP = hexc("#A8916C")
+CLOTH = hexc("#B89F77")        # warm, weathered waffle cotton (retains warmth under direct sun)
+BAND = hexc("#A88C64")         # collar band / belt / cuffs: denser weave reads darker
+STRIPE = hexc("#8E3A30")       # signature Sauna faded brick-red stripe (set palette)
+SEAM = hexc("#735C41")
+SHADOW = hexc("#433424")
+DAMP = hexc("#8F7552")
+INNER_LINING = hexc("#3C3125") # shaded interior cavity (prevents bright neck leaks)
 WAFFLE_PX = 9                # waffle cell, texels (~1.2 cm on the torso)
 
-BELT_Y, BELT_W = 0.50, 0.024                 # belt centre and half width (m)
+BELT_Y, BELT_W = 0.50, 0.025                 # belt centre and half width (m)
 KNOT = (0.02, 0.50)                          # knot centre (x, y) on the front
 NECK_R, NECK_L = (0.10, 0.83), (-0.10, 0.83)  # where the collar bands leave the neck
 WAIST_A, WAIST_B = (-0.07, BELT_Y), (0.07, BELT_Y)
 HEM_EDGE_X = -0.09                           # top panel's front edge at the hem
-COLLAR_W = 0.025                             # collar band half width (m)
+COLLAR_W = 0.026                             # collar band half width (m)
 
 
 def seg_dist(px, py, a, b):
@@ -67,7 +72,15 @@ def grad_normal(h, k):
 def main():
     V, T, F = load_obj(ORIG / "jacket.snow.obj")
     N = [normal(*(V[i] for i in vi)) for vi, _ in F]
-    pos, nrm, cov = position_map(V, T, F)
+
+    cache_path = ORIG / "pos_cache.npz"
+    if cache_path.exists():
+        data = np.load(cache_path)
+        pos, nrm, cov = data["pos"], data["nrm"], data["cov"]
+    else:
+        pos, nrm, cov = position_map(V, T, F)
+        np.savez_compressed(cache_path, pos=pos, nrm=nrm, cov=cov)
+
     x, y, z = pos[..., 0], pos[..., 1], pos[..., 2]
     ax = np.abs(x)
     rng = np.random.default_rng(SEED)
@@ -76,23 +89,35 @@ def main():
 
     bc = np.asarray(Image.open(ORIG / "jacket_snow_red_bc.png").convert("RGB").resize((SIZE, SIZE), Image.BICUBIC), np.float64) / 255.0
     r = bc[..., 0]
-    folds = np.clip(blur(r, 2) / np.maximum(blur(r, 14), 1e-3), 0.75, 1.25)
+
+    # Suppress chest pocket flaps AND central zipper seam from original red parka
+    pocket_flap_mask = front & (y > 0.56) & (y < 0.67) & (ax > 0.03) & (ax < 0.18)
+    zip_mask = front & (ax < 0.022) & (y > 0.22) & (y < 0.82)
+    flatten_mask = pocket_flap_mask | zip_mask
+
+    smooth_r = blur(r, 9)
+    r_blended = np.where(flatten_mask, smooth_r, r)
+    folds = np.clip(blur(r_blended, 2) / np.maximum(blur(r_blended, 14), 1e-3), 0.75, 1.25)
 
     # ---------------------------------------------------------------- regions
     # top panel collar band: neck (right) -> belt (left), continuing as a narrow facing to the hem
     dA, sA = seg_dist(x, y, NECK_R, WAIST_A)
-    dA2, _ = seg_dist(x, y, (WAIST_A[0], BELT_Y - BELT_W), (HEM_EDGE_X, 0.22))
+    dA2, sA2 = seg_dist(x, y, (WAIST_A[0], BELT_Y - BELT_W), (HEM_EDGE_X, 0.22))
     collar_a = front & (np.minimum(dA, dA2 * 1.4) < COLLAR_W)
     # the under panel shows only above the belt, on the far side of band A (left of it)
     edge_x = line_x(y, NECK_R, WAIST_A)
     under = front & (y > BELT_Y) & (x < edge_x - COLLAR_W)
-    dB, _ = seg_dist(x, y, NECK_L, WAIST_B)
+    dB, sB = seg_dist(x, y, NECK_L, WAIST_B)
     collar_b = under & (dB < COLLAR_W)
     # the V between the two bands, above where they cross: the chest/undershirt in shadow
     vee = under & (x > line_x(y, NECK_L, WAIST_B) + COLLAR_W) & (y > 0.6)
     # stand collar of the parka = the back of the shawl collar
     neckband = cov & (y > 0.825) & (ax < 0.22)
     collar = collar_a | collar_b | neckband
+
+    # Inside cavity facing forward: shaded interior lining
+    inner_cavity = cov & (y > 0.81) & (z < -0.01) & (ax < 0.12) & (nrm[..., 2] > 0.1)
+
     # top panel's front edge casts a soft shadow onto the under panel / lower front
     edge_shadow = (front & ~collar & (x < edge_x) & (y > BELT_Y)).astype(np.float64)
     edge_shadow = edge_shadow * smooth(COLLAR_W + 0.02, COLLAR_W, np.where(y > BELT_Y, dA, 1))
@@ -120,41 +145,75 @@ def main():
     pocket_seam &= ~belt
     band = (collar | belt | cuff) & ~vee
 
+    # --- Brick stripe accents (Sauna set palette #8E3A30) ---
+    # Shawl collar diagonal wrap: outer border running along chest to belt
+    s_a = front & (sA > 0) & (dA > COLLAR_W - 0.006) & (dA < COLLAR_W - 0.001) & (y >= BELT_Y) & (y <= 0.835)
+    s_b = under & (sB < 0) & (dB > COLLAR_W - 0.006) & (dB < COLLAR_W - 0.001) & (y >= BELT_Y) & (y <= 0.835)
+    stripe_collar = s_a | s_b
+
+    # Belt tails: double stripe at the ends of both tails (matching sauna towels)
+    stripe_tails = np.zeros_like(cov)
+    for dx0, slope, end in ((-0.012, -0.12, 0.33), (0.014, 0.18, 0.36)):
+        cx = kx + dx0 + (ky - y) * slope
+        tail = front & (y < ky) & (y > end) & (np.abs(x - cx) < 0.016)
+        s_wide = tail & (y > end + 0.014) & (y < end + 0.026)
+        s_thin = tail & (y > end + 0.032) & (y < end + 0.038)
+        stripe_tails |= (s_wide | s_thin)
+
+    stripes = (stripe_collar | stripe_tails) & cov
+
     # ---------------------------------------------------------------- diffuse
-    tone = 0.92 + 0.12 * blur(rng.random((SIZE, SIZE)), 30)
-    fleck = 0.95 + 0.08 * blur(rng.random((SIZE, SIZE)), 0.7)
-    shade = 1 + 0.35 * (folds - 1)
+    tone = 0.90 + 0.14 * blur(rng.random((SIZE, SIZE)), 28)
+    fleck = 0.94 + 0.10 * blur(rng.random((SIZE, SIZE)), 0.7)
+    shade = 1 + 0.40 * (folds - 1)
     col = CLOTH[None, None, :] * (tone * fleck * shade)[..., None]
     col = np.where(band[..., None], BAND[None, None, :] * (tone * fleck * shade)[..., None], col)
-    damp = smooth(0.58, 0.68, blur(rng.random((SIZE, SIZE)), 22)) * 0.35
+
+    damp = smooth(0.56, 0.68, blur(rng.random((SIZE, SIZE)), 20)) * 0.40
     col = col * (1 - damp[..., None]) + DAMP * damp[..., None]
-    col = col * (1 - 0.35 * edge_shadow[..., None]) + SHADOW * 0.35 * edge_shadow[..., None]
-    # the V stays cloth (the under panel, a touch shaded): cutting it out with alpha was tried
-    # in game (screenshots/v2_vcut_test.webp) and shows the game's green undershirt, not skin
-    col = np.where(vee[..., None], col * (0.82 + 0.1 * smooth(0.6, 0.78, y))[..., None], col)
+    col = col * (1 - 0.40 * edge_shadow[..., None]) + SHADOW * 0.40 * edge_shadow[..., None]
+    col = np.where(vee[..., None], col * (0.80 + 0.12 * smooth(0.6, 0.78, y))[..., None], col)
+
+    # Shaded inner cavity
+    col = np.where(inner_cavity[..., None], INNER_LINING[None, None, :] * 0.9, col)
+
     # seams and belt edges
     belt_edge = belt & ~(blur(belt.astype(np.float64), 1.2) > 0.97)
     band_edge = collar & ~(blur(collar.astype(np.float64), 1.2) > 0.97)
-    for m, a in ((belt_edge, 0.55), (band_edge, 0.4), (cuff_seam, 0.6), (hem_seam, 0.5),
+    for m, a in ((belt_edge, 0.55), (band_edge, 0.45), (cuff_seam, 0.65), (hem_seam, 0.55),
                  (pocket_seam, 0.55), (lower_edge, 0.6)):
         col[m] = col[m] * (1 - a) + SEAM * a
+
+    # Paint brick stripes with weave variation and soft edges
+    stripe_fade = 0.88 + 0.22 * blur(rng.random((SIZE, SIZE)), 2.5)
+    col = np.where(stripes[..., None], STRIPE[None, None, :] * (stripe_fade * shade)[..., None], col)
+
+    # Contact shadow under belt
+    belt_under_shadow = front & (y < BELT_Y - BELT_W) & (y > BELT_Y - BELT_W - 0.015)
+    col[belt_under_shadow] = col[belt_under_shadow] * 0.82
+
     col[~cov] = CLOTH * 0.9
 
     # ---------------------------------------------------------------- normal
     n0 = np.asarray(Image.open(ORIG / "jacket_snow_nrm.png").convert("RGB"), np.float64) / 255 * 2 - 1
-    fx = (blur(n0[..., 0] * 0.5 + 0.5, 5) * 2 - 1) * 0.6        # big folds only: no quilting, no zip flap
-    fy = (blur(n0[..., 1] * 0.5 + 0.5, 5) * 2 - 1) * 0.6
+    fx = (blur(n0[..., 0] * 0.5 + 0.5, 6) * 2 - 1) * 0.55
+    fy = (blur(n0[..., 1] * 0.5 + 0.5, 6) * 2 - 1) * 0.55
+    fx = np.where(flatten_mask, (blur(n0[..., 0] * 0.5 + 0.5, 14) * 2 - 1) * 0.15, fx)
+    fy = np.where(flatten_mask, (blur(n0[..., 1] * 0.5 + 0.5, 14) * 2 - 1) * 0.15, fy)
+
     yy, xx = np.mgrid[0:SIZE, 0:SIZE]
     u = (xx % WAFFLE_PX) / WAFFLE_PX
     v = (yy % WAFFLE_PX) / WAFFLE_PX
-    ridge = np.maximum(smooth(0.3, 0.46, np.abs(u - 0.5)), smooth(0.3, 0.46, np.abs(v - 0.5)))
+    ridge = np.maximum(smooth(0.28, 0.46, np.abs(u - 0.5)), smooth(0.28, 0.46, np.abs(v - 0.5)))
     weave = blur(rng.random((SIZE, SIZE)), 0.6)
     h = np.where(band, 0.35 * weave, ridge)
+    h = np.where(stripes, 0.42 * weave, h)
+
     # bands sit proud of the robe; seams sink
-    relief = blur(band.astype(np.float64), 1.5) * 1.2 + blur(knot.astype(np.float64), 4) * 3.0
+    relief = blur(band.astype(np.float64), 1.8) * 1.5 + blur(knot.astype(np.float64), 4.5) * 3.5 + blur(tails.astype(np.float64), 2.0) * 1.2
     grooves = (cuff_seam | hem_seam | pocket_seam | lower_edge).astype(np.float64)
-    hx, hy = grad_normal(h, 0.9)
-    rx, ry = grad_normal(relief - 0.8 * blur(grooves, 0.8), 1.4)
+    hx, hy = grad_normal(h, 0.95)
+    rx, ry = grad_normal(relief - 0.9 * blur(grooves, 0.8), 1.5)
     nx, ny = fx + hx + rx, fy + hy + ry
     nz = np.sqrt(np.clip(1 - nx ** 2 - ny ** 2, 0.05, 1))
     ln = np.sqrt(nx ** 2 + ny ** 2 + nz ** 2)
@@ -162,7 +221,7 @@ def main():
 
     # ---------------------------------------------------------------- spec / gloss / fuzz
     spec = np.full((SIZE, SIZE), 0.04) + 0.04 * damp
-    gloss = np.full((SIZE, SIZE), 0.1) + 0.25 * damp
+    gloss = np.full((SIZE, SIZE), 0.10) + 0.25 * damp
     fuzz = np.where(band, 0.7, 1.0)
 
     OUT.mkdir(exist_ok=True)
@@ -173,7 +232,7 @@ def main():
     Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "SnowJacket_v2_specgloss.png")
     Image.fromarray(np.dstack([q(fuzz), q(fuzz), q(fuzz), full]), "RGBA").save(OUT / "SnowJacket_v2_fuzz.png")
     render_views(V, T, F, N, HERE / "uv" / "v2_views.png", tex=read_png(OUT / "SnowJacket_v2_diffuse.png"))
-    print("done; collar", int(collar.sum()), "belt", int(belt.sum()), "vee", int(vee.sum()))
+    print("done; collar", int(collar.sum()), "belt", int(belt.sum()), "vee", int(vee.sum()), "stripes", int(stripes.sum()))
 
 
 if __name__ == "__main__":

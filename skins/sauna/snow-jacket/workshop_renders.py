@@ -3,10 +3,10 @@
 Usage (from the repo root):
   "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/snow-jacket/workshop_renders.py -- [shot ...] [--samples 128]
 
-Writes skins/sauna/snow-jacket/workshop/<shot>.png (1920x1080). Final v2.1 maps via ../showcase.py, on a
+Writes skins/sauna/snow-jacket/workshop/<shot>.png (1920x1080). Final v2.2 maps via ../showcase.py, on a
 wooden tailor's stand (no body: the set has no nudity; the inside of the robe shows through the collar).
-Shots: hero (3/4, day), front, back, belt (the knot and the waffle up close), set (with the Sauna Towel Wrap
-by the Sauna Stove, dusk).
+Shots: hero (3/4, day), front, back, belt (the knot and the waffle up close), sleeve (cuff & weave detail),
+set (with the Sauna Towel Wrap by the Sauna Stove, dusk).
 """
 import sys
 from pathlib import Path
@@ -22,6 +22,7 @@ SHOTS = {
     "front": ((0.0, 0.0, 1.15), (0.0, -1.0, 0.08), 2.2, 50, "day"),
     "back": ((0.0, 0.0, 1.15), (-0.45, 1.0, 0.2), 2.3, 50, "day"),
     "belt": ((0.0, -0.12, 1.1), (0.3, -1.0, 0.15), 0.85, 50, "day"),
+    "sleeve": ((0.42, 0.0, 0.95), (-0.45, -0.65, 0.45), 0.70, 45, "day"),
     "set": ((0.45, 0.0, 1.0), (0.35, -1.0, 0.2), 3.3, 40, "dusk"),
 }
 
