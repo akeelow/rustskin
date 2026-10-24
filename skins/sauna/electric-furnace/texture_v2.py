@@ -167,26 +167,48 @@ def main():
     emit[burner | bed] = 0
     emit += glow[..., None] * EMBER_RGB
 
-    # ------------------------------------------------ top plate (v2.6): sooty iron instead of v1's purple/blue
-    # temper rings and white tide lines, which read as marble in game; only a thin straw/bronze tint
-    # hugs the heaps, soot darkens towards them
+    # ------------------------------------------------ top plate: sooty iron with mineral/salt tide rings & splatter
+    # Authentic sauna stove top plate: water poured on hot stones spatters and evaporates,
+    # leaving delicate whitish mineral tide rings (кальциевые разводы / кольца накипи),
+    # dark soot halo near burner cups, and chalky matte mineral deposits.
     rimsel = (mat == RIM) & (y > 1.0) & ~stone & ~(in_dish)
     bcxr = np.where(x > 0, 0.143, -0.143)
     bczr = np.where(z > 0, 0.1435, -0.1435)
     bigr = (x > 0) == (z > 0)
     bd = np.hypot(x - bcxr, z - bczr) - np.where(bigr, 0.112, 0.098)
-    bd = bd + 0.01 * (fbm(x * 25, z * 25, y, 3, SEED + 80) - 0.5)
+    bd_warp = bd + 0.01 * (fbm(x * 25, z * 25, y, 3, SEED + 80) - 0.5)
     rsoot = fbm(x * 14, z * 14, y, 4, SEED + 81)
     rc = hexc("#38332F") * (0.72 + 0.5 * rsoot[..., None])
-    near = smooth(0.07, 0.0, bd)
-    rc = rc * (1 - 0.35 * near[..., None])
-    temper = smooth(-0.004, 0.006, bd) * smooth(0.035, 0.012, bd) * 0.3
-    tcol = hexc("#A68652") * (1 - smooth(0.0, 0.03, bd)[..., None]) + hexc("#7E5232") * smooth(0.0, 0.03, bd)[..., None]
+
+    # 1. Soot halo directly around burner rims (heat & smoke)
+    soot_ring = smooth(0.045, 0.002, bd_warp) * (0.65 + 0.35 * fbm(x * 30, z * 30, y, 3, SEED + 84))
+    rc = rc * (1 - 0.45 * soot_ring[..., None]) + hexc("#1A1715") * 0.45 * soot_ring[..., None]
+
+    # 2. Concentric evaporated water tide rings (mineral/salt crust from ladling steam-water)
+    ring1 = np.exp(-((bd_warp - 0.016) / 0.0035) ** 2) * (0.7 + 0.3 * fbm(x * 55, z * 55, 1.0, 3, SEED + 85))
+    ring2 = np.exp(-((bd_warp - 0.038) / 0.0045) ** 2) * (0.65 + 0.35 * fbm(x * 45, z * 45, 2.0, 3, SEED + 86))
+    ring3 = np.exp(-((bd_warp - 0.062) / 0.0055) ** 2) * (0.55 + 0.45 * fbm(x * 35, z * 35, 3.0, 3, SEED + 87))
+    tide_rings = np.clip(np.maximum.reduce([ring1 * 0.85, ring2 * 0.70, ring3 * 0.55]), 0, 1)
+
+    # 3. Water droplet splatter spots from ladling steam water
+    splatter_noise = fbm(x * 80, z * 80, y, 3, SEED + 88)
+    splatter = smooth(0.65, 0.76, splatter_noise) * smooth(0.12, 0.01, bd_warp)
+
+    # Blend mineral crust into diffuse: pale chalky salt deposits (#C8C0B2)
+    salt_mask = np.clip(tide_rings * 0.65 + splatter * 0.45, 0, 1)
+    salt_col = hexc("#C8C0B2") * (0.88 + 0.2 * fbm(x * 120, z * 120, 0, 2, SEED + 89)[..., None])
+    rc = rc * (1 - salt_mask[..., None]) + salt_col * salt_mask[..., None]
+
+    # 4. Bronze / straw heat temper tint hugging the burner edge
+    temper = smooth(-0.004, 0.006, bd_warp) * smooth(0.035, 0.012, bd_warp) * 0.3
+    tcol = hexc("#A68652") * (1 - smooth(0.0, 0.03, bd_warp)[..., None]) + hexc("#7E5232") * smooth(0.0, 0.03, bd_warp)[..., None]
     rc = rc * (1 - temper[..., None]) + tcol * temper[..., None]
-    stain = smooth(0.6, 0.66, fbm(x * 7, z * 7, y + 3, 3, SEED + 82)) * 0.12
-    rc = rc * (1 - stain[..., None]) + hexc("#8F887D") * stain[..., None]
-    put(rimsel, rc, 85 + 30 * temper * 3, 50 - 20 * stain * 5)
-    height[rimsel] = (0.0002 * rsoot)[rimsel]
+
+    # Metallic and gloss: mineral crust is chalky, matte (rough), and non-metallic
+    plate_metal = 85 * (1 - 0.75 * salt_mask) + 30 * temper * 3
+    plate_gloss = 50 * (1 - 0.6 * salt_mask) * (1 - 0.35 * soot_ring)
+    put(rimsel, rc, plate_metal, plate_gloss)
+    height[rimsel] = (0.0002 * rsoot + 0.0003 * tide_rings + 0.00015 * splatter)[rimsel]
 
     # ------------------------------------------------ firebox: baked heap of rocks behind the door bars
     # (v2.3; v1 painted the whole oven as flat glowing "lava", which the game's bloom blew out)
@@ -294,6 +316,16 @@ def main():
     kc = kc * (1 - 0.45 * grime[..., None])
     put(knob, kc, 0, 70 + 50 * grime)
 
+    # ------------------------------------------------ top overhang collar & junction shadow
+    # Under-rim junction (y ~ 1.096, overhang underside and lower rim edge):
+    # dark cast-iron / shadow trim (#352A22) instead of pale wood or untextured gaps
+    under_overhang = (y >= 1.08) & (y <= 1.102) & ((np.abs(x) > 0.28) | (np.abs(z) > 0.28))
+    down_lip = (nrm[..., 1] < -0.2) & (y > 1.05) & (y < 1.12)
+    collar = (under_overhang | down_lip) & ~knob
+    ccol = hexc("#352A22") * (0.75 + 0.35 * fbm(x * 40, y * 40, z * 40, 3, SEED + 75)[..., None])
+    put(collar, ccol, 70, 35)
+    micro[collar] = 0.0001
+
     # ------------------------------------------------ normal: baked + fine detail; flat leftovers keep v1
     detail = pid != ID["base"]
     keep_v1 = ~detail & ~gap & ~bed & ~pgap & ~mor & ~box & ~rest
@@ -319,7 +351,23 @@ def main():
 
     OUT.mkdir(exist_ok=True)
     rgba = lambda rgb, a=None: np.dstack([rgb, np.full(rgb.shape[:2], 255, np.uint8) if a is None else a]).astype(np.uint8)
-    PILImage.fromarray(rgba((np.clip(col, 0, 1) * 255).round())).save(OUT / "ElectricFurnace_v2_diffuse.png")
+
+    # ------------------------------------------------ 16-pixel dilation / padding
+    print("dilating diffuse padding (16px) ...")
+    col_dilated = col.copy()
+    pad_mask = filled.copy()
+    for _ in range(16):
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            src_m = np.roll(np.roll(pad_mask, dy, 0), dx, 1)
+            take = ~pad_mask & src_m
+            if not take.any():
+                continue
+            src_c = np.roll(np.roll(col_dilated, dy, 0), dx, 1)
+            col_dilated[take] = src_c[take]
+            pad_mask = pad_mask | take
+    col_dilated[~pad_mask] = hexc("#45332A")
+
+    PILImage.fromarray(rgba((np.clip(col_dilated, 0, 1) * 255).round())).save(OUT / "ElectricFurnace_v2_diffuse.png")
     # experiment: alpha 0 on the coil spirals (texels above the burner dish), for Alpha Cutoff 0.5;
     # the dish under them carries the same baked heap, so the spirals' outline disappears
     cx = np.where(x > 0, 0.143, -0.143)
@@ -329,7 +377,7 @@ def main():
     big = (x > 0) == (z > 0)
     coil = (y > 1.145) & (np.hypot(x - cx, z - cz) < np.where(big, 0.083, 0.06)) & (np.abs(x) < 0.3) & (np.abs(z) < 0.3)
     alpha = np.where(coil, 0, 255)
-    PILImage.fromarray(rgba((np.clip(col, 0, 1) * 255).round(), alpha)).save(OUT / "ElectricFurnace_v2_diffuse_cutout.png")
+    PILImage.fromarray(rgba((np.clip(col_dilated, 0, 1) * 255).round(), alpha)).save(OUT / "ElectricFurnace_v2_diffuse_cutout.png")
     nr = np.dstack([(nrm_out[..., 0] * 0.5 + 0.5) * 255, (nrm_out[..., 1] * 0.5 + 0.5) * 255, np.full(mat.shape, 255)]).round()
     PILImage.fromarray(rgba(nr)).save(OUT / "ElectricFurnace_v2_normal.png")
     mrgb = np.repeat(np.clip(metal, 0, 255)[..., None], 3, -1).round()

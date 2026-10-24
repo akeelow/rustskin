@@ -160,7 +160,7 @@ def material_map(pos, nrm, zid, glow):
     mat[zid == 1] = BACK
     front = zid == 0
     mat[front & (y >= 0.93)] = PANEL
-    mat[front & (y >= 0.95) & (y < 1.11) & (z > 0.334)] = KNOB
+    mat[front & (y >= 0.95) & (y < 1.08) & (z > 0.334)] = KNOB
     mat[front & (y < 0.93)] = IRON
     mat[(y >= 0.27) & (y < 0.33) & (zid != 4)] = IRON
     mat[(y < 0.27) & (zid != 4)] = PLINTH
