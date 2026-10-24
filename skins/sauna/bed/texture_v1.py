@@ -37,6 +37,7 @@ ASPEN = hexc("#A39176")          # aspen, steam-aged
 ASPEN_GREY = hexc("#958B7E")     # weathered silver-grey
 STEAMED = hexc("#7A5A3C")
 SMOKED = hexc("#45332A")
+SOOT = hexc("#281F1A")           # deep charred soot tone (matches box and furnace)
 LINEN = hexc("#CFC6B4")
 BRICK = hexc("#8E3A30")
 GAP = hexc("#2A2018")
@@ -181,14 +182,19 @@ def build():
     wood = wood * (1 - 0.4 * lie[..., None] * (g[..., None] - 0.5) * 0.3)      # grain softer where polished
     convex = smooth(0.52, 0.7, curv)
     concave = smooth(0.48, 0.3, curv)
-    wood = wood * (1 + 0.12 * convex[..., None]) * (1 - 0.25 * concave[..., None])
-    smoke_foot = smooth(-88, -113, x) * (deck | apron)
+    # foot soot: +25% darkness, deeper reach from stove (-68 to -114 cm), rich soot/char tone
+    smoke_foot = smooth(-68, -114, x) * (deck | apron)
     smoke_foot = smoke_foot * (0.75 + 0.5 * fbm(y * 0.06, z * 0.1 + x * 0.03, SEED + 31, 3))
-    wood = wood * (1 - 0.5 * smoke_foot[..., None]) + SMOKED * (0.5 * smoke_foot[..., None]) * 0.6
-    # dried-out cracks at the foot: thin dark lines along the grain
-    crack = smooth(0.965, 0.995, vnoise(along * 0.05, across * 1.3, SEED + 41)) * smooth(-80, -108, x) * (deck | apron)
-    wood = wood * (1 - 0.55 * crack[..., None])
-    hgt -= 0.12 * crack
+    smoke_foot = np.clip(smoke_foot, 0, 1)
+    soot_blend = 0.75 * smoke_foot
+    wood = wood * (1 - soot_blend[..., None]) + (SMOKED * 0.35 + SOOT * 0.65) * soot_blend[..., None]
+    # dried-out micro-cracks at the foot: layered fine fissures along the grain
+    crack1 = smooth(0.935, 0.985, vnoise(along * 0.07, across * 2.2, SEED + 41))
+    crack2 = smooth(0.925, 0.980, vnoise(along * 0.14, across * 4.5, SEED + 43))
+    crack_zone = smooth(-65, -112, x) * (deck | apron)
+    crack = np.clip(crack1 * 0.65 + crack2 * 0.45, 0, 1) * crack_zone
+    wood = wood * (1 - 0.70 * crack[..., None])
+    hgt -= 0.22 * crack
     # faint mineral ring from the wash tub near the foot end: broken, uneven, a damp disc inside
     ang = np.arctan2(y + 27, x + 86)
     rc = np.hypot(x + 86.0, y + 27.0) * (1 + 0.04 * np.sin(ang * 3 + 1.0))
@@ -215,8 +221,13 @@ def build():
     pstreak = np.clip((fbm(across * 0.5, 2.0, SEED + 71, 3) - 0.5) * 2.5, 0, 1) * smooth(45, 5, z) * po
     wood = wood * (1 - 0.25 * pstreak[..., None]) + MINERAL * (0.25 * pstreak[..., None]) * smooth(20, 35, z)[..., None]
     psm = foot_posts & po
-    psmoke = smooth(15, 62, z) * psm * (0.85 + 0.15 * fbm(z * 0.05, x * 0.1, SEED + 73, 2))
-    wood = wood * (1 - 0.45 * psmoke[..., None]) + SMOKED * (0.3 * psmoke[..., None])
+    psmoke = smooth(5, 62, z) * psm * (0.8 + 0.3 * fbm(z * 0.08, x * 0.15, SEED + 73, 2))
+    psmoke = np.clip(psmoke, 0, 1)
+    soot_post = 0.70 * psmoke
+    wood = wood * (1 - soot_post[..., None]) + (SMOKED * 0.35 + SOOT * 0.65) * soot_post[..., None]
+    crack_post = smooth(0.93, 0.985, vnoise(z * 0.12, across * 2.5, SEED + 47)) * psmoke
+    wood = wood * (1 - 0.65 * crack_post[..., None])
+    hgt -= np.where(po, 0.18 * crack_post, 0)
     endgrain = po & top
     wood = np.where(endgrain[..., None], wood * 0.82, wood)
 
@@ -320,6 +331,12 @@ def build():
     col = np.where(iron[..., None], ic, col)
     spec = np.where(iron, 0.32 - 0.22 * rmask, spec)
     gloss = np.where(iron, 0.4 - 0.25 * rmask, gloss)
+
+    # ---------------- soot specular & gloss: matte charred surface
+    spec = np.where((deck | apron) & (smoke_foot > 0.05), spec * (1 - 0.35 * smoke_foot), spec)
+    gloss = np.where((deck | apron) & (smoke_foot > 0.05), gloss * (1 - 0.45 * smoke_foot), gloss)
+    spec = np.where(psm & (psmoke > 0.05), spec * (1 - 0.35 * psmoke), spec)
+    gloss = np.where(psm & (psmoke > 0.05), gloss * (1 - 0.45 * psmoke), gloss)
 
     # ---------------- AO into colour (the game's AO only darkens ambient light)
     col = col * (0.55 + 0.45 * ao[..., None]) ** 0.8
