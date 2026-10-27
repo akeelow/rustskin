@@ -1,6 +1,6 @@
 # Sauna Changing Locker (Locker)
 
-> Статус: 🟢 **v5 — финал для публикации** (решение пользователя 20.10.2026): средняя дверца глухая, под замок; крайние ниши открыты. Замок в игре встаёт на железную площадку v5 (проверено). v4.1 — запасной.
+> Статус: 🟢 **v5.2 — финал для публикации** (27.10.2026: дерево ближе к палитре сета; v5 — решение пользователя 20.10.2026: средняя дверца глухая, под замок, крайние ниши открыты; замок встаёт на железную площадку — проверено). Карты `export/Locker_v5.2_*`; v5.1 — `Locker_v5_*`, v4.1 — запасной.
 > Публикация в Workshop (название, описание, таблица загрузки, рендеры): [workshop/](workshop/README.md).
 > Сет: [Sauna](../README.md).
 
@@ -45,6 +45,10 @@ y 0…224 вверх, +z — перед. Один материал `MAIN`.
 
 ## Заметки
 
+- 27.10.2026, **v5.2** (`export/Locker_v5.2_*`, `texture_v5.py` → `TAG`, `grade_wood`): дерево читалось оранжевой «сосной
+  под лаком» (медиана `#8B5C30`) рядом с бледными полоком и креслом — оранжевые тона −28 % насыщенности, нижние
+  30 см темнее от пара. Свечение, дверь, ниши — как v5.1. Глухой запасной — `Locker_v5.2_diffuse_solid.png`. Рендеры
+  Workshop + главный кадр `workshop/studio.jpg`. В игре **не проверено** — пересъёмка.
 - 24.10.2026: исправление по CRITIQUE.md (устранён дневной пересвет полок и плафонов, свечение сердечка смягчено до реалистичного конденсата, торцы полок в Diffuse переведены в натуральную древесину; сгенерирован запасной файл `export/Locker_v5_diffuse_solid.png` с глухими дверцами на случай претензий кураторов). Рендеры обновлены.
 - 21.10.2026: скриншоты v5 из редактора для страницы Workshop (`screenshots/v5_editor_{night_front,dusk_three_quarter,day_front_2,day_three_quarter}.webp`) — ночью ниши и окно читаются отлично.
 - 20.10.2026: **публикуем v5** (выбор пользователя). Карты: `export/Locker_v5_{diffuse,normal,specgloss,emission}.png`; Diffuse Alpha Cutoff 0.5, Emission Color 255/255/255, Occlusion оригинальный.
@@ -103,10 +107,10 @@ x +2, y 102 см; кодовый закрывает x −11…15, y 87…117 (о
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `export/Locker_v5_diffuse.png`, **Alpha Cutoff 0.5** |
-| Normal | `export/Locker_v5_normal.png` |
-| Specular/Gloss | `export/Locker_v5_specgloss.png` |
-| Emission | `export/Locker_v5_emission.png`, **Emission Color 255/255/255** |
+| Diffuse | `export/Locker_v5.2_diffuse.png`, **Alpha Cutoff 0.5** |
+| Normal | `export/Locker_v5.2_normal.png` |
+| Specular/Gloss | `export/Locker_v5.2_specgloss.png` |
+| Emission | `export/Locker_v5.2_emission.png`, **Emission Color 255/255/255** |
 | Occlusion | оригинальный |
 
 Что смотреть: повесить **кодовый и навесной замок** — сидят на площадке, не висят; не закрывает ли

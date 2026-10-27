@@ -3,11 +3,11 @@
 Usage (from the repo root):
   "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/wood-storage-box/workshop_renders.py -- [shot ...] [--samples 128]
 
-Writes skins/sauna/wood-storage-box/workshop/<shot>.png (1920x1080). Uses the final v1.3 maps (lid and the burnt
-rim cut with alpha, Alpha Cutoff 0.50) on the game-like OBJ (renders/concepts/box_game.obj: the inner walls wear
+Writes skins/sauna/wood-storage-box/workshop/<shot>.png (1920x1080). Uses the final v1.5 maps (the lid cut with alpha,
+Alpha Cutoff 0.50) on the game-like OBJ (renders/concepts/box_game.obj: the inner walls wear
 the outer ones, as in the client). The OBJ is metres, Y up, +Z front; imported Z up, the front faces -Y and
 the stove side (+x, the burnt rim) faces +X.
-Shots: hero (day), night, top (looking in at dusk), rim (the burnt edge up close at dusk), row (three boxes
+Shots: studio (dark studio, first on the page), hero (day), night, top (looking in at dusk), rim (the burnt edge up close at dusk), row (three boxes
 side by side at night), set (next to the Sauna Stove, burnt rim towards it, dusk).
 """
 import math
@@ -19,14 +19,15 @@ from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 OBJ = HERE / "renders" / "concepts" / "box_game.obj"
-PREFIX = HERE / "export" / "Box_v1.4"
+PREFIX = HERE / "export" / "Box_v1.5"
 STOVE_OBJ = HERE.parent / "electric-furnace" / "originals" / "electric.furnace.obj"
-STOVE_PREFIX = HERE.parent / "electric-furnace" / "export" / "ElectricFurnace_v2"
+STOVE_PREFIX = HERE.parent / "electric-furnace" / "export" / "ElectricFurnace_v2.8"
 OUT = HERE / "workshop"
 EMISSION = 3.0                       # like viewer.py
 
 # camera: (look-at point m, direction from target to eye, distance, lens mm, light preset)
 SHOTS = {
+    "studio": ((0.0, 0.0, 0.15), (0.6, -1.0, 1.35), 2.5, 40, "studio"),   # first image: dark studio, embers
     "hero": ((0.0, 0.0, 0.22), (0.75, -1.0, 1.0), 2.05, 40, "day"),
     "night": ((0.0, 0.0, 0.22), (0.75, -1.0, 1.0), 2.05, 40, "night"),
     "top": ((0.0, 0.0, 0.1), (0.25, -0.45, 1.0), 1.55, 40, "dusk"),
@@ -79,11 +80,11 @@ def material(prefix, cutoff, gloss_kind="specgloss"):
     return mat
 
 
-def floor():
+def floor(size=10.0):
     """Weathered plank floor (stand-in for the in-game foundation)."""
     bpy.ops.mesh.primitive_plane_add(size=1)
     fl = bpy.context.active_object
-    fl.scale = (10.0, 10.0, 1)
+    fl.scale = (size, size, 1)
     m = bpy.data.materials.new("floor")
     m.use_nodes = True
     nt = m.node_tree
@@ -181,8 +182,14 @@ def render(name, samples):
         stove.location = (1.05, 0.15, 0.0)
         stove.data.materials.clear()
         stove.data.materials.append(material(STOVE_PREFIX, 0.99, "metalgloss"))   # in game Alpha Cutoff 1.00
-    floor()
-    lights(scene, preset)
+    if preset == "studio":
+        floor(1.3)
+        sys.path.insert(0, str(HERE.parent))
+        import showcase as sc
+        sc.studio(scene, target, scale=0.8, key=90, rim=260)
+    else:
+        floor()
+        lights(scene, preset)
     camera(scene, target, direction, dist, lens)
     scene.render.engine = "CYCLES"
     prefs = bpy.context.preferences.addons["cycles"].preferences

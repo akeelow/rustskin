@@ -1,7 +1,7 @@
 """Sauna Stone Box v1: high-poly details modelled over the Wood Storage Box and baked onto its UVs.
 
 Concept D, open top (the lid is cut with alpha in the textures). Modelled:
-  stones   ~60 basalt stones on the floor: squashed, chipped icospheres, packed with gaps between them
+  stones   a heap of basalt (v1.5): three sizes, tilted, a second layer over the seams; chipped icospheres
   coals    a lumpy bed of charcoal between and under the stones (the embers glow there in texture_v1.py)
   tray     the steel sheet on the floor (2.5 cm short of the walls) with a turned-up rim
   hoops    two iron hoops round the outer walls, 2.5 mm proud, domed rivets every 12 cm
@@ -223,47 +223,60 @@ def _box(bm, x0, x1, y0, y1, z0, z1):
 
 
 def stone_layout(rng):
-    """Dart throwing in the tray: centres at least 7 cm apart; radius from the nearest neighbour, a touch
-    over half of it, so the stones lie packed against each other with narrow deep seams (v1 first try:
-    8.5 cm apart and 0.46 of it - sparse dark blobs on the coal, the seams too open to glow)."""
-    x0, x1 = INNER[0] + TRAY_IN + 3.5, INNER[1] - TRAY_IN - 3.5
-    z0, z1 = INNER[2] + TRAY_IN + 3.5, INNER[3] - TRAY_IN - 3.5
-    pts = []
-    for _ in range(30000):
-        p = (rng.uniform(x0, x1), rng.uniform(z0, z1))
-        if all((p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 > 7.0 ** 2 for q in pts):
-            pts.append(p)
+    """A heap, not a mosaic (v1.4 read as a honeycomb: one size, packed on a grid). Sizes from three classes,
+    the big ones placed first, the small ones filling the seams; neighbours may overlap a little (stones lie
+    on each other), and a second layer of ~12 stones sits over the seams of the first.
+    Returns (x, z, r, layer)."""
+    x0, x1 = INNER[0] + TRAY_IN + 1.5, INNER[1] - TRAY_IN - 1.5
+    z0, z1 = INNER[2] + TRAY_IN + 1.5, INNER[3] - TRAY_IN - 1.5
+    radii = ([rng.uniform(6.0, 7.6) for _ in range(9)] + [rng.uniform(3.8, 5.4) for _ in range(40)]
+             + [rng.uniform(2.2, 3.3) for _ in range(60)])
+    radii.sort(reverse=True)
     out = []
-    for p in pts:
-        d = min(math.dist(p, q) for q in pts if q is not p)
-        out.append((p[0], p[1], min(max(0.5 * d * 1.08, 3.4), 6.2)))
+    for r in radii:
+        for _ in range(4000):
+            p = (rng.uniform(x0 + r * 0.6, x1 - r * 0.6), rng.uniform(z0 + r * 0.6, z1 - r * 0.6))
+            if all(math.dist(p, q[:2]) > (r + q[2]) * 0.84 for q in out):
+                out.append((p[0], p[1], r, 0))
+                break
+    for _ in range(12):                       # second layer over the seams
+        r = rng.uniform(3.4, 5.2)
+        p = (rng.uniform(x0 + 6, x1 - 6), rng.uniform(z0 + 6, z1 - 6))
+        if all(math.dist(p, q[:2]) > (r + q[2]) * 0.9 for q in out if q[3] == 1):
+            out.append((p[0], p[1], r, 1))
     return out
 
 
 def build_stones(low, mat, rng):
     bm_all = []
-    for k, (cx, cz, r) in enumerate(stone_layout(rng)):
+    for k, (cx, cz, r, layer) in enumerate(stone_layout(rng)):
         bm = bmesh.new()
         bmesh.ops.create_icosphere(bm, subdivisions=4, radius=1.0)
-        sx, sz = r * rng.uniform(0.85, 1.1), r * rng.uniform(0.85, 1.1)
-        h = r * rng.uniform(0.6, 0.85)
+        sx, sz = r * rng.uniform(0.72, 1.28), r * rng.uniform(0.72, 1.28)
+        h = r * rng.uniform(0.5, 0.85)
         rot = rng.uniform(0, math.tau)
+        tilt_x, tilt_z = math.radians(rng.uniform(-22, 22)), math.radians(rng.uniform(-22, 22))
+        lift = FLOOR_Y + 1.4 + (r * rng.uniform(0.35, 0.55) if layer else 0.0)
         off = Vector((k * 7.3, k * 3.1, k * 5.7))
         for v in bm.verts:
             p = v.co.copy()
             # chipped basalt: a few flat facets (clamped planes) + fine noise
-            d = 1.0 + 0.18 * noise.noise(p * 1.4 + off) + 0.05 * noise.noise(p * 5.0 + off)
+            d = 1.0 + 0.2 * noise.noise(p * 1.4 + off) + 0.05 * noise.noise(p * 5.0 + off)
             p *= d
-            for j in range(4):
+            for j in range(5):
                 a = Vector((math.cos(j * 1.7 + k), 0.35 * math.sin(j * 2.3 + k), math.sin(j * 1.7 + k))).normalized()
-                lim = 0.82 + 0.1 * math.sin(j * 3.1 + k * 1.3)
+                lim = 0.78 + 0.12 * math.sin(j * 3.1 + k * 1.3)
                 t = p.dot(a)
                 if t > lim:
                     p -= a * (t - lim)
             if p.y < -0.35:                       # sits on the coals: flattened underside
                 p.y = -0.35 + (p.y + 0.35) * 0.3
-            x, z = p.x * math.cos(rot) - p.z * math.sin(rot), p.x * math.sin(rot) + p.z * math.cos(rot)
-            v.co = Vector((cx + x * sx, FLOOR_Y + 1.4 + (p.y + 0.35) * h, cz + z * sz))
+            q = Vector((p.x * sx, (p.y + 0.35) * h, p.z * sz))
+            # tilted, as a stone lies on its neighbours
+            q = Vector((q.x, q.y * math.cos(tilt_x) - q.z * math.sin(tilt_x), q.y * math.sin(tilt_x) + q.z * math.cos(tilt_x)))
+            q = Vector((q.x * math.cos(tilt_z) - q.y * math.sin(tilt_z), q.x * math.sin(tilt_z) + q.y * math.cos(tilt_z), q.z))
+            x, z = q.x * math.cos(rot) - q.z * math.sin(rot), q.x * math.sin(rot) + q.z * math.cos(rot)
+            v.co = Vector((cx + x, lift + q.y, cz + z))
         bm_all.append(new_obj(f"hp_stone{k}", bm, mat, low))
     return bm_all
 

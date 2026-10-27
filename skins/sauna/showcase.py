@@ -21,18 +21,18 @@ EMISSION = 3.0
 #       map prefix, Alpha Cutoff, gloss map kind, occlusion (path, scale) or None
 ITEMS = {
     "stove": dict(obj=SAUNA / "electric-furnace/originals/electric.furnace.obj", up="y", scale=1.0, lift=0.0,
-                  prefix=SAUNA / "electric-furnace/export/ElectricFurnace_v2", cutoff=0.99, gloss="metalgloss"),
+                  prefix=SAUNA / "electric-furnace/export/ElectricFurnace_v2.8", cutoff=0.99, gloss="metalgloss"),
     "bench": dict(obj=SAUNA / "bed/originals/bed.obj", up="z", scale=0.01, lift=0.038,
                   prefix=SAUNA / "bed/export/Bed_v1.2", cutoff=0.5, gloss="specgloss"),
     "chair": dict(obj=SAUNA / "chair/originals/chair.obj", up="y", scale=1.0, lift=0.018,
                   prefix=SAUNA / "chair/export/Chair_v1.4", cutoff=0.0, gloss="specgloss"),
     "box": dict(obj=SAUNA / "wood-storage-box/renders/concepts/box_game.obj", up="y", scale=1.0, lift=0.0,
-                prefix=SAUNA / "wood-storage-box/export/Box_v1.4", cutoff=0.5, gloss="specgloss"),
+                prefix=SAUNA / "wood-storage-box/export/Box_v1.5", cutoff=0.5, gloss="specgloss"),
     "locker": dict(obj=SAUNA / "locker/originals/locker.obj", up="y", scale=0.01, lift=0.0,
-                   prefix=SAUNA / "locker/export/Locker_v5", cutoff=0.5, gloss="specgloss",
+                   prefix=SAUNA / "locker/export/Locker_v5.2", cutoff=0.5, gloss="specgloss",
                    ao=(SAUNA / "locker/originals/locker_ao.png", 0.75)),
     "robe": dict(obj=SAUNA / "snow-jacket/originals/jacket.snow.obj", up="y", scale=1.0, lift=0.0,
-                 prefix=SAUNA / "snow-jacket/export/SnowJacket_v2", cutoff=0.0, gloss="specgloss", cloth="ghost"),
+                 prefix=SAUNA / "snow-jacket/export/SnowJacket_v2.3", cutoff=0.0, gloss="specgloss", cloth="ghost"),
     "wrap": dict(obj=SAUNA / "burlap-headwrap/originals/burlap.headwrap.obj", up="y", scale=1.0, lift=0.0,
                  prefix=SAUNA / "burlap-headwrap/export/BurlapHeadwrap_v1", cutoff=0.79, gloss="specgloss", cloth="cull"),
     # (cull back faces like the game: the outer side shows, the inside only through the eye slit)
@@ -258,6 +258,25 @@ def lights(scene, preset):
     sun.color = sun_color
     sun.angle = math.radians(2)
 
+
+def studio(scene, target, scale=1.0, key=120.0, rim=380.0):
+    """Dark studio for the first image of a page (like the accepted stoves): near-black world, a warm key
+    from the front-left above, a cool rim from the back-right. scale = the item's size in metres (~1)."""
+    import bpy as _bpy
+    from mathutils import Vector as _V
+    world = _bpy.data.worlds.new("w")
+    scene.world = world
+    world.use_nodes = True
+    bg = next(n for n in world.node_tree.nodes if n.type == "BACKGROUND")
+    bg.inputs["Color"].default_value = (0.012, 0.01, 0.01, 1)
+    t = _V(target)
+    for off, power, col, size in (((-1.6, -1.8, 1.6), key, (1.0, 0.82, 0.62), 1.2),
+                                  ((1.4, 1.5, 1.2), rim, (0.62, 0.74, 1.0), 0.6)):
+        loc = t + _V(off) * scale
+        _bpy.ops.object.light_add(type="AREA", location=loc)
+        ar = _bpy.context.active_object
+        ar.data.energy, ar.data.color, ar.data.size = power * scale ** 2, col, size * scale
+        ar.rotation_euler = (t - loc).to_track_quat("-Z", "Y").to_euler()
 
 def stove_glow(stove_xy, energy=45):
     """The stove's firebox and rocks lighting the room (the emission alone is too weak to light it)."""

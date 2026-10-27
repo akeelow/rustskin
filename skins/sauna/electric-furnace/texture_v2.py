@@ -9,7 +9,7 @@ Colour, wear, soot and glow come from the baked maps instead of noise alone:
 Texels the bake leaves flat (top-plate rim, knobs, oven interior, iron band) keep the v1 look.
 
     .venv/Scripts/python skins/sauna/electric-furnace/texture_v2.py
-Writes export/ElectricFurnace_v2_{diffuse,normal,metalgloss,occlusion,emission}.png
+Writes export/<NAME>_{diffuse,normal,metalgloss,occlusion,emission}.png
 and uv/v2_views.png, uv/v2_views_emission.png.
 """
 import sys
@@ -29,6 +29,7 @@ from uv_zones import classify, load_obj, normal, read_png, render_views  # noqa:
 BAKE = HERE / "bake"
 ORIG = HERE / "originals"
 OUT = HERE / "export"
+NAME = "ElectricFurnace_v2.8"          # v2.8: mineral patches instead of rings; v2.7 = ElectricFurnace_v2_*
 ID = {"base": 0, "board": 1, "nail": 2, "stone": 3, "plinth": 4, "mortar": 5, "bar": 6, "rivet": 7,
       "pallet": 8, "trim": 9}  # must match bake_v2.IDS
 
@@ -184,19 +185,19 @@ def main():
     soot_ring = smooth(0.045, 0.002, bd_warp) * (0.65 + 0.35 * fbm(x * 30, z * 30, y, 3, SEED + 84))
     rc = rc * (1 - 0.45 * soot_ring[..., None]) + hexc("#1A1715") * 0.45 * soot_ring[..., None]
 
-    # 2. Concentric evaporated water tide rings (mineral/salt crust from ladling steam-water)
-    ring1 = np.exp(-((bd_warp - 0.016) / 0.0035) ** 2) * (0.7 + 0.3 * fbm(x * 55, z * 55, 1.0, 3, SEED + 85))
-    ring2 = np.exp(-((bd_warp - 0.038) / 0.0045) ** 2) * (0.65 + 0.35 * fbm(x * 45, z * 45, 2.0, 3, SEED + 86))
-    ring3 = np.exp(-((bd_warp - 0.062) / 0.0055) ** 2) * (0.55 + 0.45 * fbm(x * 35, z * 35, 3.0, 3, SEED + 87))
-    tide_rings = np.clip(np.maximum.reduce([ring1 * 0.85, ring2 * 0.70, ring3 * 0.55]), 0, 1)
+    # 2. Mineral crust (v2.8): irregular patches where the ladled water runs off the heaps and dries,
+    #    each with a slightly paler tide line at its edge. v2.7 drew three concentric rings round every
+    #    burner and a spray of white dots - the rings repeated the cooker's hotplates, the dots read as snow.
+    patch_n = fbm(x * 9, z * 9, y, 4, SEED + 85) + 0.35 * (fbm(x * 26, z * 26, y, 3, SEED + 86) - 0.5)
+    near = smooth(0.09, 0.0, bd_warp)                        # water only near the heaps
+    patch = smooth(0.56, 0.66, patch_n) * near
+    tide = np.clip(patch * (1 - patch) * 4, 0, 1) * smooth(0.6, 0.64, patch_n) * 0.6
+    tide_rings = np.clip(patch * 0.55 + tide * 0.45, 0, 1)
+    splatter = np.zeros_like(tide_rings)
 
-    # 3. Water droplet splatter spots from ladling steam water
-    splatter_noise = fbm(x * 80, z * 80, y, 3, SEED + 88)
-    splatter = smooth(0.65, 0.76, splatter_noise) * smooth(0.12, 0.01, bd_warp)
-
-    # Blend mineral crust into diffuse: pale chalky salt deposits (#C8C0B2)
-    salt_mask = np.clip(tide_rings * 0.65 + splatter * 0.45, 0, 1)
-    salt_col = hexc("#C8C0B2") * (0.88 + 0.2 * fbm(x * 120, z * 120, 0, 2, SEED + 89)[..., None])
+    # muted grey-beige crust, not white (#8F887C; v2.7 #C8C0B2), matte
+    salt_mask = np.clip(tide_rings * 0.6, 0, 1)
+    salt_col = hexc("#8F887C") * (0.88 + 0.2 * fbm(x * 120, z * 120, 0, 2, SEED + 89)[..., None])
     rc = rc * (1 - salt_mask[..., None]) + salt_col * salt_mask[..., None]
 
     # 4. Bronze / straw heat temper tint hugging the burner edge
@@ -367,7 +368,7 @@ def main():
             pad_mask = pad_mask | take
     col_dilated[~pad_mask] = hexc("#45332A")
 
-    PILImage.fromarray(rgba((np.clip(col_dilated, 0, 1) * 255).round())).save(OUT / "ElectricFurnace_v2_diffuse.png")
+    PILImage.fromarray(rgba((np.clip(col_dilated, 0, 1) * 255).round())).save(OUT / f"{NAME}_diffuse.png")
     # experiment: alpha 0 on the coil spirals (texels above the burner dish), for Alpha Cutoff 0.5;
     # the dish under them carries the same baked heap, so the spirals' outline disappears
     cx = np.where(x > 0, 0.143, -0.143)
@@ -377,20 +378,20 @@ def main():
     big = (x > 0) == (z > 0)
     coil = (y > 1.145) & (np.hypot(x - cx, z - cz) < np.where(big, 0.083, 0.06)) & (np.abs(x) < 0.3) & (np.abs(z) < 0.3)
     alpha = np.where(coil, 0, 255)
-    PILImage.fromarray(rgba((np.clip(col_dilated, 0, 1) * 255).round(), alpha)).save(OUT / "ElectricFurnace_v2_diffuse_cutout.png")
+    PILImage.fromarray(rgba((np.clip(col_dilated, 0, 1) * 255).round(), alpha)).save(OUT / f"{NAME}_diffuse_cutout.png")
     nr = np.dstack([(nrm_out[..., 0] * 0.5 + 0.5) * 255, (nrm_out[..., 1] * 0.5 + 0.5) * 255, np.full(mat.shape, 255)]).round()
-    PILImage.fromarray(rgba(nr)).save(OUT / "ElectricFurnace_v2_normal.png")
+    PILImage.fromarray(rgba(nr)).save(OUT / f"{NAME}_normal.png")
     mrgb = np.repeat(np.clip(metal, 0, 255)[..., None], 3, -1).round()
-    PILImage.fromarray(rgba(mrgb, np.clip(gloss, 0, 215).round())).save(OUT / "ElectricFurnace_v2_metalgloss.png")
+    PILImage.fromarray(rgba(mrgb, np.clip(gloss, 0, 215).round())).save(OUT / f"{NAME}_metalgloss.png")
     ao_small = PILImage.fromarray((ao * 255).round().astype(np.uint8)).resize((512, 512), PILImage.BOX)
-    PILImage.fromarray(rgba(np.repeat(np.asarray(ao_small)[..., None], 3, -1))).save(OUT / "ElectricFurnace_v2_occlusion.png")
+    PILImage.fromarray(rgba(np.repeat(np.asarray(ao_small)[..., None], 3, -1))).save(OUT / f"{NAME}_occlusion.png")
     em_small = PILImage.fromarray((np.clip(emit, 0, 1) * 255).round().astype(np.uint8)).resize((512, 512), PILImage.BOX)
     em_arr = np.clip(np.asarray(em_small, np.float64) * 1.2, 0, 255)
-    PILImage.fromarray(rgba(em_arr.round())).save(OUT / "ElectricFurnace_v2_emission.png")
+    PILImage.fromarray(rgba(em_arr.round())).save(OUT / f"{NAME}_emission.png")
 
     print("rendering previews ...")
-    render_views(V, T, F, N, HERE / "uv" / "v2_views.png", tex=read_png(OUT / "ElectricFurnace_v2_diffuse.png"))
-    render_views(V, T, F, N, HERE / "uv" / "v2_views_emission.png", tex=read_png(OUT / "ElectricFurnace_v2_emission.png"))
+    render_views(V, T, F, N, HERE / "uv" / "v2_views.png", tex=read_png(OUT / f"{NAME}_diffuse.png"))
+    render_views(V, T, F, N, HERE / "uv" / "v2_views_emission.png", tex=read_png(OUT / f"{NAME}_emission.png"))
     share = {k: f"{(pid == i).mean():.1%}" for k, i in ID.items()}
     print("done; baked id share:", share)
 

@@ -16,7 +16,7 @@ from the Blender bake (door_v5_bake.py -> bake/door_{normal,ao,curvature,id}.png
   leaves, water    birch leaves from a whisk stuck to the wet wood, runs under the sill, damp bottom
 
     .venv/Scripts/python skins/sauna/locker/texture_v5.py
-Writes export/Locker_v5_{diffuse,normal,specgloss,emission}.png and uv/v5_views.png.
+Writes export/Locker_<TAG>_{diffuse,normal,specgloss,emission}.png (+ _diffuse_solid) and uv/<TAG>_views.png.
 """
 import importlib.util
 import math
@@ -26,6 +26,18 @@ import numpy as np
 from PIL import Image
 
 HERE = Path(__file__).resolve().parent
+TAG = "v5.2"   # v5.2: the wood graded towards the set's pale aspen, steam-dark bottom; v5/v5.1 = Locker_v5_*
+
+
+def grade_wood(col, pos):
+    """v5.2: the locker's linden read as orange varnished pine next to the bench and the chair (median
+    #8B5C30 against the set's #C2A77E / #7A5A3C). Orange tones lose 28 % of their saturation; the bottom
+    30 cm darkens with steam and splashes, as on the stove's slats."""
+    lum = (col * np.array([0.3, 0.59, 0.11])).sum(-1, keepdims=True)
+    orange = ((col[..., 0] - col[..., 2]) > 0.06)[..., None]
+    col = np.where(orange, lum + (col - lum) * 0.72, col)
+    low = smooth(30.0, 0.0, pos[..., 1])[..., None] * 0.22
+    return col * (1 - low) + np.array([0.33, 0.26, 0.19]) * low
 
 
 def load(name, file):
@@ -408,18 +420,19 @@ def main():
     door_emit = em_k[..., None] * LED + (sill_glow[..., None] * c * v4.WARM)
     emit = np.where(front[..., None], door_emit, emit)
 
+    col = grade_wood(col, pos)
     out = dict(m, col=col, nb=nb, spec=spec, gloss=gloss, alpha=alpha)
-    v1.save(out, "v5")
-    v4.save_emission(emit, "v5")
+    v1.save(out, TAG)
+    v4.save_emission(emit, TAG)
 
     # Solid fallback for curators (no alpha cuts on left/right doors)
     m1 = v1.build()
     left_right = (oid == ids["locker_door_a_LOD0"]) | (oid == ids["locker_door_c_LOD0"])
-    col_solid = np.where(left_right[..., None], m1["col"], col)
+    col_solid = np.where(left_right[..., None], grade_wood(m1["col"], pos), col)
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
     full = np.full((SIZE, SIZE), 255, np.uint8)
-    Image.fromarray(np.dstack([q(col_solid), full]), "RGBA").save(v1.OUT / "Locker_v5_diffuse_solid.png")
-    print("saved Locker_v5_diffuse_solid.png")
+    Image.fromarray(np.dstack([q(col_solid), full]), "RGBA").save(v1.OUT / f"Locker_{TAG}_diffuse_solid.png")
+    print(f"saved Locker_{TAG}_diffuse_solid.png")
     print("done; door front", int(front.sum()), {k: int(is_(k).sum()) for k in IDS})
 
 

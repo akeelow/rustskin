@@ -1,18 +1,18 @@
 # Sauna Stone Box (Wood Storage Box)
 
-> Статус: 🟢 **v1.4 — готов** (22.10.2026, исправления по тестам в игре: восстановлена монолитная 3D-толщина стенок без срезов альфой, убраны пустоты между полигонами, добавлено яркое многозонное свечение для высокой заметности в темноте).
+> Статус: 🟢 **v1.5 — готов** (27.10.2026: камни кучей вместо «сот»; v1.4 22.10 — стенки целые, крышка вырезана альфой, свечение углей, прорезей ручек и щелей). Карты `export/Box_v1.5_*`.
 > Рендеры и описание для Workshop — [workshop/](workshop/README.md).
 > Сет: [Sauna](../README.md). ТЗ: [TZ.md](TZ.md) (писалось как «Sauna Tub»). Эталоны — [../chair/](../chair/README.md), [../bed/](../bed/README.md).
 
-## Итог: как загрузить (финал v1.4)
+## Итог: как загрузить (финал v1.5)
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `export/Box_v1.4_diffuse.png`, **Color 255/255/255**, **Alpha Cutoff 0.50** |
-| Normal | `export/Box_v1.4_normal.png`, Normal Scale 1.00 |
-| Specular/Gloss | `export/Box_v1.4_specgloss.png`, **Spec Color 255/255/255**, Glossiness 1.00 |
-| Occlusion | `export/Box_v1.4_occlusion.png`, Occlusion Scale 1.00 |
-| Emission | `export/Box_v1.4_emission.png`, **Emission Color 255/255/255** |
+| Diffuse | `export/Box_v1.5_diffuse.png`, **Color 255/255/255**, **Alpha Cutoff 0.50** |
+| Normal | `export/Box_v1.5_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `export/Box_v1.5_specgloss.png`, **Spec Color 255/255/255**, Glossiness 1.00 |
+| Occlusion | `export/Box_v1.5_occlusion.png`, Occlusion Scale 1.00 |
+| Emission | `export/Box_v1.5_emission.png`, **Emission Color 255/255/255** |
 
 Публикация (название `Sauna Stone Box`, описание, картинки, чек-лист): [workshop/README.md](workshop/README.md).
 
@@ -382,6 +382,11 @@ Drowned Treasure Chest, Easter Chicks Box, Sheet Metal Storage Box (пример
 
 ## Заметки
 
+- 27.10.2026, **v1.5** (`export/Box_v1.5_*`): камни — куча, а не мозаика (v1.4 читалась «сотами»: один размер,
+  плотная решётка). `bake_box.py`: три размера (9 крупных 6–7.6 см, 40 средних, 60 мелких), крупные ложатся первыми,
+  соседи слегка заходят друг на друга, наклон ±22°, второй слой из 12 камней; перезапечено. `texture_v1.py` пишет
+  только текущую версию (раньше писал и в `Box_v1.3_*` — так v1.3 и перезаписалась). Свечение как в v1.4. Рендеры
+  Workshop + главный кадр `workshop/studio.jpg`. В игре **не проверено** — пересъёмка.
 - 21.10.2026: пользователь — «не рассматривал прозрачную крышку». Проверено: вся крышка прозрачной быть
   не может (её тексели — изнанка левого бока и заднего торца), а крайнюю правую доску #3 можно вырезать
   чисто — щель с углями внутри (`D_slot`). Жду выбора.

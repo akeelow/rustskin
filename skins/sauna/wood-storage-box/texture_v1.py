@@ -13,7 +13,7 @@ The lid is cut with alpha (Alpha Cutoff 0.50).
 
     .venv/Scripts/python skins/sauna/wood-storage-box/texture_v1.py
 Inputs: bake/{normal,ao,id}.png, originals/Wooden_Box_{nrm.png}, wooden_box_ao.png.
-Outputs: export/Box_v1.3_{diffuse (RGBA), normal, specgloss (512), occlusion, emission}.png (1024).
+Outputs: export/Box_<VERSION>_{diffuse (RGBA), normal, specgloss (512), occlusion, emission}.png (1024).
 """
 import sys
 from pathlib import Path
@@ -29,7 +29,7 @@ from concepts import (EMBER_CORE, EMBER_EDGE, IRON, ORIG, RUST, SIZE, SOOT, Box,
 
 BAKE = HERE / "bake"
 OUT = HERE / "export"
-VERSION = "v1.4"
+VERSION = "v1.5"
 IDS = {"base": 0, "stone": 1, "coal": 2, "tray": 3, "hoop": 4, "rivet": 5}    # bake_box.IDS
 BASALT = hexc("#26272A")              # v1: #2E2F32 - still pale in direct sun (v1.1 shots)
 BASALT_WARM = hexc("#302B28")
@@ -202,13 +202,13 @@ def main():
     occ_im = Image.fromarray(q(occ), "L")
     emis_im = Image.fromarray(q(emis), "RGB")
 
-    for ver in (VERSION, "v1.3"):
-        diff_im.save(OUT / f"Box_{ver}_diffuse.png")
-        norm_im.save(OUT / f"Box_{ver}_normal.png")
-        spec_im.save(OUT / f"Box_{ver}_specgloss.png")
-        occ_im.save(OUT / f"Box_{ver}_occlusion.png")
-        emis_im.save(OUT / f"Box_{ver}_emission.png")
-        print("wrote", OUT / f"Box_{ver}_*.png")
+    # only the current version: earlier versions' files stay as they were checked in the game
+    diff_im.save(OUT / f"Box_{VERSION}_diffuse.png")
+    norm_im.save(OUT / f"Box_{VERSION}_normal.png")
+    spec_im.save(OUT / f"Box_{VERSION}_specgloss.png")
+    occ_im.save(OUT / f"Box_{VERSION}_occlusion.png")
+    emis_im.save(OUT / f"Box_{VERSION}_emission.png")
+    print("wrote", OUT / f"Box_{VERSION}_*.png")
 
 
 if __name__ == "__main__":

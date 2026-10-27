@@ -15,7 +15,7 @@ cuffs. The parka's geometry stays (short, stand collar, zip flap), so the robe i
 Regions are chosen per texel by its 3D point (OBJ space: Y up, +Z front, arms along X).
 
     .venv/Scripts/python skins/sauna/snow-jacket/texture_v2.py
-Writes export/SnowJacket_v2_{diffuse,normal,specgloss,fuzz}.png and uv/v2_views.png.
+Writes export/<NAME>_{diffuse,normal,specgloss,fuzz}.png and uv/v2_views.png.
 """
 import sys
 from pathlib import Path
@@ -30,8 +30,9 @@ from blocking import ORIG, OUT, SIZE, blur, hexc, position_map, smooth  # noqa: 
 from uv_zones import load_obj, normal, read_png, render_views  # noqa: E402
 
 SEED = 13
-CLOTH = hexc("#B89F77")        # warm, weathered waffle cotton (retains warmth under direct sun)
-BAND = hexc("#A88C64")         # collar band / belt / cuffs: denser weave reads darker
+NAME = "SnowJacket_v2.3"       # v2.2 = SnowJacket_v2_*
+CLOTH = hexc("#BBA889")        # v2.3: less yellow in the sun (v2.2 #B89F77 read lemon-beige)
+BAND = hexc("#A99272")         # collar band / belt / cuffs: denser weave reads darker
 STRIPE = hexc("#8E3A30")       # signature Sauna faded brick-red stripe (set palette)
 SEAM = hexc("#735C41")
 SHADOW = hexc("#433424")
@@ -147,18 +148,15 @@ def main():
 
     # --- Brick stripe accents (Sauna set palette #8E3A30) ---
     # Shawl collar diagonal wrap: outer border running along chest to belt
-    s_a = front & (sA > 0) & (dA > COLLAR_W - 0.006) & (dA < COLLAR_W - 0.001) & (y >= BELT_Y) & (y <= 0.835)
-    s_b = under & (sB < 0) & (dB > COLLAR_W - 0.006) & (dB < COLLAR_W - 0.001) & (y >= BELT_Y) & (y <= 0.835)
+    # v2.3: two stripes like the towels' (9 mm and 4 mm, 4 mm apart) instead of one 5 mm thread
+    def two(d):
+        return ((d > COLLAR_W - 0.013) & (d < COLLAR_W - 0.004)) | ((d > COLLAR_W - 0.021) & (d < COLLAR_W - 0.017))
+    s_a = front & (sA > 0) & two(dA) & (y >= BELT_Y) & (y <= 0.835)
+    s_b = under & (sB < 0) & two(dB) & (y >= BELT_Y) & (y <= 0.835)
     stripe_collar = s_a | s_b
 
-    # Belt tails: double stripe at the ends of both tails (matching sauna towels)
+    # Belt tails: plain (v2.3; the v2.2 bars at the ends read as a judo belt's rank stripes)
     stripe_tails = np.zeros_like(cov)
-    for dx0, slope, end in ((-0.012, -0.12, 0.33), (0.014, 0.18, 0.36)):
-        cx = kx + dx0 + (ky - y) * slope
-        tail = front & (y < ky) & (y > end) & (np.abs(x - cx) < 0.016)
-        s_wide = tail & (y > end + 0.014) & (y < end + 0.026)
-        s_thin = tail & (y > end + 0.032) & (y < end + 0.038)
-        stripe_tails |= (s_wide | s_thin)
 
     stripes = (stripe_collar | stripe_tails) & cov
 
@@ -174,8 +172,9 @@ def main():
     col = col * (1 - 0.40 * edge_shadow[..., None]) + SHADOW * 0.40 * edge_shadow[..., None]
     col = np.where(vee[..., None], col * (0.80 + 0.12 * smooth(0.6, 0.78, y))[..., None], col)
 
-    # Shaded inner cavity
-    col = np.where(inner_cavity[..., None], INNER_LINING[None, None, :] * 0.9, col)
+    # Shaded inner cavity: a soft gradient towards the neck (v2.2 painted it flat #3C3125 - dark blotches)
+    cav = np.clip(blur(inner_cavity.astype(np.float64), 6) * 1.2, 0, 1) * 0.3
+    col = col * (1 - cav[..., None]) + INNER_LINING[None, None, :] * cav[..., None]
 
     # seams and belt edges
     belt_edge = belt & ~(blur(belt.astype(np.float64), 1.2) > 0.97)
@@ -227,11 +226,11 @@ def main():
     OUT.mkdir(exist_ok=True)
     full = np.full((SIZE, SIZE), 255, np.uint8)
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
-    Image.fromarray(np.dstack([q(col), full]), "RGBA").save(OUT / "SnowJacket_v2_diffuse.png")
-    Image.fromarray(np.dstack([q(nx * 0.5 + 0.5), q(ny * 0.5 + 0.5), full, full]), "RGBA").save(OUT / "SnowJacket_v2_normal.png")
-    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / "SnowJacket_v2_specgloss.png")
-    Image.fromarray(np.dstack([q(fuzz), q(fuzz), q(fuzz), full]), "RGBA").save(OUT / "SnowJacket_v2_fuzz.png")
-    render_views(V, T, F, N, HERE / "uv" / "v2_views.png", tex=read_png(OUT / "SnowJacket_v2_diffuse.png"))
+    Image.fromarray(np.dstack([q(col), full]), "RGBA").save(OUT / f"{NAME}_diffuse.png")
+    Image.fromarray(np.dstack([q(nx * 0.5 + 0.5), q(ny * 0.5 + 0.5), full, full]), "RGBA").save(OUT / f"{NAME}_normal.png")
+    Image.fromarray(np.dstack([q(spec), q(spec), q(spec), q(gloss)]), "RGBA").save(OUT / f"{NAME}_specgloss.png")
+    Image.fromarray(np.dstack([q(fuzz), q(fuzz), q(fuzz), full]), "RGBA").save(OUT / f"{NAME}_fuzz.png")
+    render_views(V, T, F, N, HERE / "uv" / "v2_views.png", tex=read_png(OUT / f"{NAME}_diffuse.png"))
     print("done; collar", int(collar.sum()), "belt", int(belt.sum()), "vee", int(vee.sum()), "stripes", int(stripes.sum()))
 
 

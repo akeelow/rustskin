@@ -1,6 +1,6 @@
 # Sauna Robe — публикация в Workshop
 
-> Подготовлено 21.10.2026, обновлено для **v2.2** (22.10.2026: кирпичный кант, затенённая горловина; файлы те же — `SnowJacket_v2_*`). Публикует пользователь сам из игрового редактора.
+> Подготовлено 21.10.2026, обновлено для **v2.3** (27.10.2026: двойной кирпичный кант, как у полотенец, пояс без полосок, мягкая тень в горловине вместо тёмных пятен, ткань менее жёлтая; файлы `SnowJacket_v2.3_*`; v2.2 — `SnowJacket_v2_*`). Публикует пользователь сам из игрового редактора.
 > ⚠️ Snow Jacket принимают **только в декабре–феврале** — опубликовать до конца ноября, чтобы скин был
 > в очереди к сезону.
 
@@ -30,12 +30,12 @@ Part of the Sauna set.
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `../export/SnowJacket_v2_diffuse.png`, Color 255/255/255, Alpha Cutoff 0.00 (по умолчанию; вырез V не используем) |
-| Normal | `../export/SnowJacket_v2_normal.png`, Normal Scale 1.00 |
-| Specular/Gloss | `../export/SnowJacket_v2_specgloss.png`, **Spec Color 255**, Glossiness 1.00 |
+| Diffuse | `../export/SnowJacket_v2.3_diffuse.png`, Color 255/255/255, Alpha Cutoff 0.00 (по умолчанию; вырез V не используем) |
+| Normal | `../export/SnowJacket_v2.3_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `../export/SnowJacket_v2.3_specgloss.png`, **Spec Color 255**, Glossiness 1.00 |
 | Occlusion | нет (пусто, как у оригинала) |
 | Emission | нет |
-| Fuzz Mask | `../export/SnowJacket_v2_fuzz.png`, **Fuzz 0.5** (по умолчанию 0.09), Fuzz Scatter 0.91 (по умолчанию) |
+| Fuzz Mask | `../export/SnowJacket_v2.3_fuzz.png`, **Fuzz 0.5** (по умолчанию 0.09), Fuzz Scatter 0.91 (по умолчанию) |
 
 Остальные ползунки — по умолчанию. Чаще всего забывают **Fuzz 0.5** — без него вафля плоская.
 

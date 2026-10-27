@@ -4,8 +4,8 @@ Usage (from the repo root):
   "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/electric-furnace/workshop_renders.py -- [shot ...] [--samples 128]
 
 Writes skins/sauna/electric-furnace/workshop/<shot>.png (1920x1080, collection.png 1024x1024).
-Uses the v2 export maps with the coil cutout (Alpha Cutoff 0.5) and, like the game, a warm light
-inside the lit firebox. Shots: hero, night, burners, firebox, back, collection.
+Uses the v2.8 export maps with the coil cutout (Alpha Cutoff 0.5) and, like the game, a warm light
+inside the lit firebox. Shots: studio (first on the page), hero, night, burners, firebox, back.
 """
 import math
 import sys
@@ -16,17 +16,18 @@ from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 OBJ = HERE / "originals" / "electric.furnace.obj"
-PREFIX = HERE / "export" / "ElectricFurnace_v2"
+PREFIX = HERE / "export" / "ElectricFurnace_v2.8"
 OUT = HERE / "workshop"
 
 # camera: (look-at point, direction from target to eye, distance, lens mm, light preset, resolution)
 SHOTS = {
+    # first image of the page: dark studio, warm key, cool rim, the firebox alight (like the accepted stoves)
+    "studio": ((0, 0, 0.55), (0.55, -1.0, 0.34), 3.6, 45, "studio", (1920, 1080)),
     "hero": ((0, 0, 0.58), (0.62, -1.0, 0.5), 3.1, 40, "day", (1920, 1080)),
     "night": ((0, 0, 0.58), (0.45, -1.0, 0.32), 3.0, 40, "night", (1920, 1080)),
     "burners": ((0.0, -0.05, 1.1), (0.35, -0.75, 1.0), 1.75, 50, "day", (1920, 1080)),
     "firebox": ((0.0, -0.3, 0.7), (0.22, -1.0, 0.1), 1.5, 50, "dusk", (1920, 1080)),
     "back": ((0, 0, 0.58), (-0.7, 1.0, 0.45), 3.1, 40, "day", (1920, 1080)),
-    "collection": ((0, 0, 0.6), (0.62, -1.0, 0.45), 2.8, 60, "dusk", (1024, 1024)),
 }
 
 
@@ -67,11 +68,11 @@ def material(cutout=True):
     return mat, bsdf
 
 
-def deck(scene):
+def deck(scene, size=4.2):
     """Weathered plank deck under the stove (stand-in for the in-game foundation)."""
     bpy.ops.mesh.primitive_plane_add(size=1)
     deck = bpy.context.active_object
-    deck.scale = (4.2, 4.2, 1)
+    deck.scale = (size, size, 1)
     m = bpy.data.materials.new("deck")
     m.use_nodes = True
     nt = m.node_tree
@@ -122,6 +123,17 @@ def lights(scene, preset):
         bg.inputs["Strength"].default_value = 0.35
         sun_energy, sun_color, fire = 1.2, (1.0, 0.7, 0.45), 40.0
         sun_rot = (math.radians(78), 0, math.radians(-60))
+    elif preset == "studio":
+        bg.inputs["Color"].default_value = (0.012, 0.01, 0.01, 1)
+        bg.inputs["Strength"].default_value = 1.0
+        sun_energy, sun_color, fire = 0.0, (1, 1, 1), 55.0
+        for loc, rot, power, col, size in (
+                ((-1.6, -1.8, 2.2), (math.radians(55), 0, math.radians(-40)), 120, (1.0, 0.82, 0.62), 1.2),  # warm key
+                ((1.4, 1.5, 1.8), (math.radians(-60), 0, math.radians(140)), 380, (0.62, 0.74, 1.0), 0.6)):  # cool rim
+            bpy.ops.object.light_add(type="AREA", location=loc)
+            ar = bpy.context.active_object
+            ar.data.energy, ar.data.color, ar.data.size = power, col, size
+            ar.rotation_euler = (Vector((0, 0, 0.6)) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
     else:  # night
         bg.inputs["Color"].default_value = (0.03, 0.04, 0.07, 1)
         bg.inputs["Strength"].default_value = 1.0
@@ -139,7 +151,7 @@ def lights(scene, preset):
         lt.energy = power
         lt.color = (1.0, 0.42, 0.12)
         lt.shadow_soft_size = size
-    return {"day": 3.0, "dusk": 5.0, "night": 6.0}[preset]
+    return {"day": 3.0, "dusk": 5.0, "night": 6.0, "studio": 6.0}[preset]
 
 
 def camera(scene, target, direction, dist, lens):
@@ -185,7 +197,7 @@ def render(name, samples):
     mat, bsdf = material()
     obj.data.materials.clear()
     obj.data.materials.append(mat)
-    deck(scene)
+    deck(scene, 1.5 if preset == "studio" else 4.2)       # studio: a small platform fading into the dark
     bsdf.inputs["Emission Strength"].default_value = lights(scene, preset)
     camera(scene, target, direction, dist, lens)
     scene.render.engine = "CYCLES"
