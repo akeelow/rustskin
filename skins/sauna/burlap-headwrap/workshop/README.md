@@ -66,7 +66,7 @@ Part of the Sauna set.
 
 ## Чек-лист публикации
 
-1. Редактор → Burlap Headwrap → загрузить Diffuse и Normal v1 (Occlusion не трогать).
+1. Редактор → Burlap Headwrap → загрузить Diffuse, Normal и Specular/Gloss v1 (Occlusion не трогать).
 2. **Fuzz 0.58**, Alpha Cutoff 0.79.
 3. Вкладка **ITEM**: имя `Sauna Towel Wrap`.
 4. Вкладка **PUBLISH** → Publish → страница в браузере.

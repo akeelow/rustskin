@@ -12,7 +12,7 @@
 ```
 Every Rust life starts naked. Might as well warm up properly.
 
-The changing room of a scrap-built sauna. Two open niches in pale lime
+The changing room of a scrap-built sauna. Two open niches in lime
 boards, pegs for the towels, shelves lit from beneath for the dash back
 from the steam. The middle door stays shut: a fogged window with a heart
 drawn by a finger, a map burnt into the boards with a trail to an X, days

@@ -19,9 +19,9 @@ Hide Poncho пропущено (20.10.2026).
 
 ## Картинка коллекции
 
-`workshop/collection.png` (1024×1024; JPG — `workshop/collection.jpg`): вечер в бане, все семь
-предметов в одной комнате — шкафчик с подсветкой, халат и тюрбан на стойке-манекене, кресло, полок
-изножьем к каменке, ящик с углями выгоревшим краем к печи. Скрипт — [workshop_collection.py](workshop_collection.py):
+`workshop/collection.png` (1024×1024; JPG — `workshop/collection.jpg`): вечер в бане сверху от двери, все семь
+предметов в одной комнате — справа светится каменка, перед ней ящик с углями, вдоль стены полок изножьем к
+печи, слева шкафчик, халат и тюрбан на стойке-манекене, кресло. Обновлено 27.10.2026 (плотнее кадр, ярче огонь). Скрипт — [workshop_collection.py](workshop_collection.py):
 
 ```bash
 "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/workshop_collection.py -- --samples 192 --size 1024
@@ -29,7 +29,7 @@ Hide Poncho пропущено (20.10.2026).
 
 ![collection](workshop/collection.jpg)
 
-Старая `electric-furnace/workshop/collection.png` (одна каменка) больше не нужна.
+Старая обложка с одной каменкой (`electric-furnace/workshop/collection.*`) удалена 27.10.2026.
 
 ## Описание коллекции (англ.)
 

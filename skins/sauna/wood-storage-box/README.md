@@ -8,11 +8,11 @@
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `export/Box_v1.4_diffuse.png` (или `Box_v1.3_diffuse.png`), **Color 255/255/255**, **Alpha Cutoff 0.50** |
-| Normal | `export/Box_v1.4_normal.png` (или `Box_v1.3_normal.png`), Normal Scale 1.00 |
-| Specular/Gloss | `export/Box_v1.4_specgloss.png` (или `Box_v1.3_specgloss.png`), **Spec Color 255/255/255**, Glossiness 1.00 |
-| Occlusion | `export/Box_v1.4_occlusion.png` (или `Box_v1.3_occlusion.png`), Occlusion Scale 1.00 |
-| Emission | `export/Box_v1.4_emission.png` (или `Box_v1.3_emission.png`), **Emission Color 255/255/255** |
+| Diffuse | `export/Box_v1.4_diffuse.png`, **Color 255/255/255**, **Alpha Cutoff 0.50** |
+| Normal | `export/Box_v1.4_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `export/Box_v1.4_specgloss.png`, **Spec Color 255/255/255**, Glossiness 1.00 |
+| Occlusion | `export/Box_v1.4_occlusion.png`, Occlusion Scale 1.00 |
+| Emission | `export/Box_v1.4_emission.png`, **Emission Color 255/255/255** |
 
 Публикация (название `Sauna Stone Box`, описание, картинки, чек-лист): [workshop/README.md](workshop/README.md).
 
@@ -57,6 +57,9 @@
 Лист (крупно — кромка): [renders/v1.3_sheet.png](renders/v1.3_sheet.png), ряд из 6: [renders/v1.3_row6.png](renders/v1.3_row6.png).
 
 ### Как загрузить в игру
+
+> ⚠️ С 22.10.2026 файлы `export/Box_v1.3_*.png` перезаписаны содержимым v1.4. Описанная здесь v1.3 — в git,
+> коммит `4c2a5f6`.
 
 | Слот | Файл / значение |
 |---|---|
