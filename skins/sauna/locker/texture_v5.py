@@ -26,7 +26,7 @@ import numpy as np
 from PIL import Image
 
 HERE = Path(__file__).resolve().parent
-TAG = "v5.2"   # v5.2: the wood graded towards the set's pale aspen, steam-dark bottom; v5/v5.1 = Locker_v5_*
+TAG = "v5.3"   # v5.3: paler and less saturated still (art critique 12.11: S 50 % vs the set's 30 %); v5.2: the wood graded towards the set's pale aspen, steam-dark bottom; v5/v5.1 = Locker_v5_*
 
 
 def grade_wood(col, pos):
@@ -35,9 +35,61 @@ def grade_wood(col, pos):
     30 cm darkens with steam and splashes, as on the stove's slats."""
     lum = (col * np.array([0.3, 0.59, 0.11])).sum(-1, keepdims=True)
     orange = ((col[..., 0] - col[..., 2]) > 0.06)[..., None]
-    col = np.where(orange, lum + (col - lum) * 0.72, col)
+    col = np.where(orange, (lum + (col - lum) * 0.50) * 1.12, col)   # v5.3: was 0.72 and no lift
     low = smooth(30.0, 0.0, pos[..., 1])[..., None] * 0.22
     return col * (1 - low) + np.array([0.33, 0.26, 0.19]) * low
+
+
+def hang_towel(m, col, nb, spec, gloss, emit, shift=8.0):
+    """v5.3: the set's striped towel back on a peg in the open niches (art critique 12.11: a changing locker
+    with nothing hanging in it; the towel motif was missing on this item). It is the towel modelled for v3
+    (props_v3.py -> bake/props_*), alone: a hanging towel is flat by nature, unlike v3's bucket and logs that
+    read as stickers. Back-wall texels are shared by the three compartments, so it hangs in both open niches.
+    shift moves it from its v3 place onto the middle peg."""
+    v3 = load("locker_v3", "texture_v3.py")
+    pos, cov = m["pos"], m["cov"]
+    x, y = pos[..., 0], pos[..., 1]
+    _, _, back_in, _ = v4.v2.open_doors(m)
+    xu = x - v4.UNITS[np.argmin(np.abs(x[..., None] - v4.UNITS), -1)] - shift
+    rd = lambda k: np.asarray(Image.open(BAKE / f"props_{k}.png").convert("RGBA"), np.float64) / 255.0
+    albedo, nmap, shade = rd("albedo"), rd("normal"), rd("shade")
+    H, W = albedo.shape[:2]
+    px = (xu - v3.X0) / (v3.X1 - v3.X0) * W
+    py = (v3.Y1 - y) / (v3.Y1 - v3.Y0) * H
+    sel = back_in & (xu > -21.5) & (xu < 1.8) & (y > 93) & (y < 159)      # the towel and its peg only
+    a = np.zeros(cov.shape + (4,))
+    a[sel] = v3.sample(albedo, px[sel], py[sel])
+    cov_p = a[..., 3]
+    sh = np.zeros(cov.shape + (4,))
+    sh[sel] = v3.sample(shade, px[sel], py[sel])
+    lum = sh[..., :3].mean(-1)
+    wall_ref = np.median(lum[sel & (cov_p < 0.01)])
+    light = np.clip(lum / max(wall_ref, 1e-3), 0.0, 1.4)
+    wall = sel & (cov_p < 0.01)
+    wall_col, wall_emit = np.median(col[wall], 0), np.median(emit[wall], 0)
+    col = np.where(sel[..., None], col * np.clip(light, 0.5, 1.0)[..., None], col)          # cast shadow on the wall
+    pc = a[..., :3] * (0.62 + 0.38 * np.clip(light, 0, 1.3))[..., None]
+    col = col * (1 - cov_p[..., None]) + pc * cov_p[..., None]
+    nw = np.zeros(cov.shape + (4,))
+    nw[sel] = v3.sample(nmap, px[sel], py[sel])
+    n_world = nw[..., :3] * 2 - 1
+    n_obj = np.stack([n_world[..., 0], n_world[..., 2], -n_world[..., 1]], -1)             # Blender -> OBJ axes
+    dcol, drow = np.roll(pos, -1, 1) - pos, np.roll(pos, -1, 0) - pos
+    ok = sel & np.roll(sel, -1, 1) & np.roll(sel, -1, 0)
+    tu, tv = np.median(dcol[ok], 0), -np.median(drow[ok], 0)
+    tu, tv = tu / np.linalg.norm(tu), tv / np.linalg.norm(tv)
+    nt = np.stack([n_obj @ tu, n_obj @ tv, n_obj[..., 2]], -1)
+    nt /= np.maximum(np.linalg.norm(nt, axis=-1, keepdims=True), 1e-6)
+    on = cov_p > 0.5
+    nb = np.where(on[..., None], nt, nb)
+    spec = np.where(on, 0.05, spec)
+    gloss = np.where(on, 0.12, gloss)
+    # the niche's painted lamp light falls on the cloth as on the wall (brighter: the linen is lighter), and
+    # the glowing vent slots do not show through it
+    lit = wall_emit * np.clip(pc / np.maximum(wall_col, 0.05), 0, 2.2)
+    emit = emit * (1 - cov_p[..., None]) + lit * cov_p[..., None]
+    print("towel texels", int(on.sum()))
+    return col, nb, spec, gloss, emit
 
 
 def load(name, file):
@@ -421,6 +473,7 @@ def main():
     emit = np.where(front[..., None], door_emit, emit)
 
     col = grade_wood(col, pos)
+    col, nb, spec, gloss, emit = hang_towel(m, col, nb, spec, gloss, emit)
     out = dict(m, col=col, nb=nb, spec=spec, gloss=gloss, alpha=alpha)
     v1.save(out, TAG)
     v4.save_emission(emit, TAG)

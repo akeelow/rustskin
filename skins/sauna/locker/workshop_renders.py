@@ -3,7 +3,7 @@
 Usage (from the repo root):
   "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/locker/workshop_renders.py -- [shot ...] [--samples 128]
 
-Writes skins/sauna/locker/workshop/<shot>.png (1920x1080). Final v5.2 maps (side doors cut with alpha, Alpha
+Writes skins/sauna/locker/workshop/<shot>.png (1920x1080). Final v5.3 maps (side doors cut with alpha, Alpha
 Cutoff 0.50; Emission Color 255; original occlusion at 0.75) via ../showcase.py. The OBJ is centimetres,
 Y up, +Z front; imported Z up, the front faces -Y.
 Shots: studio (dark studio, first on the page), hero (day), night (niche lights and the window), front (straight on, day), door (window, gauges and

@@ -29,7 +29,7 @@ from uv_zones import classify, load_obj, normal, read_png, render_views  # noqa:
 BAKE = HERE / "bake"
 ORIG = HERE / "originals"
 OUT = HERE / "export"
-NAME = "ElectricFurnace_v2.8"          # v2.8: mineral patches instead of rings; v2.7 = ElectricFurnace_v2_*
+NAME = "ElectricFurnace_v2.9"          # v2.9 (art critique 12.11): the set's bath leaf, dry and curled, on the plate; v2.8: mineral patches instead of rings; v2.7 = ElectricFurnace_v2_*
 ID = {"base": 0, "board": 1, "nail": 2, "stone": 3, "plinth": 4, "mortar": 5, "bar": 6, "rivet": 7,
       "pallet": 8, "trim": 9}  # must match bake_v2.IDS
 
@@ -208,8 +208,27 @@ def main():
     # Metallic and gloss: mineral crust is chalky, matte (rough), and non-metallic
     plate_metal = 85 * (1 - 0.75 * salt_mask) + 30 * temper * 3
     plate_gloss = 50 * (1 - 0.6 * salt_mask) * (1 - 0.35 * soot_ring)
+
+    # v2.9: a birch leaf from the whisk dried on the plate at the front edge, between the burners - the
+    # set's running joke, the same leaf as on the bench, the chair and the locker
+    la = np.radians(20.0)
+    lu = (x - 0.005) * np.cos(la) + (z - 0.262) * np.sin(la)
+    lv = -(x - 0.005) * np.sin(la) + (z - 0.262) * np.cos(la)
+    leaf_d = np.hypot(lu / 0.030, lv / 0.019 * (1 + 0.45 * np.clip(lu / 0.030, -1, 1)))
+    leaf = smooth(1.0, 0.9, leaf_d)
+    rib = np.clip(smooth(0.002, 0.0005, np.abs(lv)) * 0.6 + smooth(0.0015, 0.0004, np.abs(np.abs(lv) - 0.4 * (lu + 0.030))) * 0.3, 0, 1)
+    leaf_c = hexc("#A58B3C") * (0.85 + 0.3 * rsoot[..., None]) * (1 - 0.45 * rib[..., None])
+    scorch = smooth(0.4, 1.0, leaf_d)[..., None] * 0.55                          # brown, curled edge
+    leaf_c = leaf_c * (1 - scorch) + hexc("#4A3520") * scorch
+    lshadow = smooth(1.3, 0.95, np.hypot((lu + 0.002) / 0.030, (lv + 0.004) / 0.019)) * (1 - leaf) * 0.35
+    rc = rc * (1 - lshadow[..., None])
+    rc = rc * (1 - leaf[..., None]) + leaf_c * leaf[..., None]
+    plate_metal = plate_metal * (1 - leaf)
+    plate_gloss = plate_gloss * (1 - leaf) + 30 * leaf
     put(rimsel, rc, plate_metal, plate_gloss)
-    height[rimsel] = (0.0002 * rsoot + 0.0003 * tide_rings + 0.00015 * splatter)[rimsel]
+    height[rimsel] = (0.0002 * rsoot + 0.0003 * tide_rings + 0.00015 * splatter
+                      + leaf * (0.0012 + 0.0012 * smooth(0.3, 1.0, leaf_d) - 0.0005 * rib))[rimsel]
+    print("leaf texels on the plate", int((rimsel & (leaf > 0.5)).sum()))
 
     # ------------------------------------------------ firebox: baked heap of rocks behind the door bars
     # (v2.3; v1 painted the whole oven as flat glowing "lava", which the game's bloom blew out)

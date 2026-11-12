@@ -77,7 +77,7 @@ DIFF = {
     "Stove": "electric-furnace/export/ElectricFurnace_v2.8_diffuse.png",
     "Towel Wrap": "burlap-headwrap/export/BurlapHeadwrap_v1_diffuse.png",
     "Robe": "snow-jacket/export/SnowJacket_v2.3_diffuse.png",
-    "Locker": "locker/export/Locker_v5.2_diffuse.png",
+    "Locker": "locker/export/Locker_v5.3_diffuse.png",
     "Bench": "bed/export/Bed_v1.2_diffuse.png",
     "Chair": "chair/export/Chair_v1.4_diffuse.png",
     "Stone Box": "wood-storage-box/export/Box_v1.5_diffuse.png",

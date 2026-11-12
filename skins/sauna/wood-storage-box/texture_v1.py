@@ -29,7 +29,7 @@ from concepts import (EMBER_CORE, EMBER_EDGE, IRON, ORIG, RUST, SIZE, SOOT, Box,
 
 BAKE = HERE / "bake"
 OUT = HERE / "export"
-VERSION = "v1.5"
+VERSION = "v1.6"   # v1.6 (art critique 12.11): embers in hot pockets instead of an even web, warmer wood, a bath leaf
 IDS = {"base": 0, "stone": 1, "coal": 2, "tray": 3, "hoop": 4, "rivet": 5}    # bake_box.IDS
 BASALT = hexc("#26272A")              # v1: #2E2F32 - still pale in direct sun (v1.1 shots)
 BASALT_WARM = hexc("#302B28")
@@ -119,6 +119,8 @@ def main():
     gloss = np.where(hoop, np.where(riv, 0.35, 0.25), gloss)
 
     col, spec, gloss, rim_heat, rim_keep = rim(b, col, spec, gloss)
+    # v1.6: the weathered grey planks a touch warmer, towards the bench and the chair
+    col = np.where((b.walls & ~hoop)[..., None], col * np.array([1.04, 1.0, 0.93]), col)
 
     # ---------------- floor
     stone, coal, tray = floor & M["stone"], floor & M["coal"], floor & M["tray"]
@@ -159,6 +161,30 @@ def main():
 
     floor_heat = np.maximum.reduce([coal_heat, stone_heat, tray_heat])
 
+    # v1.6: the bed does not glow evenly (v1.5 read as lava / a giraffe pattern): four hot pockets, the rest
+    # is dark ash with a faint ruby breath
+    pocket = np.zeros_like(fx)
+    for px, pz, r in ((-0.12, 0.20, 0.13), (0.15, -0.02, 0.11), (-0.05, -0.27, 0.12), (0.19, 0.31, 0.08)):
+        pocket = np.maximum(pocket, np.exp(-((fx - px) ** 2 + (fz - pz) ** 2) / (2 * (r * 0.8) ** 2)))
+    pocket = np.clip(pocket * (0.75 + 0.5 * b.noise), 0, 1)
+    floor_heat = floor_heat * (0.30 + 0.70 * smooth(0.12, 0.7, pocket))
+    # warm bounce of the pockets on the stones around them, so that they read as stones, not black holes
+    bounce = (stone * smooth(0.1, 0.8, pocket) * (1 - 0.6 * up) * 0.22)[..., None]
+    col = np.where(floor[..., None], col * (1 - bounce) + hexc("#B4532A") * bounce, col)
+
+    # v1.6: the set's bath leaf, dry and scorched along one edge, lying on the stones
+    la = np.radians(35.0)
+    lu = (fx - 0.17) * np.cos(la) + (fz + 0.20) * np.sin(la)
+    lv = -(fx - 0.17) * np.sin(la) + (fz + 0.20) * np.cos(la)
+    leaf_d = np.hypot(lu / 0.034, lv / 0.021 * (1 + 0.5 * np.clip(lu / 0.034, -1, 1)))      # pointed at one end
+    leaf = floor * smooth(1.0, 0.9, leaf_d)
+    rib = smooth(0.0022, 0.0006, np.abs(lv)) * 0.5 + smooth(0.0016, 0.0004, np.abs(np.abs(lv) - 0.35 * (lu + 0.034))) * 0.25
+    leaf_c = hexc("#A58B3C") * (0.85 + 0.3 * b.noise[..., None]) * (1 - 0.45 * rib[..., None])
+    char = smooth(-0.005, 0.03, lu)[..., None]                                             # the tip towards a pocket is burnt
+    leaf_c = leaf_c * (1 - 0.8 * char) + CHARCOAL * 0.8 * char
+    col = col * (1 - leaf[..., None]) + leaf_c * (0.45 + 0.55 * ao[..., None]) * leaf[..., None]
+    floor_heat = floor_heat * (1 - leaf)
+
     # Firelight shining through handle slots (prominently visible on base loot shelves)
     ends = b.front | b.back
     slot = ends & (b.x > -0.165) & (b.x < 0.165) & (b.y > 0.395) & (b.y < 0.455)
@@ -177,7 +203,7 @@ def main():
     heat = np.maximum.reduce([floor_heat, blur(slot_heat, 0.5), gap_heat])
 
     # 3-tier thermal color gradient: deep ruby -> bright fiery orange -> incandescent yellow-white
-    HOT_CORE = hexc("#FFE680")  # incandescent core (~255 bloom)
+    HOT_CORE = hexc("#FFB347")  # v1.6: amber, the set palette (v1.5 #FFE680 burnt out to yellow-white)
     MID_CORE = hexc("#FF7A10")  # rich radiant orange
     EDGE_EMB = hexc("#B51805")  # deep fiery ruby
     c_mid = smooth(0.15, 0.65, heat)

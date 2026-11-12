@@ -1,6 +1,7 @@
 # Sauna Towel Wrap — публикация в Workshop
 
 > Подготовлено 21.10.2026 для **v1** (проверен в игре 19.10.2026). Публикует пользователь сам из игрового редактора.
+> **v1.2 (12.11.2026, по [CRITIQUE_ART.md](../../CRITIQUE_ART.md)):** одна крупная кайма на лбу (широкая и узкая полосы) вместо двух тонких, бечёвка приглушена до тона льна, банный лист на левом виске. Файлы `BurlapHeadwrap_v1.2_*`. **В игре не проверено** — посмотреть в редакторе перед публикацией; если не понравится, прежняя версия v1.1 лежит рядом (`BurlapHeadwrap_v1_*`).
 
 ## Название и описание (англ.)
 
@@ -28,9 +29,9 @@ Part of the Sauna set.
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `../export/BurlapHeadwrap_v1_diffuse.png`, **Alpha Cutoff 0.79** (по умолчанию) |
-| Normal | `../export/BurlapHeadwrap_v1_normal.png`, Normal Scale 1.00 |
-| Specular/Gloss | `../export/BurlapHeadwrap_v1_specgloss.png` (влажный блеск на затылке и складках; или оставить пустым 51 / 0.28) |
+| Diffuse | `../export/BurlapHeadwrap_v1.2_diffuse.png`, **Alpha Cutoff 0.79** (по умолчанию) |
+| Normal | `../export/BurlapHeadwrap_v1.2_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `../export/BurlapHeadwrap_v1.2_specgloss.png` (влажный блеск на затылке и складках; или оставить пустым 51 / 0.28) |
 | Occlusion | **оригинальный** (не заменять), Occlusion Scale 1.00 |
 | Emission | нет |
 | Fuzz Mask | пусто (белый), **Fuzz 0.58** (по умолчанию 0.23 — махра без ворса плоская), Fuzz Scatter 0.53 |

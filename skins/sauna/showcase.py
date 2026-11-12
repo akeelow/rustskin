@@ -21,20 +21,20 @@ EMISSION = 3.0
 #       map prefix, Alpha Cutoff, gloss map kind, occlusion (path, scale) or None
 ITEMS = {
     "stove": dict(obj=SAUNA / "electric-furnace/originals/electric.furnace.obj", up="y", scale=1.0, lift=0.0,
-                  prefix=SAUNA / "electric-furnace/export/ElectricFurnace_v2.8", cutoff=0.99, gloss="metalgloss"),
+                  prefix=SAUNA / "electric-furnace/export/ElectricFurnace_v2.9", cutoff=0.99, gloss="metalgloss"),
     "bench": dict(obj=SAUNA / "bed/originals/bed.obj", up="z", scale=0.01, lift=0.038,
                   prefix=SAUNA / "bed/export/Bed_v1.2", cutoff=0.5, gloss="specgloss"),
     "chair": dict(obj=SAUNA / "chair/originals/chair.obj", up="y", scale=1.0, lift=0.018,
                   prefix=SAUNA / "chair/export/Chair_v1.4", cutoff=0.0, gloss="specgloss"),
     "box": dict(obj=SAUNA / "wood-storage-box/renders/concepts/box_game.obj", up="y", scale=1.0, lift=0.0,
-                prefix=SAUNA / "wood-storage-box/export/Box_v1.5", cutoff=0.5, gloss="specgloss"),
+                prefix=SAUNA / "wood-storage-box/export/Box_v1.6", cutoff=0.5, gloss="specgloss"),
     "locker": dict(obj=SAUNA / "locker/originals/locker.obj", up="y", scale=0.01, lift=0.0,
-                   prefix=SAUNA / "locker/export/Locker_v5.2", cutoff=0.5, gloss="specgloss",
+                   prefix=SAUNA / "locker/export/Locker_v5.3", cutoff=0.5, gloss="specgloss",
                    ao=(SAUNA / "locker/originals/locker_ao.png", 0.75)),
     "robe": dict(obj=SAUNA / "snow-jacket/originals/jacket.snow.obj", up="y", scale=1.0, lift=0.0,
-                 prefix=SAUNA / "snow-jacket/export/SnowJacket_v2.3", cutoff=0.0, gloss="specgloss", cloth="ghost"),
+                 prefix=SAUNA / "snow-jacket/export/SnowJacket_v2.4", cutoff=0.0, gloss="specgloss", cloth="ghost"),
     "wrap": dict(obj=SAUNA / "burlap-headwrap/originals/burlap.headwrap.obj", up="y", scale=1.0, lift=0.0,
-                 prefix=SAUNA / "burlap-headwrap/export/BurlapHeadwrap_v1", cutoff=0.79, gloss="specgloss", cloth="cull"),
+                 prefix=SAUNA / "burlap-headwrap/export/BurlapHeadwrap_v1.2", cutoff=0.79, gloss="specgloss", cloth="cull"),
     # (cull back faces like the game: the outer side shows, the inside only through the eye slit)
     # (the wrap's original occlusion is not multiplied in: the game shades only ambient light with it,
     #  baked into the colour it turns the light linen olive)

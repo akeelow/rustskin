@@ -3,7 +3,7 @@
 Usage (from the repo root):
   "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/wood-storage-box/workshop_renders.py -- [shot ...] [--samples 128]
 
-Writes skins/sauna/wood-storage-box/workshop/<shot>.png (1920x1080). Uses the final v1.5 maps (the lid cut with alpha,
+Writes skins/sauna/wood-storage-box/workshop/<shot>.png (1920x1080). Uses the final v1.6 maps (the lid cut with alpha,
 Alpha Cutoff 0.50) on the game-like OBJ (renders/concepts/box_game.obj: the inner walls wear
 the outer ones, as in the client). The OBJ is metres, Y up, +Z front; imported Z up, the front faces -Y and
 the stove side (+x, the burnt rim) faces +X.
@@ -19,7 +19,7 @@ from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 OBJ = HERE / "renders" / "concepts" / "box_game.obj"
-PREFIX = HERE / "export" / "Box_v1.5"
+PREFIX = HERE / "export" / "Box_v1.6"
 STOVE_OBJ = HERE.parent / "electric-furnace" / "originals" / "electric.furnace.obj"
 STOVE_PREFIX = HERE.parent / "electric-furnace" / "export" / "ElectricFurnace_v2.8"
 OUT = HERE / "workshop"

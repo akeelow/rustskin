@@ -6,11 +6,11 @@ Critique fixes:
 2. Solidified alpha: eliminated the coarse burlap "gauze pinhole" perforation on the forehead
    and temples, leaving the eye slit open and naturally frayed.
 3. Damp accents & sweat: damp darkening on the nape and deep folds in Diffuse;
-   high-gloss moisture sheen in export/BurlapHeadwrap_v1_specgloss.png.
+   high-gloss moisture sheen in the specgloss map.
 
 Usage:
     .venv/Scripts/python skins/sauna/burlap-headwrap/texture_v1.py
-Writes export/BurlapHeadwrap_v1_{diffuse,normal,specgloss}.png and uv/v1_views.png.
+Writes export/{NAME}_{diffuse,normal,specgloss}.png and uv/v1_views.png.
 """
 import sys
 from pathlib import Path
@@ -31,6 +31,12 @@ SWEAT = hexc("#A8946A")       # yellowing from sweat and breath
 GRIME = hexc("#6E6250")       # dirt along the hems
 TEA = hexc("#9C8461")         # water/tea ring stains
 DAMP = hexc("#8C7A5E")        # darkened saturated wet linen
+
+
+# v1.2 (art critique 12.11): every line on the hood had the same weight (three twine wraps + two thin stripes) and
+# the wrap read as a bandage. Now one towel border leads - a wide and a narrow stripe on the forehead, the
+# twine sinks into the cloth's tone - and the set's bath leaf sticks to the temple. v1 files stay as they were.
+NAME = "BurlapHeadwrap_v1.2"
 
 
 def noise(rng, r):
@@ -150,12 +156,28 @@ def main():
     col = col * (1 - (0.4 * ring + inside)[..., None]) + TEA * (0.4 * ring + inside)[..., None]
 
     # Stripes across forehead fold and cowl hem
-    stripes, fade = stripe_mask(cowl, hood, alpha, rng)
+    stripes, fade = stripe_mask(cowl, hood, alpha, rng, hood_offs=((176, 11), (198, 4)))
+    fade = np.clip(fade + 0.12, 0, 1)
     sc = STRIPE[None, None, :] * folds[..., None] * (0.9 + 0.2 * wash[..., None])
     col[stripes] = (col * (1 - fade[..., None]) + sc * fade[..., None])[stripes]
 
     # Twine ropes tied over cloth and stripes
-    col[rope] = (TWINE[None, None, :] * folds[..., None] * (0.88 + 0.24 * loops[..., None]))[rope]
+    twine = TWINE[None, None, :] * folds[..., None] * (0.88 + 0.24 * loops[..., None])
+    col[rope] = (0.35 * twine + 0.65 * col * 0.9)[rope]          # v1.2: undyed linen cord, close to the towel
+
+    # v1.2: bath leaf on the left temple (side view plane z, y)
+    lz, ly = pos_3d[..., 2] + 0.03, pos_3d[..., 1] - 0.335
+    la = np.radians(25.0)
+    lu, lv = lz * np.cos(la) + ly * np.sin(la), -lz * np.sin(la) + ly * np.cos(la)
+    leaf_d = np.hypot(lu / 0.018, lv / 0.0115 * (1 + 0.45 * np.clip(lu / 0.018, -1, 1)))
+    side = hood & (pos_3d[..., 0] > 0.045) & (alpha > 200)
+    leaf = side * smooth(1.0, 0.86, leaf_d)
+    rib = np.clip(smooth(0.0018, 0.0004, np.abs(lv)) * 0.6 + smooth(0.0013, 0.0003, np.abs(np.abs(lv) - 0.4 * (lu + 0.018))) * 0.3, 0, 1)
+    shadow = side * smooth(1.3, 0.95, np.hypot(lu / 0.018, (lv + 0.003) / 0.0115)) * (1 - leaf)
+    col = col * (1 - 0.2 * shadow[..., None])
+    leaf_c = hexc("#66703A") * (0.8 + 0.2 * wash[..., None]) * (1 - 0.4 * rib[..., None])
+    col = col * (1 - leaf[..., None]) + leaf_c * leaf[..., None]
+    print("leaf texels", int((leaf > 0.5).sum()))
     col[~fabric] = LINEN * 0.9
 
     # ---------------------------------------------------------------- specgloss
@@ -184,17 +206,17 @@ def main():
 
     OUT.mkdir(exist_ok=True)
     rgba = np.dstack([(np.clip(col, 0, 1) * 255).round().astype(np.uint8), alpha])
-    Image.fromarray(rgba, "RGBA").save(OUT / "BurlapHeadwrap_v1_diffuse.png")
+    Image.fromarray(rgba, "RGBA").save(OUT / f"{NAME}_diffuse.png")
     nrm = np.dstack([(nx * 0.5 + 0.5) * 255, (ny * 0.5 + 0.5) * 255, np.full((SIZE, SIZE), 255), np.full((SIZE, SIZE), 255)])
-    Image.fromarray(nrm.round().astype(np.uint8), "RGBA").save(OUT / "BurlapHeadwrap_v1_normal.png")
+    Image.fromarray(nrm.round().astype(np.uint8), "RGBA").save(OUT / f"{NAME}_normal.png")
     sg = np.dstack([
         (np.clip(spec, 0, 1) * 255).round().astype(np.uint8),
         (np.clip(spec, 0, 1) * 255).round().astype(np.uint8),
         (np.clip(spec, 0, 1) * 255).round().astype(np.uint8),
         (np.clip(gloss, 0, 1) * 255).round().astype(np.uint8),
     ])
-    Image.fromarray(sg, "RGBA").save(OUT / "BurlapHeadwrap_v1_specgloss.png")
-    render_views(V, T, F, N, HERE / "uv" / "v1_views.png", tex=read_png(OUT / "BurlapHeadwrap_v1_diffuse.png"))
+    Image.fromarray(sg, "RGBA").save(OUT / f"{NAME}_specgloss.png")
+    render_views(V, T, F, N, HERE / "uv" / "v1_views.png", tex=read_png(OUT / f"{NAME}_diffuse.png"))
     print("Exported diffuse, normal, specgloss, and v1_views.png successfully.")
 
 

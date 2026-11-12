@@ -46,14 +46,14 @@
 
 | # | Предмет | Название в Workshop | Образ | Шанс* | Статус |
 |---|---|---|---|---:|---|
-| 1 | Electric Furnace | Sauna Stove | Каменка: обшивка рейками, раскалённые камни в окне | 1 из 6 | 🟢 [v2.8](electric-furnace/README.md) (в игре проверена v2.6; v2.7–v2.8 — переснять) · [пакет Workshop](electric-furnace/workshop/README.md) |
-| 2 | Burlap Headwrap | Sauna Towel Wrap | Полотенце, накрученное тюрбаном, или войлочная банная шапка с «рожками» (см. references) | 1 из 10 | 🟢 [v1.1](burlap-headwrap/README.md) (в игре проверена v1; переснять) · [пакет Workshop](burlap-headwrap/workshop/README.md) |
-| 3 | Snow Jacket | Sauna Robe | Короткий вафельный халат с запахом и поясом (тулуп отложен) | 1 из 9 | 🟢 сезонный, [v2.3](snow-jacket/README.md) (в игре проверена v2.1; переснять) · [пакет Workshop](snow-jacket/workshop/README.md) |
-| 4 | Locker | Sauna Changing Locker | Деревянный шкафчик раздевалки с крючками и полотенцами | 1 из 9 | 🟢 [v5.2 — финал](locker/README.md) (глухая средняя дверца под замок; в игре проверена v5; переснять) · [пакет Workshop](locker/workshop/README.md) |
+| 1 | Electric Furnace | Sauna Stove | Каменка: обшивка рейками, раскалённые камни в окне | 1 из 6 | 🟡 [v2.9](electric-furnace/README.md) (12.11: банный лист; не проверена в игре) · v2.8 (в игре проверена v2.6; v2.7–v2.8 — переснять) · [пакет Workshop](electric-furnace/workshop/README.md) |
+| 2 | Burlap Headwrap | Sauna Towel Wrap | Полотенце, накрученное тюрбаном, или войлочная банная шапка с «рожками» (см. references) | 1 из 10 | 🟡 [v1.2](burlap-headwrap/README.md) (12.11: крупная кайма, лист; не проверена в игре) · v1.1 (в игре проверена v1; переснять) · [пакет Workshop](burlap-headwrap/workshop/README.md) |
+| 3 | Snow Jacket | Sauna Robe | Короткий вафельный халат с запахом и поясом (тулуп отложен) | 1 из 9 | 🟡 сезонный, [v2.4](snow-jacket/README.md) (12.11: кайма на спине, лист; не проверена в игре) · v2.3 (в игре проверена v2.1; переснять) · [пакет Workshop](snow-jacket/workshop/README.md) |
+| 4 | Locker | Sauna Changing Locker | Деревянный шкафчик раздевалки с крючками и полотенцами | 1 из 9 | 🟡 [v5.3](locker/README.md) (12.11: бледнее дерево, полотенце в нишах; не проверена в игре) · v5.2 (глухая средняя дверца под замок; в игре проверена v5; переснять) · [пакет Workshop](locker/workshop/README.md) |
 | 5 | Hide Poncho | — | Пропущено (20.10.2026): полотенце на шкуре не получилось, попытки в [hide-poncho/](hide-poncho/README.md) | 1 из 10 | ⏸️ пропущено |
 | 6 | Bed | Sauna Bench | Полок из реек с подголовником | 1 из 10 | 🟢 [v1.2](bed/README.md) (копоть 24.10 — переснять изножье) · [пакет Workshop](bed/workshop/README.md) |
 | 7 | Chair | Sauna Chair | Кресло из предбанника: вагонка, полотенце через спинку | 1 из 16 | 🟢 [v1.4 готов, проверен в игре](chair/README.md) · [пакет Workshop](chair/workshop/README.md) |
-| 8 | Wood Storage Box | Sauna Stone Box | Открытый ящик у каменки: обручи, на железном противне камни, ночью между ними тлеют угли, камни лежат кучей, стенки целые (крышка вырезана альфой) | 1 из 18 | 🟢 [v1.5](wood-storage-box/README.md) (в игре проверена v1.3; переснять) · [пакет Workshop](wood-storage-box/workshop/README.md) |
+| 8 | Wood Storage Box | Sauna Stone Box | Открытый ящик у каменки: обручи, на железном противне камни, ночью между ними тлеют угли, камни лежат кучей, стенки целые (крышка вырезана альфой) | 1 из 18 | 🟡 [v1.6](wood-storage-box/README.md) (12.11: угли гнёздами, лист; не проверена в игре) · v1.5 (в игре проверена v1.3; переснять) · [пакет Workshop](wood-storage-box/workshop/README.md) |
 
 \* по [docs/item-selection.md](../../docs/item-selection.md).
 

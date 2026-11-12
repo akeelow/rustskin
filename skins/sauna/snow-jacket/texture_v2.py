@@ -30,7 +30,7 @@ from blocking import ORIG, OUT, SIZE, blur, hexc, position_map, smooth  # noqa: 
 from uv_zones import load_obj, normal, read_png, render_views  # noqa: E402
 
 SEED = 13
-NAME = "SnowJacket_v2.3"       # v2.2 = SnowJacket_v2_*
+NAME = "SnowJacket_v2.4"       # v2.4 (art critique 12.11): towel stripes round the back hem and the sleeves, a bath leaf; v2.3, v2.2 = SnowJacket_v2_*
 CLOTH = hexc("#BBA889")        # v2.3: less yellow in the sun (v2.2 #B89F77 read lemon-beige)
 BAND = hexc("#A99272")         # collar band / belt / cuffs: denser weave reads darker
 STRIPE = hexc("#8E3A30")       # signature Sauna faded brick-red stripe (set palette)
@@ -158,7 +158,25 @@ def main():
     # Belt tails: plain (v2.3; the v2.2 bars at the ends read as a judo belt's rank stripes)
     stripe_tails = np.zeros_like(cov)
 
-    stripes = (stripe_collar | stripe_tails) & cov
+    # v2.4: the back and the sleeves were plain waffle - the robe read as a beige jacket from behind and in
+    # first person. The towels' border (18 mm + 8 mm) runs round the back and the sides above the hem seam
+    # (the front keeps its pockets and belt tails); a thin piping marks each cuff.
+    def border(t, a):
+        return ((t > a) & (t < a + 0.018)) | ((t > a + 0.026) & (t < a + 0.034))
+    stripe_hem = torso & (z < 0.0) & border(y, 0.262)          # ends at the side seams
+    # sleeves: one thin piping at the cuff seam (a full border ran diagonally and read as a tracksuit)
+    stripe_sleeve = cov & (ax > 0.392) & (ax < 0.400)
+    stripes = (stripe_collar | stripe_tails | stripe_hem | stripe_sleeve) & cov
+
+    # v2.4: the set's bath leaf, stuck between the shoulder blades
+    la = np.radians(-28.0)
+    lu = (x - 0.045) * np.cos(la) + (y - 0.705) * np.sin(la)
+    lv = -(x - 0.045) * np.sin(la) + (y - 0.705) * np.cos(la)
+    leaf_d = np.hypot(lu / 0.030, lv / 0.019 * (1 + 0.45 * np.clip(lu / 0.030, -1, 1)))
+    leaf_k = (cov & (z < -0.02) & (ax < 0.2)) * smooth(1.0, 0.88, leaf_d)
+    leaf_rib = np.clip(smooth(0.0022, 0.0005, np.abs(lv)) * 0.6
+                       + smooth(0.0016, 0.0004, np.abs(np.abs(lv) - 0.4 * (lu + 0.030))) * 0.3, 0, 1)
+    leaf_shadow = (cov & (z < -0.02) & (ax < 0.2)) * smooth(1.25, 0.95, np.hypot((lu + 0.002) / 0.030, (lv + 0.004) / 0.019))
 
     # ---------------------------------------------------------------- diffuse
     tone = 0.90 + 0.14 * blur(rng.random((SIZE, SIZE)), 28)
@@ -186,6 +204,9 @@ def main():
     # Paint brick stripes with weave variation and soft edges
     stripe_fade = 0.88 + 0.22 * blur(rng.random((SIZE, SIZE)), 2.5)
     col = np.where(stripes[..., None], STRIPE[None, None, :] * (stripe_fade * shade)[..., None], col)
+    col = col * (1 - 0.22 * (leaf_shadow * (1 - leaf_k)))[..., None]
+    leaf_c = hexc("#6B7A3C") * (0.85 + 0.3 * stripe_fade[..., None] - 0.25) * (1 - 0.4 * leaf_rib[..., None])
+    col = col * (1 - leaf_k[..., None]) + leaf_c * leaf_k[..., None]
 
     # Contact shadow under belt
     belt_under_shadow = front & (y < BELT_Y - BELT_W) & (y > BELT_Y - BELT_W - 0.015)
@@ -207,6 +228,7 @@ def main():
     weave = blur(rng.random((SIZE, SIZE)), 0.6)
     h = np.where(band, 0.35 * weave, ridge)
     h = np.where(stripes, 0.42 * weave, h)
+    h = np.where(leaf_k > 0.5, 1.3 - 0.5 * leaf_rib, h)        # the leaf lies on the cloth, veins sunk
 
     # bands sit proud of the robe; seams sink
     relief = blur(band.astype(np.float64), 1.8) * 1.5 + blur(knot.astype(np.float64), 4.5) * 3.5 + blur(tails.astype(np.float64), 2.0) * 1.2

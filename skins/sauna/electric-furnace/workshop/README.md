@@ -1,6 +1,7 @@
 # Sauna Stove — публикация в Workshop
 
 > Подготовлено 19.10.2026, обновлено для **v2.8** (27.10.2026: неровные пятна накипи вместо концентрических колец и белых точек; файлы `ElectricFurnace_v2.8_*`; v2.7 — `ElectricFurnace_v2_*`). Публикует пользователь сам из игрового редактора.
+> **v2.9 (12.11.2026, по [CRITIQUE_ART.md](../../CRITIQUE_ART.md)):** сухой банный лист на плите у переднего края (сквозной мотив сета); первый кадр `studio.jpg` снят с левого бока, топка ярче. Файлы `ElectricFurnace_v2.9_*`. **В игре не проверено** — посмотреть в редакторе перед публикацией; если не понравится, прежняя версия v2.8 лежит рядом (`ElectricFurnace_v2.8_*`).
 
 ## Название и описание (англ.)
 
@@ -30,15 +31,15 @@ through.»
 ([Creating Skins](https://wiki.facepunch.com/rust/Creating_Skins)). Поэтому
 своей иконки не делаем. Перед Publish в редакторе выставить:
 
-- все 5 карт v2.8, **Alpha Cutoff 1.00** (проверено в игре; 0.5 тоже работает):
+- все 5 карт v2.9, **Alpha Cutoff 1.00** (проверено в игре; 0.5 тоже работает):
 
 | Слот | Файл |
 |---|---|
-| Diffuse | `../export/ElectricFurnace_v2.8_diffuse_cutout.png`, **Alpha Cutoff 1.00** |
-| Normal | `../export/ElectricFurnace_v2.8_normal.png` |
-| Metal/Gloss | `../export/ElectricFurnace_v2.8_metalgloss.png` |
-| Occlusion | `../export/ElectricFurnace_v2.8_occlusion.png` |
-| Emission | `../export/ElectricFurnace_v2.8_emission.png` |
+| Diffuse | `../export/ElectricFurnace_v2.9_diffuse_cutout.png`, **Alpha Cutoff 1.00** |
+| Normal | `../export/ElectricFurnace_v2.9_normal.png` |
+| Metal/Gloss | `../export/ElectricFurnace_v2.9_metalgloss.png` |
+| Occlusion | `../export/ElectricFurnace_v2.9_occlusion.png` |
+| Emission | `../export/ElectricFurnace_v2.9_emission.png` |
 
 - остальные ползунки по умолчанию.
 
@@ -83,12 +84,12 @@ through.»
 - **Вывод:** риск — в вырезах, через которые что-то видно (обзор, преимущество в игре). У нас
   вырез только убирает спирали конфорок, под ними цельная чаша (проверено лучами в Blender:
   насквозь ничего не видно), на хитбокс текстура не влияет. Риск низкий — **публикуем с вырезом**.
-  Запасной вариант на случай замечаний: `ElectricFurnace_v2.8_diffuse.png` и Alpha Cutoff 0
+  Запасной вариант на случай замечаний: `ElectricFurnace_v2.9_diffuse.png` и Alpha Cutoff 0
   (спирали видны, но покрыты камнями нормалью).
 
 ## Чек-лист публикации
 
-1. Редактор → Electric Furnace → загрузить 5 карт v2.8 (таблица выше), Alpha Cutoff 1.00.
+1. Редактор → Electric Furnace → загрузить 5 карт v2.9 (таблица выше), Alpha Cutoff 1.00.
 2. Вкладка **ITEM**: имя `Sauna Stove` (без имени кнопка Publish неактивна).
 3. Вкладка **PUBLISH** → Publish. Откроется страница в браузере (войти в Steam).
 4. На странице: вставить описание, добавить картинки (5 рендеров + 2–4 скриншота из игры).

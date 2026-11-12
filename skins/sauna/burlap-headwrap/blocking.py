@@ -79,13 +79,13 @@ def rope_mask(hood, lum):
     return (blur(rope.astype(np.float64), 1.6) > 0.2) & hood    # take in the rope's grey edges too
 
 
-def stripe_mask(cowl, hood, alpha, rng):
+def stripe_mask(cowl, hood, alpha, rng, hood_offs=((180, 5), (195, 3))):
     """Two faded stripes: along cowl hem and across hood forehead wrap.
     Returns (mask, fade 0..1 per texel)."""
     ys = np.arange(SIZE)[:, None]
     xs = np.arange(SIZE)
     stripes = np.zeros((SIZE, SIZE), bool)
-    for part, offs in ((cowl, ((46, 6), (64, 3))), (hood, ((180, 5), (195, 3)))):
+    for part, offs in ((cowl, ((46, 6), (64, 3))), (hood, hood_offs)):
         solid = part & (alpha > 40)
         has = solid.any(0)
         hem = np.where(has, SIZE - 1 - np.argmax(solid[::-1], 0), np.nan)

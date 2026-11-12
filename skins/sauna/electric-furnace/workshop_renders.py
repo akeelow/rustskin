@@ -4,7 +4,7 @@ Usage (from the repo root):
   "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/electric-furnace/workshop_renders.py -- [shot ...] [--samples 128]
 
 Writes skins/sauna/electric-furnace/workshop/<shot>.png (1920x1080, collection.png 1024x1024).
-Uses the v2.8 export maps with the coil cutout (Alpha Cutoff 0.5) and, like the game, a warm light
+Uses the v2.9 export maps with the coil cutout (Alpha Cutoff 0.5) and, like the game, a warm light
 inside the lit firebox. Shots: studio (first on the page), hero, night, burners, firebox, back.
 """
 import math
@@ -16,13 +16,13 @@ from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 OBJ = HERE / "originals" / "electric.furnace.obj"
-PREFIX = HERE / "export" / "ElectricFurnace_v2.8"
+PREFIX = HERE / "export" / "ElectricFurnace_v2.9"
 OUT = HERE / "workshop"
 
 # camera: (look-at point, direction from target to eye, distance, lens mm, light preset, resolution)
 SHOTS = {
     # first image of the page: dark studio, warm key, cool rim, the firebox alight (like the accepted stoves)
-    "studio": ((0, 0, 0.55), (0.55, -1.0, 0.34), 3.6, 45, "studio", (1920, 1080)),
+    "studio": ((0, 0, 0.55), (-0.55, -1.0, 0.34), 3.6, 45, "studio", (1920, 1080)),   # left side: the slats, not the louvre cutout
     "hero": ((0, 0, 0.58), (0.62, -1.0, 0.5), 3.1, 40, "day", (1920, 1080)),
     "night": ((0, 0, 0.58), (0.45, -1.0, 0.32), 3.0, 40, "night", (1920, 1080)),
     "burners": ((0.0, -0.05, 1.1), (0.35, -0.75, 1.0), 1.75, 50, "day", (1920, 1080)),
@@ -126,10 +126,10 @@ def lights(scene, preset):
     elif preset == "studio":
         bg.inputs["Color"].default_value = (0.012, 0.01, 0.01, 1)
         bg.inputs["Strength"].default_value = 1.0
-        sun_energy, sun_color, fire = 0.0, (1, 1, 1), 55.0
+        sun_energy, sun_color, fire = 0.0, (1, 1, 1), 170.0   # the firebox is the accent of the first image
         for loc, rot, power, col, size in (
                 ((-1.6, -1.8, 2.2), (math.radians(55), 0, math.radians(-40)), 120, (1.0, 0.82, 0.62), 1.2),  # warm key
-                ((1.4, 1.5, 1.8), (math.radians(-60), 0, math.radians(140)), 380, (0.62, 0.74, 1.0), 0.6)):  # cool rim
+                ((1.4, 1.5, 1.8), (math.radians(-60), 0, math.radians(140)), 200, (0.62, 0.74, 1.0), 0.6)):  # cool rim
             bpy.ops.object.light_add(type="AREA", location=loc)
             ar = bpy.context.active_object
             ar.data.energy, ar.data.color, ar.data.size = power, col, size
@@ -151,7 +151,7 @@ def lights(scene, preset):
         lt.energy = power
         lt.color = (1.0, 0.42, 0.12)
         lt.shadow_soft_size = size
-    return {"day": 3.0, "dusk": 5.0, "night": 6.0, "studio": 6.0}[preset]
+    return {"day": 3.0, "dusk": 5.0, "night": 6.0, "studio": 14.0}[preset]
 
 
 def camera(scene, target, direction, dist, lens):
