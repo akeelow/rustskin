@@ -255,23 +255,65 @@ Part of the Sauna set.
 
 ## После семи предметов: коллекция
 
-1. Steam → Workshop Rust → **Create Collection**.
-2. Название `Sauna`, картинка `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\collection.jpg`, описание:
+Опубликованные предметы (по порядку, в котором добавлять в коллекцию):
 
-   ```
-   Every Rust life starts naked. Might as well warm up properly.
+| # | Предмет | Страница |
+|---|---|---|
+| 1 | Sauna Stove | https://steamcommunity.com/sharedfiles/filedetails/?id=3840311723 |
+| 2 | Sauna Bench | https://steamcommunity.com/sharedfiles/filedetails/?id=3840333377 |
+| 3 | Sauna Chair | https://steamcommunity.com/sharedfiles/filedetails/?id=3840335380 |
+| 4 | Sauna Stone Box | https://steamcommunity.com/sharedfiles/filedetails/?id=3840337593 |
+| 5 | Sauna Changing Locker | https://steamcommunity.com/sharedfiles/filedetails/?id=3840340102 |
+| 6 | Sauna Towel Wrap | https://steamcommunity.com/sharedfiles/filedetails/?id=3840341829 |
+| 7 | Sauna Robe | _ещё не опубликован — впишет агент_ |
 
-   A sauna scrap-built by a survivor: an old cooker clad in aspen slats with
-   glowing rocks in the firebox, a bed frame turned into a slatted bench, an
-   armchair from the changing room, a crate of hot stones and embers by the
-   stove, a changing locker with lit niches and a door for your lock - and a
-   towel wrap and a waffle robe for the dash into the snow.
+### Шаг 1. Создать коллекцию
 
-   Seven skins, one house.
-   ```
+1. Открыть в браузере (залогиненном в Steam):
+   **https://steamcommunity.com/workshop/editcollection/?appid=252490**
+   Если ссылка не откроется: Steam → Сообщество → Rust → **Мастерская** → **Обзор** → **Коллекции** → справа
+   **Создать коллекцию**.
+2. Заполнить:
+   - **Название:** `Sauna`
+   - **Описание:** текст ниже, целиком.
+   - **Тип:** коллекция (Collection), не «игра».
+   - **Картинка:** `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\collection.jpg`
+3. **Сохранить и продолжить.**
 
-3. Добавить все семь предметов в порядке из таблицы выше → видимость **Public**.
-4. Прислать агенту ссылку на коллекцию.
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+A sauna scrap-built by a survivor: an old cooker clad in aspen slats with
+glowing rocks in the firebox, a bed frame turned into a slatted bench, an
+armchair from the changing room, a crate of hot stones and embers by the
+stove, a changing locker with lit niches and a door for your lock - and a
+towel wrap and a waffle robe for the dash into the snow.
+
+Seven skins, one house.
+```
+
+### Шаг 2. Добавить предметы
+
+На следующей странице будет список твоих работ (вкладка «Ваши работы» / «Your Workshop Files»). Нажать **«+»**
+(Добавить) у всех семи, по порядку из таблицы выше.
+
+Если какого-то предмета там нет: открыть его страницу по ссылке из таблицы → кнопка **«В коллекцию»** под
+галереей → отметить `Sauna`.
+
+### Шаг 3. Опубликовать
+
+**Опубликовать** → видимость **Public** (Публичная). Прислать агенту ссылку на коллекцию.
+
+### Шаг 4 (по желанию). Ссылка на коллекцию в описании каждого предмета
+
+На странице каждого из семи → **Edit title & description** → последнюю строку `Part of the Sauna set.` заменить на
+(вместо `ССЫЛКА` — адрес коллекции):
+
+```
+Part of the [url=ССЫЛКА]Sauna set[/url].
+```
+
+Так покупатель с любой страницы попадёт ко всему сету. Это можно сделать и позже.
 
 ## Если что-то пошло не так
 
