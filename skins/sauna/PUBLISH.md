@@ -11,6 +11,7 @@
    него принятый скин не станет публичным в магазине.
 3. Публиковать **все семь подряд, в один заход**, затем собрать коллекцию.
 4. ✅ 15.11: платёжная и налоговая информация (W-8BEN) заполнена и подтверждена.
+5. ✅ 15.11: все семь предметов опубликованы (ссылки — в таблице ниже). Осталось: коллекция и автоскрины.
 
 ## Шаги для одного предмета
 
@@ -47,7 +48,7 @@
 | 4 | `Sauna Stone Box` | Wood Storage Box | `wood-storage-box` | [3840337593](https://steamcommunity.com/sharedfiles/filedetails/?id=3840337593) |
 | 5 | `Sauna Changing Locker` | Locker | `locker` | [3840340102](https://steamcommunity.com/sharedfiles/filedetails/?id=3840340102) |
 | 6 | `Sauna Towel Wrap` | Burlap Headwrap | `burlap-headwrap` | [3840341829](https://steamcommunity.com/sharedfiles/filedetails/?id=3840341829) |
-| 7 | `Sauna Robe` | Snow Jacket | `snow-jacket` | |
+| 7 | `Sauna Robe` | Snow Jacket | `snow-jacket` | [3840344106](https://steamcommunity.com/sharedfiles/filedetails/?id=3840344106) |
 
 ---
 
@@ -265,7 +266,7 @@ Part of the Sauna set.
 | 4 | Sauna Stone Box | https://steamcommunity.com/sharedfiles/filedetails/?id=3840337593 |
 | 5 | Sauna Changing Locker | https://steamcommunity.com/sharedfiles/filedetails/?id=3840340102 |
 | 6 | Sauna Towel Wrap | https://steamcommunity.com/sharedfiles/filedetails/?id=3840341829 |
-| 7 | Sauna Robe | _ещё не опубликован — впишет агент_ |
+| 7 | Sauna Robe | https://steamcommunity.com/sharedfiles/filedetails/?id=3840344106 |
 
 ### Шаг 1. Создать коллекцию
 
