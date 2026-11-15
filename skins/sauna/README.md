@@ -52,7 +52,7 @@
 | 4 | Locker | Sauna Changing Locker | Деревянный шкафчик раздевалки с крючками и полотенцами | 1 из 9 | 🟢 [v5.4](locker/README.md) (15.11: свечение ×2; проверена и снята в игре) · v5.2 (глухая средняя дверца под замок; в игре проверена v5; переснять) · [пакет Workshop](locker/workshop/README.md) |
 | 5 | Hide Poncho | — | Пропущено (20.10.2026): полотенце на шкуре не получилось, попытки в [hide-poncho/](hide-poncho/README.md) | 1 из 10 | ⏸️ пропущено |
 | 6 | Bed | Sauna Bench | Полок из реек с подголовником | 1 из 10 | 🚀 [опубликован 15.11](https://steamcommunity.com/sharedfiles/filedetails/?id=3840333377) · [v1.2](bed/README.md) (копоть 24.10 — переснять изножье) · [пакет Workshop](bed/workshop/README.md) |
-| 7 | Chair | Sauna Chair | Кресло из предбанника: вагонка, полотенце через спинку | 1 из 16 | 🟢 [v1.4 готов, проверен в игре](chair/README.md) · [пакет Workshop](chair/workshop/README.md) |
+| 7 | Chair | Sauna Chair | Кресло из предбанника: вагонка, полотенце через спинку | 1 из 16 | 🚀 [опубликован 15.11](https://steamcommunity.com/sharedfiles/filedetails/?id=3840335380) · [v1.4 готов, проверен в игре](chair/README.md) · [пакет Workshop](chair/workshop/README.md) |
 | 8 | Wood Storage Box | Sauna Stone Box | Открытый ящик у каменки: обручи, на железном противне камни, ночью между ними тлеют угли, камни лежат кучей, стенки целые (крышка вырезана альфой) | 1 из 18 | 🟢 [v1.6](wood-storage-box/README.md) (12.11: угли гнёздами, лист; проверена и снята в игре 15.11) · v1.5 (в игре проверена v1.3; переснять) · [пакет Workshop](wood-storage-box/workshop/README.md) |
 
 \* по [docs/item-selection.md](../../docs/item-selection.md).

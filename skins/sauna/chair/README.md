@@ -1,5 +1,7 @@
 # Sauna Chair (Chair)
 
+> 🚀 **Опубликован в Workshop 15.11.2026:** https://steamcommunity.com/sharedfiles/filedetails/?id=3840335380 (v1.4).
+>
 > Статус: 🟢 **v1.4 — готов** (24.10.2026): добавлена мягкая тень от верхнего света под берёзовый лист на полотенце, обновлена карта AO и воркшоп-рендеры.
 > Рендеры и описание для Workshop — [workshop/](workshop/README.md).
 > Сет: [Sauna](../README.md). ТЗ: [TZ.md](TZ.md). Эталон процесса и «почерка» — [../bed/](../bed/README.md).
