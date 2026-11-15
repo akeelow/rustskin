@@ -20,14 +20,14 @@
    эту схему.
 3. Сдвинуть ползунок TIME на день и на ночь, проверить, что предмет выглядит как на скриншотах.
 4. Вкладка **ITEM** → имя (колонка «Название»). Без имени кнопка Publish неактивна.
-5. Вкладка **PUBLISH** → **Publish**. Иконку не менять — редактор делает её сам. Откроется страница предмета в
-   браузере.
-6. На странице Steam:
-   - **Edit title & description** → вставить описание из пакета предмета (`<папка>/workshop/README.md`, блок
-     `Description`, текст между ``` целиком).
-   - **Add/edit images & videos** → загрузить картинки **в порядке из раздела предмета** (первая — обложка
-     галереи).
-   - Видимость — **Public**.
+5. Вкладка **PUBLISH**:
+   - **Description** — вставить текст из раздела предмета ниже (блок «Описание», целиком).
+   - **Additional Preview Images** → «+» → добавить картинки **в порядке из раздела предмета**. Если редактор
+     какую-то не примет — добавить её потом на странице Steam (Add/edit images & videos).
+   - **Icon Override** — не трогать (None): иконку редактор делает сам. **Change Log** — пусто.
+   - Нажать **PUBLISH**. Откроется страница предмета в браузере.
+6. На странице Steam проверить: описание с переносами строк, все картинки на месте, видимость **Public**.
+   Что не так — поправить там же (Edit title & description, Add/edit images & videos).
 7. Скопировать ссылку на страницу и прислать агенту (запишет в README).
 
 ## Порядок и названия
@@ -46,6 +46,18 @@
 
 ## 1. Sauna Stove — Electric Furnace
 
+**Описание** (поле Description):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+An old kitchen cooker turned into a sauna stove: clad in aspen slats nailed
+to the rusty shell, burners buried under split basalt, a forged grate over a
+firebox full of glowing rocks, all sitting on a rubble plinth and a wet pallet.
+
+Part of the Sauna set.
+```
+
 **Файлы** (`electric-furnace/export/`):
 
 | Слот | Файл | Ползунки |
@@ -57,10 +69,24 @@
 | Emission | `ElectricFurnace_v2.9_emission.png` | |
 
 **Картинки** (`electric-furnace/workshop/`), по порядку:
-`ingame/front_night.jpg` → `studio.jpg` → `ingame/three_quarter_day.jpg` → `ingame/top_night.jpg` →
-`ingame/top_day.jpg` → `hero.jpg` → `night.jpg` → `firebox.jpg` → `burners.jpg` → `back.jpg`
+`ingame/front_night.jpg` → `studio.jpg` → `ingame/three_quarter_night.jpg` → `ingame/three_quarter_day.jpg` →
+`ingame/top_day.jpg` → `ingame/top_night.jpg` → `hero.jpg` → `night.jpg` → `firebox.jpg` → `burners.jpg` → `back.jpg`
 
 ## 2. Sauna Bench — Bed
+
+**Описание** (поле Description):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+A roadside bed frame dragged into a scrap-built sauna: the mattress went
+out, a deck of aspen slats from an old pallet went on, two boards from a
+paint-chipped door became the headrest. Polished by years of lying in the
+steam, smoked at the end facing the stove, with a rolled linen towel
+waiting under your head.
+
+Part of the Sauna set.
+```
 
 **Файлы** (`bed/export/`):
 
@@ -77,6 +103,22 @@
 
 ## 3. Sauna Chair — Chair
 
+**Описание** (поле Description):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+An old armchair on a steel-channel frame, dragged from the same roadside
+house as the bench and set in the changing room, where you cool off after
+the steam. The back is clad in lining off-cuts left over from the sauna
+walls, the seat in aspen slats, and a shovel handle stands in for the
+missing leg, its split end bound with wire. Greasy where the hands rest,
+a wet patch where the wash basin stood, a few leaves off the bath broom,
+and a linen towel thrown over the back.
+
+Part of the Sauna set.
+```
+
 **Файлы** (`chair/export/`), все ползунки по умолчанию:
 
 | Слот | Файл |
@@ -91,6 +133,20 @@
 `towel.jpg` → `seat.jpg` → `back.jpg` → `dusk.jpg` → `set.jpg`
 
 ## 4. Sauna Stone Box — Wood Storage Box
+
+**Описание** (поле Description):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+An old crate kept by the sauna stove for the spare stones and the embers
+to light it with. Bound with two hoops off a barrel so the heat wouldn't
+split it, a sheet of steel on the bottom so it wouldn't catch. The basalt
+on the steel is still hot: at night radiant embers glow between the stones,
+and warm firelight spills through the handle grips and plank seams.
+
+Part of the Sauna set.
+```
 
 **Файлы** (`wood-storage-box/export/`):
 
@@ -108,6 +164,22 @@
 
 ## 5. Sauna Changing Locker — Locker
 
+**Описание** (поле Description):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+The changing room of a scrap-built sauna. Two open niches in lime
+boards, pegs for the towels, shelves lit from beneath for the dash back
+from the steam. The middle door stays shut: a fogged window with a heart
+drawn by a finger, a map burnt into the boards with a trail to an X, days
+counted in notches, a thermometer and a hygrometer, and a steel plate for
+your lock - scratched by keys, next to a boot print and a split board
+where someone tried to kick it in.
+
+Part of the Sauna set.
+```
+
 **Файлы** (`locker/export/`):
 
 | Слот | Файл | Ползунки |
@@ -124,6 +196,19 @@
 
 ## 6. Sauna Towel Wrap — Burlap Headwrap
 
+**Описание** (поле Description):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+An old linen sauna towel with two faded brick stripes, wound round the
+head and neck and tied with twine, to keep the ears warm between the
+steam room and the snow. Washed grey, yellowed where you breathe, and
+frayed at every edge.
+
+Part of the Sauna set.
+```
+
 **Файлы** (`burlap-headwrap/export/`):
 
 | Слот | Файл | Ползунки |
@@ -139,6 +224,19 @@
 `front.jpg` → `side.jpg` → `set.jpg`
 
 ## 7. Sauna Robe — Snow Jacket
+
+**Описание** (поле Description):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+A short waffle robe for the dash from the steam room into the snow and
+back. Wrapped across and tied with a belt, patch pockets, wide cuffs.
+Washed a hundred times in a bucket and never quite dry: the beige has
+gone uneven, with damp patches that never fade.
+
+Part of the Sauna set.
+```
 
 **Файлы** (`snow-jacket/export/`):
 
@@ -157,8 +255,20 @@
 ## После семи предметов: коллекция
 
 1. Steam → Workshop Rust → **Create Collection**.
-2. Название `Sauna`, картинка `workshop/collection.jpg`, описание — из [workshop_collection.md](workshop_collection.md)
-   («Описание коллекции»).
+2. Название `Sauna`, картинка `workshop/collection.jpg`, описание:
+
+   ```
+   Every Rust life starts naked. Might as well warm up properly.
+
+   A sauna scrap-built by a survivor: an old cooker clad in aspen slats with
+   glowing rocks in the firebox, a bed frame turned into a slatted bench, an
+   armchair from the changing room, a crate of hot stones and embers by the
+   stove, a changing locker with lit niches and a door for your lock - and a
+   towel wrap and a waffle robe for the dash into the snow.
+
+   Seven skins, one house.
+   ```
+
 3. Добавить все семь предметов в порядке из таблицы выше → видимость **Public**.
 4. Прислать агенту ссылку на коллекцию.
 
