@@ -26,3 +26,4 @@ scratch/
 __pycache__/
 
 .venv/
+skins/sauna/_inbox/
