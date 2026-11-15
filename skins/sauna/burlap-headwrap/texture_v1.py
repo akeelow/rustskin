@@ -36,7 +36,7 @@ DAMP = hexc("#8C7A5E")        # darkened saturated wet linen
 # v1.2 (art critique 12.11): every line on the hood had the same weight (three twine wraps + two thin stripes) and
 # the wrap read as a bandage. Now one towel border leads - a wide and a narrow stripe on the forehead, the
 # twine sinks into the cloth's tone - and the set's bath leaf sticks to the temple. v1 files stay as they were.
-NAME = "BurlapHeadwrap_v1.2"
+NAME = "BurlapHeadwrap_v1.3"   # v1.3 (15.11, in game): the forehead border moved up off the eye slit (v1.2 touched it and read as blood above the brow)
 
 
 def noise(rng, r):
@@ -156,7 +156,9 @@ def main():
     col = col * (1 - (0.4 * ring + inside)[..., None]) + TEA * (0.4 * ring + inside)[..., None]
 
     # Stripes across forehead fold and cowl hem
-    stripes, fade = stripe_mask(cowl, hood, alpha, rng, hood_offs=((176, 11), (198, 4)))
+    stripes, fade = stripe_mask(cowl, hood, alpha, rng, hood_offs=((190, 8), (206, 4)),
+                                  # v1.3: the stripe follows the hood's hem and dipped to the eye slit in the middle
+                                  hood_lift=lambda xs: 48.0 * np.exp(-((xs - 490.0) / 120.0) ** 2))
     fade = np.clip(fade + 0.12, 0, 1)
     sc = STRIPE[None, None, :] * folds[..., None] * (0.9 + 0.2 * wash[..., None])
     col[stripes] = (col * (1 - fade[..., None]) + sc * fade[..., None])[stripes]

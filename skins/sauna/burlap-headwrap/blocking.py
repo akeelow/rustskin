@@ -79,7 +79,7 @@ def rope_mask(hood, lum):
     return (blur(rope.astype(np.float64), 1.6) > 0.2) & hood    # take in the rope's grey edges too
 
 
-def stripe_mask(cowl, hood, alpha, rng, hood_offs=((180, 5), (195, 3))):
+def stripe_mask(cowl, hood, alpha, rng, hood_offs=((180, 5), (195, 3)), hood_lift=None):
     """Two faded stripes: along cowl hem and across hood forehead wrap.
     Returns (mask, fade 0..1 per texel)."""
     ys = np.arange(SIZE)[:, None]
@@ -93,6 +93,8 @@ def stripe_mask(cowl, hood, alpha, rng, hood_offs=((180, 5), (195, 3))):
         k = 51                                        # smooth the frayed edge into a hem line
         hem = np.convolve(np.pad(hem, k // 2, mode="edge"), np.ones(k) / k, mode="valid")
         d = hem[None, :] - ys + 3 * np.sin(xs / 37.0)[None, :]
+        if part is hood and hood_lift is not None:
+            d = d - hood_lift(xs)[None, :]          # raise the stripe over these columns
         for off, w in offs:
             stripes |= (np.abs(d - off) < w) & part & has[None, :]
     fade = 0.55 + 0.25 * blur(rng.random((SIZE, SIZE)), 6)
