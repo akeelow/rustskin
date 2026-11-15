@@ -16,6 +16,8 @@
 
 1. Rust → **Workshop** → **Create a new item** → выбрать предмет (колонка «Предмет в редакторе») → вкладка **EDIT**.
 2. Загрузить файлы в слоты и выставить ползунки (раздел предмета ниже). Слот, которого нет в списке, не трогать.
+   Плашка «This item uses the Metal/Smoothness workflow» у каменки — просто информация, наша карта сделана под
+   эту схему.
 3. Сдвинуть ползунок TIME на день и на ночь, проверить, что предмет выглядит как на скриншотах.
 4. Вкладка **ITEM** → имя (колонка «Название»). Без имени кнопка Publish неактивна.
 5. Вкладка **PUBLISH** → **Publish**. Иконку не менять — редактор делает её сам. Откроется страница предмета в
@@ -48,7 +50,7 @@
 
 | Слот | Файл | Ползунки |
 |---|---|---|
-| Diffuse | `ElectricFurnace_v2.9_diffuse_cutout.png` (именно `_cutout`) | **Alpha Cutoff 1.00** |
+| Diffuse | `ElectricFurnace_v2.9_diffuse_cutout.png` (именно `_cutout`) | **Alpha Cutoff 1.00** — ползунок до упора вправо; при 0.00 сквозь камни видны спирали конфорок |
 | Normal | `ElectricFurnace_v2.9_normal.png` | |
 | Metal/Gloss | `ElectricFurnace_v2.9_metalgloss.png` | |
 | Occlusion | `ElectricFurnace_v2.9_occlusion.png` | |
