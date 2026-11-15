@@ -153,7 +153,7 @@ def orient_outwards(ob):
         me.flip_normals()
 
 
-def wood(name, dark=(0.1, 0.075, 0.05), light=(0.45, 0.36, 0.25), plank=14.0, axis="X"):
+def wood(name, dark=(0.1, 0.075, 0.05), light=(0.45, 0.36, 0.25), plank=14.0, axis="X", grain_scale=30.0):
     """Weathered planks (floor or a lining wall), planks ~100/plank cm wide."""
     m = bpy.data.materials.new(name)
     m.use_nodes = True
@@ -170,7 +170,7 @@ def wood(name, dark=(0.1, 0.075, 0.05), light=(0.45, 0.36, 0.25), plank=14.0, ax
     wave.inputs["Distortion"].default_value = 0.0
     nt.links.new(mapping.outputs["Vector"], wave.inputs["Vector"])
     grain = nt.nodes.new("ShaderNodeTexNoise")
-    grain.inputs["Scale"].default_value = 30.0
+    grain.inputs["Scale"].default_value = grain_scale
     grain.inputs["Detail"].default_value = 8.0
     nt.links.new(coord.outputs["Object"], grain.inputs["Vector"])
     ramp = nt.nodes.new("ShaderNodeValToRGB")
@@ -194,7 +194,8 @@ def floor(size=10.0):
     bpy.ops.mesh.primitive_plane_add(size=1)
     fl = bpy.context.active_object
     fl.scale = (size, size, 1)
-    fl.data.materials.append(wood("floor"))
+    k = size / 10.0              # the pattern follows object coordinates: keep the planks as wide at any floor size
+    fl.data.materials.append(wood("floor", plank=14.0 * k, grain_scale=30.0 * k))
     return fl
 
 

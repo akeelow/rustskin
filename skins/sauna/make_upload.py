@@ -42,6 +42,7 @@ def main():
             shutil.copy2(src, dst / f"{i:02d}_{name}.jpg")
         print(f"{title}: {len(pics)} pictures")
     shutil.copy2(HERE / "workshop" / "collection.jpg", OUT / "collection.jpg")
+    shutil.copy2(HERE / "workshop" / "collection_wide.jpg", OUT / "collection_wide.jpg")   # page background, 948x470 on Steam
     print("->", OUT)
 
 
