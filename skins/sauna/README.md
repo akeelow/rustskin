@@ -71,7 +71,7 @@
 
 ## Workshop: оформление
 
-> **Пересъёмка кадров в редакторе (15.11): [SHOOTING.md](SHOOTING.md).**
+> **Публикация по шагам: [PUBLISH.md](PUBLISH.md).** Пересъёмка кадров (15.11, сделана): [SHOOTING.md](SHOOTING.md).
 >
 > **Коллекция, описание, порядок, дата и чек-лист публикации всех семи: [workshop_collection.md](workshop_collection.md)** (картинка — `workshop/collection.png`, скрипт `workshop_collection.py`; общие настройки рендеров — `showcase.py`). ТЗ, по которому делалось: [TZ_workshop_pack.md](TZ_workshop_pack.md).
 
