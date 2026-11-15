@@ -29,7 +29,7 @@ ITEMS = {
     "box": dict(obj=SAUNA / "wood-storage-box/renders/concepts/box_game.obj", up="y", scale=1.0, lift=0.0,
                 prefix=SAUNA / "wood-storage-box/export/Box_v1.6", cutoff=0.5, gloss="specgloss"),
     "locker": dict(obj=SAUNA / "locker/originals/locker.obj", up="y", scale=0.01, lift=0.0,
-                   prefix=SAUNA / "locker/export/Locker_v5.3", cutoff=0.5, gloss="specgloss",
+                   prefix=SAUNA / "locker/export/Locker_v5.4", cutoff=0.5, gloss="specgloss",
                    ao=(SAUNA / "locker/originals/locker_ao.png", 0.75)),
     "robe": dict(obj=SAUNA / "snow-jacket/originals/jacket.snow.obj", up="y", scale=1.0, lift=0.0,
                  prefix=SAUNA / "snow-jacket/export/SnowJacket_v2.5", cutoff=0.0, gloss="specgloss", cloth="ghost"),

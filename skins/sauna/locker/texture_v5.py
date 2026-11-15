@@ -26,7 +26,10 @@ import numpy as np
 from PIL import Image
 
 HERE = Path(__file__).resolve().parent
-TAG = "v5.3"   # v5.3: paler and less saturated still (art critique 12.11: S 50 % vs the set's 30 %); v5.2: the wood graded towards the set's pale aspen, steam-dark bottom; v5/v5.1 = Locker_v5_*
+TAG = "v5.4"   # v5.4 (15.11, in game): night glow x2 (24.10 cut it ~2.6x and it was never seen in game since), no vent slots peeking under the towel; v5.3:   # v5.3: paler and less saturated still (art critique 12.11: S 50 % vs the set's 30 %); v5.2: the wood graded towards the set's pale aspen, steam-dark bottom; v5/v5.1 = Locker_v5_*
+
+
+GLOW = 2.0   # v5.4: whole emission map x2 (night shots 15.11: v5.3 niches barely lit)
 
 
 def grade_wood(col, pos):
@@ -88,6 +91,12 @@ def hang_towel(m, col, nb, spec, gloss, emit, shift=8.0):
     # the glowing vent slots do not show through it
     lit = wall_emit * np.clip(pc / np.maximum(wall_col, 0.05), 0, 2.2)
     emit = emit * (1 - cov_p[..., None]) + lit * cov_p[..., None]
+    # v5.4: the three vent slots under the towel showed as glowing dots below its hem at night: plain wall there
+    xs = x - v4.UNITS[np.argmin(np.abs(x[..., None] - v4.UNITS), -1)]
+    slots = back_in & (np.abs(xs) < 6.5) & (y > 98.5) & (y < 121.5) & (cov_p < 0.5)
+    col = np.where(slots[..., None], wall_col, col)
+    emit = np.where(slots[..., None], wall_emit, emit)
+    nb = np.where(slots[..., None], np.array([0.0, 0.0, 1.0]), nb)
     print("towel texels", int(on.sum()))
     return col, nb, spec, gloss, emit
 
@@ -476,7 +485,7 @@ def main():
     col, nb, spec, gloss, emit = hang_towel(m, col, nb, spec, gloss, emit)
     out = dict(m, col=col, nb=nb, spec=spec, gloss=gloss, alpha=alpha)
     v1.save(out, TAG)
-    v4.save_emission(emit, TAG)
+    v4.save_emission(emit * GLOW, TAG)
 
     # Solid fallback for curators (no alpha cuts on left/right doors)
     m1 = v1.build()
