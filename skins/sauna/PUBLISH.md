@@ -44,7 +44,7 @@
 | 1 | `Sauna Stove` | Electric Furnace | `electric-furnace` | [3840311723](https://steamcommunity.com/sharedfiles/filedetails/?id=3840311723) |
 | 2 | `Sauna Bench` | Bed | `bed` | [3840333377](https://steamcommunity.com/sharedfiles/filedetails/?id=3840333377) |
 | 3 | `Sauna Chair` | Chair | `chair` | [3840335380](https://steamcommunity.com/sharedfiles/filedetails/?id=3840335380) |
-| 4 | `Sauna Stone Box` | Wood Storage Box | `wood-storage-box` | |
+| 4 | `Sauna Stone Box` | Wood Storage Box | `wood-storage-box` | [3840337593](https://steamcommunity.com/sharedfiles/filedetails/?id=3840337593) |
 | 5 | `Sauna Changing Locker` | Locker | `locker` | |
 | 6 | `Sauna Towel Wrap` | Burlap Headwrap | `burlap-headwrap` | |
 | 7 | `Sauna Robe` | Snow Jacket | `snow-jacket` | |
