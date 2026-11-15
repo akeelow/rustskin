@@ -277,7 +277,9 @@ Part of the Sauna set.
 2. Заполнить:
    - **Название:** `Sauna`
    - **Описание:** текст ниже, целиком.
-   - **Тип:** коллекция (Collection), не «игра».
+   - **Тип:** «Продукты в наборе» (набор для голосования; «сочетаются друг с другом» — для модов и карт).
+   - **Категории:** Clothing — Burlap Headwrap, Snow Jacket; Deployables — Wood Storage Box, Locker, Chair, Bed,
+     **Electric Furnace** (не просто Furnace).
    - **Картинка:** `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\collection.jpg`
 3. **Сохранить и продолжить.**
 
