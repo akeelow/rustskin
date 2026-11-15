@@ -1,6 +1,7 @@
 # Sauna — публикация по шагам
 
-> 15.11.2026. Все карты проверены в игре, кадры сняты. Публикует только пользователь: из редактора Rust и на
+> 15.11.2026. Все карты проверены в игре, кадры сняты. Картинки для страниц разложены по папкам с номерами в
+> `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload` (собирает `make_upload.py`; если папки нет — попросить агента пересобрать). Публикует только пользователь: из редактора Rust и на
 > страницах Steam. Все пути ниже — от папки `skins/sauna/`.
 
 ## Перед началом (один раз)
@@ -22,7 +23,7 @@
 4. Вкладка **ITEM** → имя (колонка «Название»). Без имени кнопка Publish неактивна.
 5. Вкладка **PUBLISH**:
    - **Description** — вставить текст из раздела предмета ниже (блок «Описание», целиком).
-   - **Additional Preview Images** → «+» → добавить картинки **в порядке из раздела предмета**. Если редактор
+   - **Additional Preview Images** → «+» → добавить картинки из папки предмета (раздел ниже) **по номерам 01, 02, 03…**. Если редактор
      какую-то не примет — добавить её потом на странице Steam (Add/edit images & videos).
    - **Icon Override** — не трогать (None): иконку редактор делает сам. **Change Log** — пусто.
    - Нажать **PUBLISH**. Откроется страница предмета в браузере.
@@ -68,9 +69,8 @@ Part of the Sauna set.
 | Occlusion | `ElectricFurnace_v2.9_occlusion.png` | |
 | Emission | `ElectricFurnace_v2.9_emission.png` | |
 
-**Картинки** (`electric-furnace/workshop/`), по порядку:
-`ingame/front_night.jpg` → `studio.jpg` → `ingame/three_quarter_night.jpg` → `ingame/three_quarter_day.jpg` →
-`ingame/top_day.jpg` → `ingame/top_night.jpg` → `hero.jpg` → `night.jpg` → `firebox.jpg` → `burners.jpg` → `back.jpg`
+**Картинки:** папка `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\1 Sauna Stove` — 11 файлов. Добавить **все по номерам**, от `01_` до `11_`
+(первая станет обложкой галереи). `game_` — кадры из игры, `render_` — рендеры.
 
 ## 2. Sauna Bench — Bed
 
@@ -97,9 +97,8 @@ Part of the Sauna set.
 | Specular/Gloss | `Bed_v1.2_specgloss.png` | |
 | Occlusion | `Bed_v1.2_occlusion.png` | |
 
-**Картинки** (`bed/workshop/`):
-`hero.jpg` → `ingame/three_quarter_day.jpg` → `ingame/headrest_day.jpg` → `ingame/foot_day.jpg` →
-`towel.jpg` → `side.jpg` → `foot.jpg` → `dusk.jpg`
+**Картинки:** папка `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\2 Sauna Bench` — 8 файлов. Добавить **все по номерам**, от `01_` до `08_`
+(первая станет обложкой галереи). `game_` — кадры из игры, `render_` — рендеры.
 
 ## 3. Sauna Chair — Chair
 
@@ -128,9 +127,8 @@ Part of the Sauna set.
 | Specular/Gloss | `Chair_v1.4_specgloss.png` |
 | Occlusion | `Chair_v1.4_occlusion.png` |
 
-**Картинки** (`chair/workshop/`):
-`hero.jpg` → `ingame/three_quarter_day.jpg` → `ingame/side_day.jpg` → `ingame/back_day.jpg` →
-`towel.jpg` → `seat.jpg` → `back.jpg` → `dusk.jpg` → `set.jpg`
+**Картинки:** папка `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\3 Sauna Chair` — 9 файлов. Добавить **все по номерам**, от `01_` до `09_`
+(первая станет обложкой галереи). `game_` — кадры из игры, `render_` — рендеры.
 
 ## 4. Sauna Stone Box — Wood Storage Box
 
@@ -158,9 +156,8 @@ Part of the Sauna set.
 | Occlusion | `Box_v1.6_occlusion.png` | |
 | Emission | `Box_v1.6_emission.png` | **Emission Color 255/255/255** |
 
-**Картинки** (`wood-storage-box/workshop/`):
-`ingame/top_night.jpg` → `studio.jpg` → `ingame/top_day.jpg` → `ingame/three_quarter_day.jpg` →
-`hero.jpg` → `night.jpg` → `top.jpg` → `row.jpg` → `set.jpg`
+**Картинки:** папка `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\4 Sauna Stone Box` — 9 файлов. Добавить **все по номерам**, от `01_` до `09_`
+(первая станет обложкой галереи). `game_` — кадры из игры, `render_` — рендеры.
 
 ## 5. Sauna Changing Locker — Locker
 
@@ -190,9 +187,8 @@ Part of the Sauna set.
 | Occlusion | не трогать (оригинальный) | |
 | Emission | `Locker_v5.4_emission.png` | **Emission Color 255/255/255** |
 
-**Картинки** (`locker/workshop/`):
-`ingame/front_night.jpg` → `studio.jpg` → `ingame/front_day.jpg` → `ingame/three_quarter_day.jpg` →
-`ingame/three_quarter_night.jpg` → `door.jpg` → `hero.jpg` → `night.jpg` → `set.jpg`
+**Картинки:** папка `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\5 Sauna Changing Locker` — 9 файлов. Добавить **все по номерам**, от `01_` до `09_`
+(первая станет обложкой галереи). `game_` — кадры из игры, `render_` — рендеры.
 
 ## 6. Sauna Towel Wrap — Burlap Headwrap
 
@@ -219,9 +215,8 @@ Part of the Sauna set.
 | Occlusion | не трогать (оригинальный) | |
 | Fuzz Mask | не трогать | **Fuzz 0.58** |
 
-**Картинки** (`burlap-headwrap/workshop/`):
-`ingame/front_day.jpg` → `hero.jpg` → `ingame/side_day.jpg` → `ingame/three_quarter_night.jpg` →
-`front.jpg` → `side.jpg` → `set.jpg`
+**Картинки:** папка `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\6 Sauna Towel Wrap` — 7 файлов. Добавить **все по номерам**, от `01_` до `07_`
+(первая станет обложкой галереи). `game_` — кадры из игры, `render_` — рендеры.
 
 ## 7. Sauna Robe — Snow Jacket
 
@@ -247,15 +242,15 @@ Part of the Sauna set.
 | Specular/Gloss | `SnowJacket_v2.5_specgloss.png` | **Spec Color 255** |
 | Fuzz Mask | `SnowJacket_v2.5_fuzz.png` | **Fuzz 0.5** |
 
-**Картинки** (`snow-jacket/workshop/`):
-`ingame/three_quarter_day.jpg` → `hero.jpg` → `ingame/back_day.jpg` → `back.jpg` → `belt.jpg` → `set.jpg`
+**Картинки:** папка `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\7 Sauna Robe` — 6 файлов. Добавить **все по номерам**, от `01_` до `06_`
+(первая станет обложкой галереи). `game_` — кадры из игры, `render_` — рендеры.
 
 ---
 
 ## После семи предметов: коллекция
 
 1. Steam → Workshop Rust → **Create Collection**.
-2. Название `Sauna`, картинка `workshop/collection.jpg`, описание:
+2. Название `Sauna`, картинка `C:\Users\akeel\OneDrive\rustskin\skins\sauna\upload\collection.jpg`, описание:
 
    ```
    Every Rust life starts naked. Might as well warm up properly.

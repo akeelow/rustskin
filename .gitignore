@@ -27,3 +27,4 @@ __pycache__/
 
 .venv/
 skins/sauna/_inbox/
+skins/sauna/upload/
