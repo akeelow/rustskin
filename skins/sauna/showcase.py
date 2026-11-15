@@ -32,7 +32,7 @@ ITEMS = {
                    prefix=SAUNA / "locker/export/Locker_v5.3", cutoff=0.5, gloss="specgloss",
                    ao=(SAUNA / "locker/originals/locker_ao.png", 0.75)),
     "robe": dict(obj=SAUNA / "snow-jacket/originals/jacket.snow.obj", up="y", scale=1.0, lift=0.0,
-                 prefix=SAUNA / "snow-jacket/export/SnowJacket_v2.4", cutoff=0.0, gloss="specgloss", cloth="ghost"),
+                 prefix=SAUNA / "snow-jacket/export/SnowJacket_v2.5", cutoff=0.0, gloss="specgloss", cloth="ghost"),
     "wrap": dict(obj=SAUNA / "burlap-headwrap/originals/burlap.headwrap.obj", up="y", scale=1.0, lift=0.0,
                  prefix=SAUNA / "burlap-headwrap/export/BurlapHeadwrap_v1.3", cutoff=0.79, gloss="specgloss", cloth="cull"),
     # (cull back faces like the game: the outer side shows, the inside only through the eye slit)

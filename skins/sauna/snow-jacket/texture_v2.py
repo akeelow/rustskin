@@ -30,7 +30,7 @@ from blocking import ORIG, OUT, SIZE, blur, hexc, position_map, smooth  # noqa: 
 from uv_zones import load_obj, normal, read_png, render_views  # noqa: E402
 
 SEED = 13
-NAME = "SnowJacket_v2.4"       # v2.4 (art critique 12.11): towel stripes round the back hem and the sleeves, a bath leaf; v2.3, v2.2 = SnowJacket_v2_*
+NAME = "SnowJacket_v2.5"       # v2.5 (15.11, in game): cuff and its piping square to the sleeve; v2.4 =       # v2.4 (art critique 12.11): towel stripes round the back hem and the sleeves, a bath leaf; v2.3, v2.2 = SnowJacket_v2_*
 CLOTH = hexc("#BBA889")        # v2.3: less yellow in the sun (v2.2 #B89F77 read lemon-beige)
 BAND = hexc("#A99272")         # collar band / belt / cuffs: denser weave reads darker
 STRIPE = hexc("#8E3A30")       # signature Sauna faded brick-red stripe (set palette)
@@ -133,8 +133,13 @@ def main():
         tails |= front & (y < ky) & (y > end) & (np.abs(x - cx) < 0.016)
     belt = belt_band | knot | tails
 
-    cuff = cov & (ax > 0.405)
-    cuff_seam = cov & (np.abs(ax - 0.405) < 0.004)
+    # v2.5: the sleeves hang ~60 deg down, so a plane |x| = const cut them on a long slant (in game v2.4's cuff
+    # piping ran along the forearm like a tracksuit stripe). Measure along the sleeve axis instead.
+    SLEEVE_C, SLEEVE_AX, SLEEVE_END = np.array([0.37, 0.503, -0.007]), np.array([0.461, -0.845, 0.27]), 0.165
+    st = (np.stack([ax, y, z], -1) - SLEEVE_C) @ SLEEVE_AX                     # along the sleeve, + towards the hand
+    sleeve = cov & (ax > 0.30)
+    cuff = sleeve & (st > SLEEVE_END - 0.06)
+    cuff_seam = sleeve & (np.abs(st - (SLEEVE_END - 0.06)) < 0.004)
     hem_seam = cov & (np.abs(y - 0.24) < 0.003)
     pocket = np.zeros_like(cov)
     pocket_seam = np.zeros_like(cov)
@@ -165,7 +170,7 @@ def main():
         return ((t > a) & (t < a + 0.018)) | ((t > a + 0.026) & (t < a + 0.034))
     stripe_hem = torso & (z < 0.0) & border(y, 0.262)          # ends at the side seams
     # sleeves: one thin piping at the cuff seam (a full border ran diagonally and read as a tracksuit)
-    stripe_sleeve = cov & (ax > 0.392) & (ax < 0.400)
+    stripe_sleeve = sleeve & (st > SLEEVE_END - 0.078) & (st < SLEEVE_END - 0.069)
     stripes = (stripe_collar | stripe_tails | stripe_hem | stripe_sleeve) & cov
 
     # v2.4: the set's bath leaf, stuck between the shoulder blades
