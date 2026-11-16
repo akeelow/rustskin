@@ -17,7 +17,7 @@ import analyze_uv as A  # noqa: E402
 
 R = HERE / "renders"
 EXP = HERE / "export"
-V = "v1.1"
+V = "v1.2"
 CELL = 512                      # the viewer's sheet: 6 views x 2 rows (day, night)
 VIEWS = {"front": 0, "three_quarter": 1, "side": 2, "back": 3, "top": 4, "close": 5}
 
@@ -41,7 +41,8 @@ def padding():
     """Gap between UV islands and whether the exported maps are filled beyond the island edges."""
     P, T, VI = A.load()
     ids = A.islands(VI)
-    owner, _ = A.raster(T, ids)                       # 2048, row 0 = v 0
+    A.N = Image.open(EXP / f"Door_{V}_diffuse.png").size[0]      # check at the exported size
+    owner, _ = A.raster(T, ids)                       # row 0 = v 0
     n = owner.shape[0]
     best = {}
     for d in range(1, 40):
@@ -50,7 +51,7 @@ def padding():
             m = (a >= 0) & (b >= 0) & (a != b)
             for i, j in set(zip(a[m].tolist(), b[m].tolist())):
                 best.setdefault((min(i, j), max(i, j)), d)
-    print("closest island pairs (texels at 2048):", sorted(best.items(), key=lambda kv: kv[1])[:8])
+    print("closest island pairs (texels at %d):" % A.N, sorted(best.items(), key=lambda kv: kv[1])[:8])
     inside = owner[::-1] >= 0
     dif = np.asarray(Image.open(EXP / f"Door_{V}_diffuse.png").convert("RGB"), np.int32)
     ring = np.zeros_like(inside)

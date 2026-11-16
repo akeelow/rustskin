@@ -1,7 +1,7 @@
 # Sauna Door (Wooden Door)
 
-> Статус: 🟡 **v1.1 (16.11.2026) — правки по кадрам v1 из редактора; сама v1.1 в игре не проверена.**
-> Файлы `export/Door_v1.1_*` (v1 лежит рядом, `Door_v1_*`). Публикация: [workshop/](workshop/README.md). Сет: [Sauna](../README.md).
+> Статус: 🟡 **v1.2 (16.11.2026) — правки по кадрам v1.1 из редактора; сама v1.2 в игре не проверена.**
+> Файлы `export/Door_v1.2_*`, 1024 px (v1.1 и v1 лежат рядом, 2048).
 
 ## Образ
 
@@ -18,8 +18,10 @@
 
 Под ручкой с обеих сторон оставлены чистые доски — туда игра вешает навесной и кодовый замок.
 
-![Лист день/ночь](renders/v1.1_sheet.png)
+![Лист день/ночь](renders/v1.2_sheet.png)
 
+v1.1 в редакторе: [перед днём](screenshots/v1.1_editor_front_day.webp), [перед ночью](screenshots/v1.1_editor_front_night.webp),
+[зад днём](screenshots/v1.1_editor_back_day.webp), [зад ночью](screenshots/v1.1_editor_back_night.webp).
 v1 в редакторе: [перед днём](screenshots/v1_editor_front_day.webp), [перед в сумерках](screenshots/v1_editor_front_dusk.webp),
 [перед ночью](screenshots/v1_editor_front_night.png), [зад днём](screenshots/v1_editor_back_day_panel.webp), [зад ночью](screenshots/v1_editor_back_night.webp).
 
@@ -50,9 +52,9 @@ v1 в редакторе: [перед днём](screenshots/v1_editor_front_day.
 
 | Слот | Оригинал | v1 |
 |---|---|---|
-| Diffuse | `logwood_window_doors_bc.png`, 2048, альфа 255 | 2048, RGBA, альфа 255 |
-| Normal | `logwood_window_doors_nrm.png`, 2048, OpenGL, B = 255 | 2048, OpenGL, B = 255 |
-| Specular/Gloss | `logwood_window_doors_sg.png`, 2048, RGB = блик, A = глянец | 2048, RGB = блик, A = глянец |
+| Diffuse | `logwood_window_doors_bc.png`, 2048, альфа 255 | 1024, RGBA, альфа 255 |
+| Normal | `logwood_window_doors_nrm.png`, 2048, OpenGL, B = 255 | 1024, OpenGL, B = 255 |
+| Specular/Gloss | `logwood_window_doors_sg.png`, 2048, RGB = блик, A = глянец | 1024, RGB = блик, A = глянец |
 | Occlusion | `logwood_window_doors_ao.png`, 1024 | 1024 |
 | Emission | нет | 1024 |
 
@@ -60,23 +62,22 @@ v1 в редакторе: [перед днём](screenshots/v1_editor_front_day.
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `export/Door_v1.1_diffuse.png`, Color 255/255/255, Alpha Cutoff 0.00 |
-| Normal | `export/Door_v1.1_normal.png`, Normal Scale 1.00 |
-| Specular/Gloss | `export/Door_v1.1_specgloss.png`, Spec Color 255, Glossiness 1.00 |
-| Occlusion | `export/Door_v1.1_occlusion.png`, Occlusion Scale 0.70 |
-| Emission | `export/Door_v1.1_emission.png`, **Emission Color 255/255/255** |
+| Diffuse | `export/Door_v1.2_diffuse.png`, Color 255/255/255, Alpha Cutoff 0.00 |
+| Normal | `export/Door_v1.2_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `export/Door_v1.2_specgloss.png`, Spec Color 255, Glossiness 1.00 |
+| Occlusion | `export/Door_v1.2_occlusion.png`, Occlusion Scale 0.70 |
+| Emission | `export/Door_v1.2_emission.png`, **Emission Color 255/255/255** |
 
-Значения — с панели EDIT на кадре [v1_editor_back_day_panel.webp](screenshots/v1_editor_back_day_panel.webp).
-На том же кадре редактор подписывает Diffuse и Normal как «1024 x …», хотя файлы 2048: похоже, он
-уменьшает карты двери до 1024. Если так — мелкие детали (шляпки гвоздей, подтёки) в игре вдвое грубее,
-чем в рендерах; подпись «Default (W x H)» под слотами стоит посмотреть.
+Значения — с панели EDIT на кадрах из редактора. Редактор уменьшает карты этой двери до **1024**
+(на панели v1 и v1.1 у файлов 2048 подпись «1024 x …»), поэтому с v1.2 карты собираются сразу в 1024
+из запекания 4096 — со своим фильтром вместо фильтра редактора. Плотность в игре — 230 px/м.
 
 ## Как сделано
 
 ```bash
 "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/wooden-door/bake_door.py -- --preview --blend
 .venv/Scripts/python skins/sauna/wooden-door/texture_v1.py
-"C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P tools/blender/viewer.py -- --obj skins/sauna/wooden-door/originals/door.hinged.wood.obj --tex skins/sauna/wooden-door/export/Door_v1.1 --focus -0.45,1.45,0.05 --sheet skins/sauna/wooden-door/renders/v1.1_sheet.png --blend skins/sauna/wooden-door/renders/v1.1_view.blend
+"C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P tools/blender/viewer.py -- --obj skins/sauna/wooden-door/originals/door.hinged.wood.obj --tex skins/sauna/wooden-door/export/Door_v1.1 --focus -0.45,1.45,0.05 --sheet skins/sauna/wooden-door/renders/v1.2_sheet.png --blend skins/sauna/wooden-door/renders/v1.2_view.blend
 ```
 
 1. [bake_door.py](bake_door.py) — high-poly поверх оригинала (около 60 тыс. полигонов): стальной лист,
@@ -119,16 +120,16 @@ v1 в редакторе: [перед днём](screenshots/v1_editor_front_day.
   поле/брус). Рисунок через них не переходит, рваться нечему. Доски на кромках двери совпадают с
   досками на лицевых сторонах, потому что цвет считается от 3D-точки, а не от UV.
 - Плотность текселя 450–463 px/м на всех островах двери — растяжения нет.
-- Отступы: карты залиты на 10 px за край каждого острова (в полосе 8 px вокруг островов заполнено
-  100 % текселей). Сама развёртка оригинала местами плотнее: между островами 4 и 5 — 5 px, между 7 и
-  8 — 6 px, остальные от 10 px. Развёртку скин изменить не может; заливка делит такой зазор пополам.
+- Отступы (при 1024): карты залиты на 9 px за край каждого острова, в полосе 8 px вокруг островов
+  заполнено 100 % текселей. Сама развёртка оригинала плотнее: между островами 4–5 и 7–8 всего 3 px,
+  3–7 — 5 px, остальные от 6 px. Развёртку скин изменить не может; заливка делит такой зазор пополам.
 - Ручка (острова 8, 9) — единственное перекрытие, деталей на ней нет, только тон.
 
 ![Острова](uv/islands.png)
 
 ### 3. Сравнение с оригиналом
 
-![Оригинал и v1](renders/v1.1_vs_original.png)
+![Оригинал и v1](renders/v1.2_vs_original.png)
 
 Модель та же, силуэт не менялся. Крупные формы совпадают: брусья и раскосы перестроены по контурам
 оригинала, окно стоит в свободном поле. Выступают за реальную поверхность только запечённые детали:
@@ -138,14 +139,14 @@ v1 в редакторе: [перед днём](screenshots/v1_editor_front_day.
 
 ### 4. День и ночь
 
-Лист выше. Ночью окно читается с обеих сторон; самый яркий пиксель ночного кадра — 0,84, пересвета
-нет (на карте свечения среднее по стеклу 0,31, максимум 0,68; просмотрщик умножает свечение на 3).
+Лист выше. Ночью окно читается с обеих сторон; самый яркий пиксель ночного кадра — 0,76, пересвета
+нет (на карте свечения среднее по стеклу 0,31, максимум 0,52; просмотрщик умножает свечение на 3).
 Днём сухое дерево переда — `#897B6B`, насыщенность 22 %. В игре v1 (`#998873`, 25 %) всё равно читалась
 желтоватой свежей сосной — игровой свет теплее просмотрщика, поэтому v1.1 серее и темнее.
 
 ### 5. Читаемость
 
-![Иконки](renders/v1.1_icons.png)
+![Иконки](renders/v1.2_icons.png)
 
 В 128 и 64 px, в цвете и в ч/б: светлая дощатая дверь, белое пятно полотенца и светлый квадрат окна.
 Со стороны парилки — тёмная дверь с Z-раскосом и окном. Ночью остаются окно и полотенце.
@@ -154,7 +155,7 @@ v1 в редакторе: [перед днём](screenshots/v1_editor_front_day.
 
 | День | Ночь |
 |---|---|
-| ![день](renders/v1.1_set_day.png) | ![ночь](renders/v1.1_set_night.png) |
+| ![день](renders/v1.2_set_day.png) | ![ночь](renders/v1.2_set_night.png) |
 
 Каменка v2.9, шкафчик v5.4 и дверь в одном свете просмотрщика. Медианы дерева на диффузах:
 
@@ -178,13 +179,12 @@ v1 в редакторе: [перед днём](screenshots/v1_editor_front_day.
 
 ### 8. Требования редактора
 
-Размеры — как у оригинала (2048, Occlusion 1024); Emission 1024. Каналы — как у оригинала: Normal
+Все карты 1024 — степень двойки, не больше оригинальных 2048; до 1024 редактор уменьшает их сам. Каналы — как у оригинала: Normal
 OpenGL с B = 255, глянец в альфе Specular/Gloss, альфа диффуза 255.
 
 ## Что не проверено без игры
 
-- v1.1 в игру не загружалась: проверена только v1 (пять кадров в `screenshots/`).
-- Размер, до которого редактор уменьшает карты (см. «Как загрузить»).
+- v1.2 в игру не загружалась: проверены v1 и v1.1 (кадры в `screenshots/`).
 - Как навесной и кодовый замок садятся на чистые доски, не закрывают ли подтёки у ручки.
 - Анимация открытия, вид двери в проёме: кромка с ржавым листом видна только на открытой двери.
 - Рамка окна, подоконник и полотенце под острым углом — насколько заметно, что они плоские.
@@ -209,6 +209,15 @@ OpenGL с B = 255, глянец в альфе Specular/Gloss, альфа диф�
 | `EXAPMLES SKINS ACCEPTED/` | карты принятого скина двери |
 
 ## Заметки
+
+- 16.11.2026, **v1.2** по кадрам v1.1 из редактора (`screenshots/v1.1_editor_*`). Дерево, полотенце, подоконник
+  и зад в v1.1 выглядят как задумано. Исправлено:
+
+  | В игре (v1.1) | v1.2 |
+  |---|---|
+  | ночью свечение в окне пятнистое, читается как огонь | ровный мягкий градиент: внизу ярче, без пятен |
+  | верхняя петля с остриём похожа на стрелку-указатель | простая сужающаяся полоса с круглым концом, короче |
+  | редактор сам уменьшает карты до 1024 | карты собраны в 1024 |
 
 - 16.11.2026, **v1.1** по кадрам v1 из редактора (`screenshots/v1_editor_*`). Что было видно и что сделано:
 

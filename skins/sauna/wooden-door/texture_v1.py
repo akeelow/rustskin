@@ -30,8 +30,8 @@ sys.path.insert(0, str(HERE / "uv"))
 import analyze_uv as A  # noqa: E402
 
 BAKE, ORIG, OUT = HERE / "bake", HERE / "originals", HERE / "export"
-N, OUT_N = 4096, 2048
-VERSION = "v1.1"
+N, OUT_N = 4096, 1024          # the editor shrinks this door's maps to 1024 (seen on the v1 and v1.1 panels)
+VERSION = "v1.2"
 SEED = 21
 IDS = {"steel": 1, "board_f": 2, "board_b": 3, "rail": 4, "brace": 5, "nail": 6, "frame": 7, "sill": 8,
        "glass": 9, "towel": 10, "stripe": 11, "hook": 12, "leaf": 13, "hinge": 14, "wire": 15}
@@ -363,7 +363,7 @@ def build():
     gl = is_["glass"]
     u = np.clip((x - px0) / (px1 - px0), 0, 1)
     v = np.clip((y - py0) / (py1 - py0), 0, 1)                                    # 0 bottom .. 1 top
-    heat = np.clip((1 - v) ** 1.25 * (0.55 + 0.45 * np.exp(-((u - 0.45) / 0.33) ** 2)) + 0.14, 0, 1)
+    heat = np.clip((1 - v) ** 1.1 * (0.62 + 0.38 * np.exp(-((u - 0.47) / 0.42) ** 2)) + 0.14, 0, 1)
     fog = 0.70 + 0.30 * fbm(x * 20.0, y * 20.0, 91)
     track = np.zeros(len(x), np.float32)
     trng = np.random.default_rng(SEED + 5)
@@ -389,7 +389,9 @@ def build():
     emis = np.zeros((len(x), 3), np.float32)
     e_col = mix(GLOW_CORE, GLOW_EDGE, np.clip(heat * 1.25 - 0.1, 0, 1) ** 1.2)
     # runs barely change the glow: wide dark runs over the hot zone read as flames (seen in the v1.1 draft)
-    e_int = (0.15 + 0.58 * heat ** 1.4) * fog * (1 - 0.14 * clear) * (1 - 0.7 * edge_dirt)
+    # v1.1 in game at night: the fog's mottling over the hot zone read as fire -> an even, soft gradient
+    e_fog = 0.94 + 0.06 * fbm(x * 9.0, y * 9.0, 96)
+    e_int = (0.13 + 0.40 * heat ** 1.2) * e_fog * (1 - 0.08 * clear) * (1 - 0.7 * edge_dirt)
     emis[gl] = (e_col * e_int[:, None])[gl]
     # the glow spills on the inner edges of the frame and on the sill's top
     near = (is_["frame"] | is_["sill"]) & (x > px0 - 0.016) & (x < px1 + 0.016) & (y > py0 - 0.02) & (y < py1 + 0.016)
@@ -416,8 +418,8 @@ def build():
         img[M] = vals.reshape(len(x), ch)
         return img
 
-    diffuse = dilate(to_img(col, 3), M, 20)
-    sg = dilate(to_img(np.concatenate([np.repeat(spec[:, None], 3, 1), gloss[:, None]], 1), 4), M, 20)
+    diffuse = dilate(to_img(col, 3), M, 36)
+    sg = dilate(to_img(np.concatenate([np.repeat(spec[:, None], 3, 1), gloss[:, None]], 1), 4), M, 36)
     emission = to_img(emis, 3)
 
     # normal: the bake + micro relief (grain, weave) from the height field in texture space
@@ -440,7 +442,7 @@ def build():
     hm[M] = handle
     normal[hm] = on[hm]
     normal[..., 2] = 1.0
-    normal = dilate(normal * M[..., None], M, 20)
+    normal = dilate(normal * M[..., None], M, 36)
     normal[~(M | (normal.sum(-1) > 1.01))] = (0.5, 0.5, 1.0)
 
     occ = ao_b.copy()
@@ -449,12 +451,12 @@ def build():
     occ[tm] = 0.55 + 0.45 * occ[tm]            # v1 in game: black smears in the towel's folds
     oa = np.asarray(Image.open(ORIG / "logwood_window_doors_ao.png").convert("L").resize((N, N), Image.LANCZOS), np.float32) / 255
     occ[hm] = oa[hm]
-    occ = dilate((occ * M)[..., None], M, 20)[..., 0]
+    occ = dilate((occ * M)[..., None], M, 36)[..., 0]
     occ[occ == 0] = 1.0
 
     def save(arr, name, size, mode):
         im = Image.fromarray((np.clip(arr, 0, 1) * 255 + 0.5).astype(np.uint8), mode)
-        im = im.resize((size, size), Image.BOX)
+        im = im.resize((size, size), Image.LANCZOS if size < N // 2 else Image.BOX)
         path = OUT / f"Door_{VERSION}_{name}.png"
         im.save(path)
         print("->", path.name, im.size, im.mode)
@@ -463,8 +465,8 @@ def build():
     save(np.concatenate([diffuse, np.ones((N, N, 1), np.float32)], -1), "diffuse", OUT_N, "RGBA")
     save(np.concatenate([normal, np.ones((N, N, 1), np.float32)], -1), "normal", OUT_N, "RGBA")
     save(sg, "specgloss", OUT_N, "RGBA")
-    save(np.repeat(occ[..., None], 3, -1), "occlusion", 1024, "RGB")
-    save(emission, "emission", 1024, "RGB")
+    save(np.repeat(occ[..., None], 3, -1), "occlusion", OUT_N, "RGB")
+    save(emission, "emission", OUT_N, "RGB")
 
     # numbers for the README
     def med(m):

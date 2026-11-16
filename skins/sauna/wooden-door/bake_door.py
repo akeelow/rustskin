@@ -444,10 +444,11 @@ def build_hinges(mats, rng):
     """Two hand-forged strap hinges on the rails at the hinge edge (x near 0); the top one is tied with wire."""
     hinge, nails, wire = bmesh.new(), bmesh.new(), bmesh.new()
     for y in HINGES:
-        xe, L, h0, h1 = X1 + 0.004, 0.36, 0.062, 0.034
-        outline = [(xe, y - h0 / 2), (xe, y + h0 / 2), (xe - 0.05, y + h0 / 2 - 0.004), (xe - L * 0.72, y + h1 / 2),
-                   (xe - L * 0.78, y + h1 / 2 + 0.012), (xe - L, y + 0.002), (xe - L * 0.78, y - h1 / 2 - 0.012),
-                   (xe - L * 0.72, y - h1 / 2), (xe - 0.05, y - h0 / 2 + 0.004)]
+        xe, L, h0, h1 = X1 + 0.004, 0.30, 0.062, 0.040
+        # a plain tapering strap with a round end (v1.1 in game: the spear point read as an arrow sign)
+        tip = [(xe - L + 0.5 * h1 * (1 - math.cos(a)), y + 0.5 * h1 * math.sin(a))
+               for a in (math.radians(d) for d in (80, 50, 20, -20, -50, -80))]
+        outline = [(xe, y - h0 / 2), (xe, y + h0 / 2), (xe - 0.05, y + h0 / 2 - 0.004)] + tip             + [(xe - 0.05, y - h0 / 2 + 0.004)]
         verts = prism(hinge, outline, ZR + 0.001, ZR - 0.0055, bevel=0.0018)
         for v in verts:                                # hammered
             if v.co.z < ZR - 0.004:
@@ -456,11 +457,11 @@ def build_hinges(mats, rng):
         res = bmesh.ops.create_cone(hinge, cap_ends=True, segments=16, radius1=0.011, radius2=0.011, depth=h0 + 0.014)
         for v in res["verts"]:
             v.co = Vector((xe + 0.006 + v.co.x, y + v.co.z, ZR - 0.004 + v.co.y))
-        for k, t in enumerate((0.12, 0.38, 0.64)):
+        for k, t in enumerate((0.14, 0.45, 0.72)):
             forged_nail(nails, xe - L * t + rng.uniform(-0.004, 0.004), y + rng.uniform(-0.004, 0.004), ZR - 0.0055, -1, rng, r=0.0062)
     # the wire: the top strap's last nail is gone, the end is lashed through two holes in the rail
     y = HINGES[1]
-    xw = X1 + 0.004 - 0.36 * 0.80
+    xw = X1 + 0.004 - 0.30 * 0.90
     for k in range(3):
         x = xw + k * 0.011 + rng.uniform(-0.002, 0.002)
         tube(wire, [(x - 0.004, y - 0.05, ZR + 0.001), (x - 0.002, y - 0.036, ZR - 0.006), (x, y, ZR - 0.011),
