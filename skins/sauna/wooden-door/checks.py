@@ -17,7 +17,7 @@ import analyze_uv as A  # noqa: E402
 
 R = HERE / "renders"
 EXP = HERE / "export"
-V = "v1"
+V = "v1.1"
 CELL = 512                      # the viewer's sheet: 6 views x 2 rows (day, night)
 VIEWS = {"front": 0, "three_quarter": 1, "side": 2, "back": 3, "top": 4, "close": 5}
 

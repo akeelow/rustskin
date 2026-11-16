@@ -31,7 +31,7 @@ import analyze_uv as A  # noqa: E402
 
 BAKE, ORIG, OUT = HERE / "bake", HERE / "originals", HERE / "export"
 N, OUT_N = 4096, 2048
-VERSION = "v1"
+VERSION = "v1.1"
 SEED = 21
 IDS = {"steel": 1, "board_f": 2, "board_b": 3, "rail": 4, "brace": 5, "nail": 6, "frame": 7, "sill": 8,
        "glass": 9, "towel": 10, "stripe": 11, "hook": 12, "leaf": 13, "hinge": 14, "wire": 15}
@@ -238,13 +238,15 @@ def build():
 
     # ---------------- front wood
     tone = mix(mix(ASPEN_GREY, ASPEN, np.clip(rnd * 1.4, 0, 1)), ASPEN_FRESH, np.clip(rnd - 0.6, 0, 1) * 0.9)
-    cf = tone * (0.80 + 0.36 * grain)[:, None] * (0.93 + 0.14 * blotch)[:, None]
+    # v1 in game read as fresh yellow pine: greyer, a step darker, quieter grain
+    tone = mix(tone, ASPEN_GREY, 0.45) * 0.90
+    cf = tone * (0.86 + 0.24 * grain)[:, None] * (0.92 + 0.16 * blotch)[:, None]
     # steam and water: the lowest part of the door is dark, with a ragged upper edge on every board
     level = 0.36 + 0.16 * (vnoise(x * 9.0, x * 0 + 1.0, 31) - 0.5) + (rnd - 0.5) * 0.16
     yy = y + 0.07 * (vnoise(x * 160.0, y * 5.0, 32) - 0.5)
     wet = smooth(level + 0.09, level - 0.06, yy)
     damp = smooth(1.05, 0.25, y) * 0.22
-    WET = STEAMED * 0.6 + SMOKED * 0.25 + ASPEN_GREY * 0.15            # wet aspen: brown-grey, not orange
+    WET = STEAMED * 0.42 + SMOKED * 0.36 + ASPEN_GREY * 0.22            # wet aspen: brown-grey, not orange
     cf = mix(cf, WET * (0.82 + 0.3 * grain)[:, None], np.clip(wet * 0.9 + damp, 0, 1))
     cf = mix(cf, SMOKED * 1.05, smooth(0.16, 0.0, y) * 0.55)
     # hands: the boards round the handle and a smear below it
@@ -268,9 +270,9 @@ def build():
     fr = (is_["frame"] | is_["sill"]) & front
     cf[fr] = mix(cf[fr], ASPEN_GREY * (0.85 + 0.3 * grain[fr])[:, None], 0.55)
     # rust runs under the nails
-    canvas, cx0, cy0, sc = nail_runs(lay["nails"]["front"], 0.055, rng)
+    canvas, cx0, cy0, sc = nail_runs(lay["nails"]["front"], 0.04, rng)
     run = sample(canvas, x, y, cx0, cy0, sc)
-    cf = mix(cf, RUST * 0.85, np.clip(run, 0, 1) * 0.6)
+    cf = mix(cf, hexc("#6B4630"), np.clip(run, 0, 1) * 0.48)
     col[wood_f] = cf[wood_f]
     gloss[wood_f] = (0.17 + 0.07 * grain + 0.30 * wet + 0.25 * grime)[wood_f]
 
@@ -286,7 +288,7 @@ def build():
     cb = mix(cb, SOOT, soot * 0.7)
     # worn edges of rails, braces, frame (convex in the curvature bake)
     edge = np.clip((cur - 0.56) * 3.2, 0, 1) * (planks | fb | is_["board_b"])
-    cb = mix(cb, hexc("#9A8062"), edge * (0.55 - 0.3 * soot))
+    cb = mix(cb, hexc("#8C7B66"), edge * (0.40 - 0.25 * soot))
     # wet patches along the bottom rail and at the foot of the boards
     wetb = smooth(0.5, 0.0, y + 0.25 * (fbm(x * 6.0, y * 4.0, 52) - 0.5)) * 0.8
     cb = mix(cb, cb * 0.62, wetb)
@@ -300,6 +302,7 @@ def build():
     canvas_b, cx0, cy0, sc = nail_runs(lay["nails"]["back"], 0.03, rng)
     runb = sample(canvas_b, x, y, cx0, cy0, sc)
     cb = mix(cb, SOOT * 1.2, np.clip(runb, 0, 1) * 0.5)
+    cb = mix(cb, cb.mean(1, keepdims=True) * np.array([1.06, 1.0, 0.93], np.float32), 0.30) * 0.94   # v1 in game: too orange
     col[wood_b] = cb[wood_b]
     gloss[wood_b] = (0.22 + 0.10 * grain + 0.35 * wetb + 0.12 * (1 - soot))[wood_b]
 
@@ -322,7 +325,7 @@ def build():
     # ---------------- steel sheet in the gaps and on the door's edges
     st = is_["steel"]
     rn = fbm(x * 40.0, y * 40.0, 61)
-    col[st] = mix(mix(hexc("#5E3A28"), IRON, smooth(0.3, 0.7, rn)), RUST * 0.9, smooth(0.6, 0.9, fbm(x * 90.0, y * 90.0, 62)) * 0.55)[st]
+    col[st] = mix(mix(hexc("#4A3024"), IRON, smooth(0.3, 0.7, rn)), RUST * 0.75, smooth(0.62, 0.92, fbm(x * 90.0, y * 90.0, 62)) * 0.4)[st]
     gloss[st], spec[st] = 0.22, 0.12
 
     # ---------------- iron: nails, hinges, wire, the bent nail
@@ -343,7 +346,7 @@ def build():
     cloth = mix(cloth, hexc("#A89C86"), fbm(x * 9.0, y * 9.0, 72) * 0.35)        # washed-out, not clean
     stripe = mix(BRICK, LINEN, 0.22 + 0.25 * fbm(x * 60.0, y * 60.0, 73)) * (0.92 + 0.1 * weave)[:, None]
     ct = np.where(is_["stripe"][:, None], stripe, cloth)
-    ct = ct * (0.80 + 0.20 * ao)[:, None]                                         # grime sits in the folds
+    ct = ct * (0.94 + 0.06 * ao)[:, None]                                         # v1 in game: folds went sooty
     hem_damp = smooth(1.42, 1.25, y) * 0.18
     ct = mix(ct, ct * 0.8, hem_damp)
     col[tw] = ct[tw]
@@ -361,35 +364,36 @@ def build():
     u = np.clip((x - px0) / (px1 - px0), 0, 1)
     v = np.clip((y - py0) / (py1 - py0), 0, 1)                                    # 0 bottom .. 1 top
     heat = np.clip((1 - v) ** 1.25 * (0.55 + 0.45 * np.exp(-((u - 0.45) / 0.33) ** 2)) + 0.14, 0, 1)
-    fog = 0.75 + 0.25 * fbm(x * 45.0, y * 45.0, 91)
+    fog = 0.70 + 0.30 * fbm(x * 20.0, y * 20.0, 91)
     track = np.zeros(len(x), np.float32)
     trng = np.random.default_rng(SEED + 5)
-    for _ in range(6):
-        tx, top, wdt = trng.uniform(0.08, 0.92), trng.uniform(0.35, 0.95), trng.uniform(0.008, 0.016)
+    for _ in range(7):
+        tx, top, wdt = trng.uniform(0.08, 0.92), trng.uniform(0.55, 0.97), trng.uniform(0.007, 0.013)
         wob = 0.012 * (vnoise(v * 9.0, v * 0 + tx * 40, 92) - 0.5)
-        tr = np.exp(-((u - tx - wob) / wdt) ** 2) * smooth(top, top - 0.06, v) * (0.5 + 0.5 * smooth(0.0, 0.5, top - v + 0.2))
-        head = np.exp(-(((u - tx) / (wdt * 1.6)) ** 2 + ((v - top) / 0.02) ** 2))  # the drop at the top of a run
-        track = np.maximum(track, np.maximum(tr, head))
+        wide = wdt * (0.7 + 0.9 * vnoise(v * 14.0, v * 0 + tx * 9, 94))                                 # uneven, no drop heads
+        tr = np.exp(-((u - tx - wob * 2.5) / wide) ** 2) * smooth(top, top - 0.10, v) * (0.35 + 0.65 * vnoise(v * 6.0, v * 0 + tx * 5, 95))
+        track = np.maximum(track, tr)
     cells = 70.0
     du, dv = u * cells * (px1 - px0) / (py1 - py0), v * cells
     drop_h = hash1((np.floor(du).astype(np.int64) * 7919 + np.floor(dv).astype(np.int64) * 104729) & 0x7FFFFFFF, 93)
     drops = (np.hypot(du % 1 - 0.5, dv % 1 - 0.5) < 0.2) * (drop_h > 0.80)
-    clear = np.clip(track + drops * 0.8, 0, 1)
+    clear = np.clip(track * 0.75 + drops * 0.5, 0, 1)
     border = np.minimum(np.minimum(u, 1 - u) * (px1 - px0), np.minimum(v, 1 - v) * (py1 - py0))
     edge_dirt = smooth(0.03, 0.0, border)
     g_day = mix(hexc("#8F7458"), hexc("#BC966C"), heat) * fog[:, None]            # fog lit from behind
-    g_day = mix(g_day, hexc("#7A4A2A"), clear * 0.6)                               # runs show the dark room and the glow
+    g_day = mix(g_day, hexc("#7A4A2A"), clear * 0.4)                               # runs show the dark room and the glow
     g_day = mix(g_day, hexc("#5A4636"), edge_dirt * 0.6)
     col[gl] = g_day[gl]
     gloss[gl] = (0.42 + 0.35 * clear - 0.15 * edge_dirt)[gl]
     spec[gl] = 0.16
     emis = np.zeros((len(x), 3), np.float32)
     e_col = mix(GLOW_CORE, GLOW_EDGE, np.clip(heat * 1.25 - 0.1, 0, 1) ** 1.2)
-    e_int = (0.13 + 0.54 * heat ** 1.4) * fog * (1 - 0.35 * clear) * (1 - 0.7 * edge_dirt)
+    # runs barely change the glow: wide dark runs over the hot zone read as flames (seen in the v1.1 draft)
+    e_int = (0.15 + 0.58 * heat ** 1.4) * fog * (1 - 0.14 * clear) * (1 - 0.7 * edge_dirt)
     emis[gl] = (e_col * e_int[:, None])[gl]
     # the glow spills on the inner edges of the frame and on the sill's top
     near = (is_["frame"] | is_["sill"]) & (x > px0 - 0.016) & (x < px1 + 0.016) & (y > py0 - 0.02) & (y < py1 + 0.016)
-    spill = 0.10 * (0.4 + 0.6 * np.clip(1 - (y - py0) / (py1 - py0), 0, 1))
+    spill = 0.045 * (0.4 + 0.6 * np.clip(1 - (y - py0) / (py1 - py0), 0, 1))
     emis[near] = (GLOW_CORE * spill[:, None] * col.mean(1, keepdims=True) * 2.2)[near]
 
     # ---------------- dirt in the crevices (not lighting: the AO map carries the shading)
@@ -440,6 +444,9 @@ def build():
     normal[~(M | (normal.sum(-1) > 1.01))] = (0.5, 0.5, 1.0)
 
     occ = ao_b.copy()
+    tm = np.zeros((N, N), bool)
+    tm[M] = tw
+    occ[tm] = 0.55 + 0.45 * occ[tm]            # v1 in game: black smears in the towel's folds
     oa = np.asarray(Image.open(ORIG / "logwood_window_doors_ao.png").convert("L").resize((N, N), Image.LANCZOS), np.float32) / 255
     occ[hm] = oa[hm]
     occ = dilate((occ * M)[..., None], M, 20)[..., 0]

@@ -1,6 +1,6 @@
 # Sauna Door — публикация в Workshop
 
-> Подготовлено 16.11.2026 для **v1**. **В игре не проверено** — сначала посмотреть в редакторе
+> Подготовлено 16.11.2026 для **v1.1** (правки по кадрам v1 из редактора). **v1.1 в игре не проверена** — сначала посмотреть в редакторе
 > (список в [../README.md](../README.md), «Что не проверено без игры»). Публикует пользователь сам.
 
 ## Название и описание (англ.)
@@ -33,13 +33,13 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3840348906
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `../export/Door_v1_diffuse.png`, **Color 255/255/255**, Alpha Cutoff 0.00 |
-| Normal | `../export/Door_v1_normal.png`, Normal Scale 1.00 |
-| Specular/Gloss | `../export/Door_v1_specgloss.png`, ползунки по умолчанию |
-| Occlusion | `../export/Door_v1_occlusion.png`, Occlusion Scale по умолчанию |
-| Emission | `../export/Door_v1_emission.png`, **Emission Color 255/255/255** |
+| Diffuse | `../export/Door_v1.1_diffuse.png`, Color 255/255/255, Alpha Cutoff 0.00 |
+| Normal | `../export/Door_v1.1_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `../export/Door_v1.1_specgloss.png`, Spec Color 255, Glossiness 1.00 |
+| Occlusion | `../export/Door_v1.1_occlusion.png`, Occlusion Scale 0.70 |
+| Emission | `../export/Door_v1.1_emission.png`, **Emission Color 255/255/255** |
 
-Чаще всего забывают **Emission Color 255**: если по умолчанию там 0, окно не светится.
+На кадре v1 Emission Color уже стоял 255 — окно светилось.
 
 ## Картинки для страницы
 

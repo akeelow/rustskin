@@ -346,12 +346,9 @@ def build_window(mats, rng):
                        (x0 + SLAT / 2, (y0 + y1) / 2), (x1 - SLAT / 2, (y0 + y1) / 2)):
             forged_nail(nails, cx + rng.uniform(-0.006, 0.006), cy + rng.uniform(-0.006, 0.006),
                         z_out - sgn * 0.003, sgn, rng, r=0.005)
-        # the sill: a short thick board, its top sloped so water runs off
-        verts = add_box(sill, (x0 - 0.022, y0 - SILL_H, min(z_in, zs + sgn * 0.032)),
-                        (x1 + 0.026, y0 + 0.002, max(z_in, zs + sgn * 0.032)), 0.005, 3)
-        for v in verts:
-            if (v.co.z - zs) * sgn > 0.02 and v.co.y < y0 - SILL_H * 0.5:
-                v.co.z -= sgn * 0.008
+        # the sill: a short thick board (v1 in game: its sloped face baked as a dark bar - now square)
+        add_box(sill, (x0 - 0.022, y0 - SILL_H, min(z_in, zs + sgn * 0.026)),
+                (x1 + 0.026, y0 + 0.002, max(z_in, zs + sgn * 0.026)), 0.004, 3)
         # the pane, 16 mm back in the frame, a little wavy (old glass)
         zg = zs + sgn * 0.003
         res = bmesh.ops.create_grid(glass, x_segments=16, y_segments=24, size=0.5)
