@@ -27,58 +27,46 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3840348906
 
 Без просьб о лайках и без текста на текстуре. Строку «This skin glows in the dark» Steam добавляет сам.
 
-## Иконка и как загрузить
+## Что загружать: всё в одной папке
 
-Иконку генерирует сам редактор при Publish, Facepunch просит её не заменять. Перед Publish выставить:
+Всё для публикации лежит в **`skins/sauna/upload/8 Sauna Door/`** (как у остальных семи предметов). Файлы там —
+копии; исходники остаются в этой папке. Если карты или кадры изменятся, папку нужно пересобрать.
 
-| Слот | Файл / значение |
-|---|---|
-| Diffuse | `../export/Door_v1.2_diffuse.png`, Color 255/255/255, Alpha Cutoff 0.00 |
-| Normal | `../export/Door_v1.2_normal.png`, Normal Scale 1.00 |
-| Specular/Gloss | `../export/Door_v1.2_specgloss.png`, Spec Color 255, Glossiness 1.00 |
-| Occlusion | `../export/Door_v1.2_occlusion.png`, Occlusion Scale 0.70 |
-| Emission | `../export/Door_v1.2_emission.png`, **Emission Color 255/255/255** |
+### 1. В редакторе Rust (вкладка EDIT) — папка `textures/`
 
-На кадре v1 Emission Color уже стоял 255 — окно светилось.
+| Слот | Файл | Ползунки |
+|---|---|---|
+| Diffuse | `textures/Door_v1.2_diffuse.png` | Color 255/255/255, Alpha Cutoff 0.00 |
+| Normal | `textures/Door_v1.2_normal.png` | Normal Scale 1.00 |
+| Specular/Gloss | `textures/Door_v1.2_specgloss.png` | Spec Color 255/255/255, Glossiness 1.00 |
+| Occlusion | `textures/Door_v1.2_occlusion.png` | Occlusion Scale 0.70 |
+| Emission | `textures/Door_v1.2_emission.png` | **Emission Color 255/255/255** |
 
-## Картинки для страницы
+Иконку генерирует сам редактор при Publish, Facepunch просит её не заменять.
 
-Рендеры Blender (`../workshop_renders.py`, Cycles, 1920×1080, карты v1.2; JPG для загрузки). Это рендеры,
-не игровые кадры — в подписи на странице так и назвать.
+### 2. На странице Steam (Add/edit images) — в этом порядке
 
-| Файл | Что |
-|---|---|
-| `studio.jpg` | **главный рендер**: тёмная студия, тёплый ключевой и холодный контровой свет, окно светится |
-| `hero.jpg` | днём, 3/4 спереди |
-| `night.jpg` | ночью спереди: окно и полотенце |
-| `back.jpg` | днём сзади: раскосы, окно, петли |
-| `back_night.jpg` | ночью сзади |
-| `window.jpg` | крупно: полотенце и окно |
-| `set.jpg` | в стене раздевалки между шкафчиком Sauna Changing Locker и каменкой Sauna Stove, сумерки |
+| # | Файл | Что | Откуда |
+|---:|---|---|---|
+| 1 | `01_game_front_night.jpg` | перед ночью, окно светится | редактор, F12 |
+| 2 | `02_render_studio.jpg` | тёмная студия, главный рендер | Blender |
+| 3 | `03_game_front_day.jpg` | перед днём, 3/4 | редактор, F12 |
+| 4 | `04_game_back_day.jpg` | зад днём: раскосы, окно, петля с проволокой | редактор, F12 |
+| 5 | `05_game_back_night.jpg` | зад ночью | редактор, F12 |
+| 6 | `06_render_hero.jpg` | днём, 3/4 спереди | Blender |
+| 7 | `07_render_back.jpg` | днём сзади | Blender |
+| 8 | `08_render_window.jpg` | крупно: полотенце и окно | Blender |
+| 9 | `09_render_night.jpg` | ночью спереди | Blender |
+| 10 | `10_render_back_night.jpg` | ночью сзади | Blender |
+| 11 | `11_render_set.jpg` | в стене раздевалки со шкафчиком и каменкой | Blender |
 
-![studio](studio.jpg)
+Номер в имени файла = порядок на странице. Файлы `*_game_*` — кадры из редактора (v1.2, 16.11.2026), `*_render_*` —
+рендеры Blender (`../workshop_renders.py`); рендеры игровыми кадрами не называть.
 
-![set](set.jpg)
+Откуда копии: игровые — `ingame/` (исходники с панелью редактора — `../screenshots/editor_16x9/`), рендеры —
+`*.jpg` в этой папке, карты — `../export/`.
 
-Плюс **скриншоты из редактора Workshop** — v1.2, сняты пользователем 16.11.2026 на весь экран (F12): исходники в
-`../screenshots/editor_16x9/`, для загрузки — `ingame/` (1920×1080, панель редактора обрезана скриптом
-`../../ingame_import.py`).
-
-| Файл | Что |
-|---|---|
-| `ingame/front_night.jpg` | перед ночью с фонарём редактора: окно светится, полотенце |
-| `ingame/front_day.jpg` | перед днём, 3/4 |
-| `ingame/back_day.jpg` | зад днём: раскосы, окно, петля с проволокой |
-| `ingame/back_night.jpg` | зад ночью с фонарём |
-
-![front_day](ingame/front_day.jpg)
-
-Оба ночных кадра сняты с включённым фонарём редактора: дверь освещена, окно на её фоне светится слабее,
-чем в полной темноте. Кадр без фонаря (как `../screenshots/v1.2_editor_front_night.png`, но на весь экран)
-показал бы свечение лучше — по желанию.
-
-Порядок на странице: `ingame/front_night` **первым**, затем `studio`, затем `ingame/front_day`,
-`ingame/back_day`, `ingame/back_night`, затем рендеры `hero`, `back`, `window`, `night`, `back_night`, `set`.
+Оба ночных игровых кадра сняты с фонарём редактора: дверь освещена, окно светится слабее, чем в темноте.
 
 ## После публикации
 
