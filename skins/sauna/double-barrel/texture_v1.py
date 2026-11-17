@@ -170,13 +170,15 @@ WOOD_SET = np.array([143, 128, 106], np.float32) / 255
 
 
 # палитра железа и износа (sRGB)
-IRON = hexc("45423E")
-IRON_DARK = hexc("2B2A28")
-EDGE = hexc("7A766E")
+# v1.1 (17.11.2026, по кадрам из игры): в v1 стволы читались хромом. В Unity Specular металл берёт цвет из
+# блика, Diffuse у металла должен быть почти чёрным; у v1 был средне-серый #45423E + блик 0.40 — «полировка».
+IRON = hexc("2A2826")
+IRON_DARK = hexc("181716")
+EDGE = hexc("4E4B46")
 RUST = hexc("8C4A26")
 RUST_DARK = hexc("5A2E18")
 SOOT = hexc("191817")
-MINERAL = hexc("D6D2C8")
+MINERAL = hexc("C9C4B8")
 WOOD_DARK = hexc("7A5A3C")
 WOOD_OLD = hexc("45332A")
 
@@ -204,8 +206,8 @@ def iron_paint(size, pos, cav, edge, seed, part, tubes=None):
     # затёртые рёбра
     e = smooth(edge * 1.0) * (1 - rust * 0.7)
     col = col * (1 - e[..., None] * 0.6) + EDGE * e[..., None] * 0.6
-    spec = 0.40 + 0.18 * e - 0.25 * rust
-    gloss = 0.40 + 0.18 * e - 0.28 * rust + 0.06 * (n2 - 0.5)
+    spec = 0.30 + 0.14 * e - 0.22 * rust
+    gloss = 0.30 + 0.15 * e - 0.22 * rust + 0.06 * (n2 - 0.5)
     return col, spec, gloss, rust
 
 
@@ -213,7 +215,7 @@ def steam_and_soot(col, gloss, spec, P, part, seed, tubes=None):
     """Копоть у дула и белые минеральные потёки (вертикальные: не зависят от высоты y)."""
     if part in ("barrel", "sights"):
         z = P[..., 2]
-        soot = smooth((z - 0.355) / 0.08) * (0.65 + 0.35 * fbm(P * 140, 3, seed + 3))
+        soot = smooth((z - 0.32) / 0.10) * (0.7 + 0.3 * fbm(P * 140, 3, seed + 3))
         col = col * (1 - soot[..., None] * 0.8) + SOOT * soot[..., None] * 0.8
         gloss = gloss * (1 - 0.6 * soot)
         spec = spec * (1 - 0.5 * soot)
@@ -222,7 +224,7 @@ def steam_and_soot(col, gloss, spec, P, part, seed, tubes=None):
     streak = smooth((vnoise(q, seed + 11) - 0.62) * 5)
     fade = smooth((fbm(P * np.array([30, 120, 30]), 3, seed + 12) - 0.42) * 3)
     blot = smooth((fbm(P * 160, 4, seed + 13) - 0.62) * 4)  # засохшие капли пятнами
-    m = np.clip(streak * fade * 0.55 + blot * 0.45, 0, 1)
+    m = np.clip(streak * fade * 0.45 + blot * 0.30, 0, 1) * 0.8
     if tubes is not None:   # на общих островах стволов потёки по x/y повернулись бы — только пятна
         m = m * (1 - tubes) + np.clip(blot * 0.45, 0, 1) * tubes
     col = col * (1 - m[..., None] * 0.55) + MINERAL * m[..., None] * 0.55

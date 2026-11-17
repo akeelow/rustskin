@@ -1,14 +1,14 @@
-# Самопроверки Sauna Shotgun v1 (checks.py)
+# Самопроверки Sauna Shotgun v1.1 (checks.py)
 
 ## 1. Швы развёртки (разница Diffuse по обе стороны шва, 0–255)
 
 | часть | швов | медиана | 95 % | худший | где худший (UV) |
 |---|---:|---:|---:|---:|---|
-| barrel | 911 | 7.8 | 31.2 | 37.1 | (0.962,0.744) |
-| main | 585 | 9.5 | 28.5 | 35.2 | (0.989,0.551) |
-| stock | 181 | 5.0 | 16.7 | 43.3 | (0.416,0.639) |
-| grip | 141 | 9.5 | 34.7 | 55.9 | (0.643,0.176) |
-| sights | 87 | 2.6 | 18.2 | 31.9 | (0.097,0.485) |
+| barrel | 911 | 7.0 | 25.2 | 33.3 | (0.849,0.260) |
+| main | 585 | 7.3 | 26.5 | 41.2 | (0.565,0.010) |
+| stock | 181 | 4.9 | 16.3 | 43.3 | (0.416,0.639) |
+| grip | 141 | 9.7 | 34.1 | 55.9 | (0.643,0.176) |
+| sights | 87 | 1.6 | 15.9 | 21.7 | (0.591,0.074) |
 
 Пурпурным на `seams_<часть>.png` — швы с разницей > 25, жёлтым — остальные из 40 худших.
 
@@ -33,32 +33,32 @@
 
 | часть | деталь | spec | gloss |
 |---|---|---:|---:|
-| barrel | metal | 87 | 88 |
-| barrel | wood | 51 | 60 |
-| barrel | bark | 45 | 36 |
-| barrel | twine | 36 | 19 |
+| barrel | metal | 64 | 67 |
+| barrel | wood | 50 | 58 |
+| barrel | bark | 44 | 35 |
+| barrel | twine | 38 | 18 |
 | barrel | towel | 35 | 41 |
-| barrel | leaf | 53 | 111 |
+| barrel | leaf | 52 | 110 |
 | barrel | resin | 60 | 151 |
-| barrel | nail | 66 | 58 |
-| barrel | fore | 40 | 56 |
-| main | metal | 87 | 83 |
-| main | towel | 30 | 14 |
-| main | leaf | 54 | 114 |
-| stock | metal | 50 | 60 |
+| barrel | nail | 65 | 58 |
+| barrel | fore | 38 | 53 |
+| main | metal | 63 | 62 |
+| main | towel | 27 | 13 |
+| main | leaf | 53 | 114 |
+| stock | metal | 47 | 59 |
 | stock | wood | 45 | 55 |
-| stock | bark | 43 | 53 |
+| stock | bark | 43 | 54 |
 | stock | twine | 42 | 43 |
-| stock | towel | 26 | 10 |
-| stock | leaf | 54 | 74 |
-| stock | resin | 61 | 140 |
-| stock | nail | 63 | 63 |
+| stock | towel | 25 | 11 |
+| stock | leaf | 54 | 75 |
+| stock | resin | 62 | 141 |
+| stock | nail | 63 | 64 |
 | stock | fore | 56 | 78 |
 | stock | burn | 47 | 45 |
 | grip | metal | 45 | 60 |
-| grip | wood | 45 | 61 |
+| grip | wood | 45 | 62 |
 | grip | bark | 38 | 49 |
 | grip | twine | 36 | 42 |
-| grip | towel | 26 | 11 |
-| grip | nail | 75 | 48 |
+| grip | towel | 25 | 11 |
+| grip | nail | 74 | 50 |
 
