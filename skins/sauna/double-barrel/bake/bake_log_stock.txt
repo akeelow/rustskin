@@ -1,7 +1,7 @@
-stock high-poly: {'hp_stock_wood': 147513, 'hp_resin': 288, 'hp_towel_wrist': 8360, 'hp_nail_towel': 8}
-C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:887: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+stock high-poly: {'hp_stock_wood': 111560, 'hp_resin': 288, 'hp_towel_wrist': 8360, 'hp_nail_towel': 8, 'hp_stock_guard': 311, 'hp_stock_butt': 177408}
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:1058: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   m.use_nodes = True
-C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:968: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:1139: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   lm.use_nodes = True
 baking stock normal group 0 ...
 Info: Baking map saved to internal image, save it externally or pack it
@@ -20,6 +20,6 @@ Info: Baking map saved to internal image, save it externally or pack it
   -> stock pos
 done
 Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
-OBJ import of 'stock.obj' took 5.18 ms
+OBJ import of 'stock.obj' took 30.86 ms
 
 Blender quit

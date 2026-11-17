@@ -1,9 +1,9 @@
 barrel B = M A + t: [[-0.156, 1.001, 0.009], [-1.001, -0.156, -0.01], [-0.009, -0.011, 1.0]] [-0.0362, 0.0421, 0.0004] max err 0.0001
 barrel B from A: shift 0.0001 0.0001
-barrel high-poly: {'hp_barrel_rest': 4140, 'hp_barrel_tubes': 79488, 'hp_fore_cap': 89856, 'hp_sleeve_0': 8360, 'hp_sleeve_1': 8816, 'hp_sleeve_twine_0': 1440, 'hp_sleeve_twine_1': 1440, 'hp_sleeve_twine_2': 1440, 'hp_sleeve_twine_3': 1440, 'hp_sleeve_0_b': 8360, 'hp_sleeve_1_b': 8816, 'hp_sleeve_twine_0_b': 1440, 'hp_sleeve_twine_1_b': 1440, 'hp_sleeve_twine_2_b': 1440, 'hp_sleeve_twine_3_b': 1440, 'hp_bark_0': 3700, 'hp_bark_1': 3300, 'hp_bark_2': 3550, 'hp_bark_3': 3750, 'hp_bark_4': 3350, 'hp_bark_5': 3950, 'hp_bark_6': 3900, 'hp_twine_0.238_0': 1912, 'hp_twine_0.238_1': 1912, 'hp_twine_0.238_2': 1912, 'hp_twine_0.238_3': 1912, 'hp_twine_0.238_4': 1912, 'hp_knot_0.238_0': 192, 'hp_knot_0.238_1': 192, 'hp_knot_0.238_2': 192, 'hp_tail_0.238_-1': 232, 'hp_tail_0.238_1': 232, 'hp_twine_0.404_0': 1912, 'hp_twine_0.404_1': 1912, 'hp_twine_0.404_2': 1912, 'hp_twine_0.404_3': 1912, 'hp_twine_0.404_4': 1912, 'hp_knot_0.404_0': 192, 'hp_knot_0.404_1': 192, 'hp_knot_0.404_2': 192, 'hp_tail_0.404_-1': 232, 'hp_tail_0.404_1': 232, 'hp_leaf': 960, 'hp_leaf_stalk': 36, 'hp_nail_b0_-0.6': 8, 'hp_nail_b1_3.9': 8, 'hp_nail_b1_-0.6': 8, 'hp_nail_b2_-0.6': 8, 'hp_nail_b3_-0.6': 8, 'hp_nail_b4_-0.6': 8, 'hp_nail_b5_3.9': 8, 'hp_nail_b5_-0.6': 8, 'hp_nail_b6_-0.6': 8}
-C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:1010: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+barrel high-poly: {'hp_barrel_rest': 3808, 'hp_fore_wood': 13488, 'hp_fore_rear': 39168, 'hp_barrel_tubes': 79488, 'hp_fore_cap': 89856, 'hp_sleeve_0': 8360, 'hp_sleeve_1': 8816, 'hp_sleeve_twine_0': 1440, 'hp_sleeve_twine_1': 1440, 'hp_sleeve_twine_2': 1440, 'hp_sleeve_twine_3': 1440, 'hp_sleeve_0_b': 8360, 'hp_sleeve_1_b': 8816, 'hp_sleeve_twine_0_b': 1440, 'hp_sleeve_twine_1_b': 1440, 'hp_sleeve_twine_2_b': 1440, 'hp_sleeve_twine_3_b': 1440, 'hp_bark_0': 3700, 'hp_bark_1': 3300, 'hp_bark_2': 3550, 'hp_bark_3': 3750, 'hp_bark_4': 3350, 'hp_bark_5': 3950, 'hp_bark_6': 3900, 'hp_twine_0.238_0': 1856, 'hp_twine_0.238_1': 1856, 'hp_twine_0.238_2': 1856, 'hp_twine_0.238_3': 1856, 'hp_twine_0.238_4': 1856, 'hp_knot_0.238_0': 192, 'hp_knot_0.238_1': 192, 'hp_knot_0.238_2': 192, 'hp_tail_0.238_-1': 232, 'hp_tail_0.238_1': 232, 'hp_twine_0.404_0': 1840, 'hp_twine_0.404_1': 1840, 'hp_twine_0.404_2': 1840, 'hp_twine_0.404_3': 1840, 'hp_twine_0.404_4': 1840, 'hp_knot_0.404_0': 192, 'hp_knot_0.404_1': 192, 'hp_knot_0.404_2': 192, 'hp_tail_0.404_-1': 232, 'hp_tail_0.404_1': 232, 'hp_leaf': 960, 'hp_leaf_stalk': 36, 'hp_nail_b0_-0.6': 8, 'hp_nail_b1_3.9': 8, 'hp_nail_b1_-0.6': 8, 'hp_nail_b2_-0.6': 8, 'hp_nail_b3_-0.6': 8, 'hp_nail_b4_-0.6': 8, 'hp_nail_b5_3.9': 8, 'hp_nail_b5_-0.6': 8, 'hp_nail_b6_-0.6': 8}
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:1058: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   m.use_nodes = True
-C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:1091: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:1139: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   lm.use_nodes = True
 baking barrel normal group 0 ...
 Info: Baking map saved to internal image, save it externally or pack it
@@ -32,6 +32,6 @@ Info: Baking map saved to internal image, save it externally or pack it
   -> barrel pos
 done
 Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
-OBJ import of 'barrel.obj' took 7.27 ms
+OBJ import of 'barrel.obj' took 7.34 ms
 
 Blender quit

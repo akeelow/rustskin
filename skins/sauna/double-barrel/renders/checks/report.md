@@ -1,13 +1,13 @@
-# Самопроверки Sauna Shotgun v1.5 (checks.py)
+# Самопроверки Sauna Shotgun v1.6 (checks.py)
 
 ## 1. Швы развёртки (разница Diffuse по обе стороны шва, 0–255)
 
 | часть | швов | медиана | 95 % | худший | где худший (UV) |
 |---|---:|---:|---:|---:|---|
-| barrel | 911 | 6.8 | 32.7 | 38.5 | (0.695,0.991) |
+| barrel | 911 | 7.3 | 32.8 | 121.9 | (0.516,0.440) |
 | main | 585 | 7.9 | 36.4 | 66.3 | (0.082,0.620) |
-| stock | 157 | 5.9 | 21.5 | 90.5 | (0.434,0.087) |
-| grip | 101 | 13.4 | 39.5 | 99.5 | (0.693,0.182) |
+| stock | 157 | 15.0 | 61.0 | 94.1 | (0.244,0.918) |
+| grip | 101 | 14.7 | 62.3 | 121.0 | (0.693,0.182) |
 | sights | 87 | 1.6 | 15.9 | 21.7 | (0.591,0.074) |
 
 Пурпурным на `seams_<часть>.png` — швы с разницей > 25, жёлтым — остальные из 40 худших.
@@ -34,13 +34,13 @@
 | часть | деталь | spec | gloss |
 |---|---|---:|---:|
 | barrel | metal | 65 | 67 |
-| barrel | wood | 50 | 59 |
+| barrel | wood | 59 | 85 |
 | barrel | bark | 45 | 37 |
-| barrel | twine | 40 | 20 |
-| barrel | towel | 35 | 41 |
-| barrel | leaf | 53 | 111 |
-| barrel | resin | 61 | 152 |
-| barrel | nail | 66 | 59 |
+| barrel | twine | 40 | 21 |
+| barrel | towel | 48 | 68 |
+| barrel | leaf | 53 | 109 |
+| barrel | resin | 53 | 77 |
+| barrel | nail | 59 | 65 |
 | barrel | fore | 41 | 58 |
 | main | metal | 63 | 63 |
 | main | wood | 63 | 55 |
@@ -48,7 +48,7 @@
 | main | twine | 41 | 20 |
 | main | towel | 27 | 13 |
 | main | leaf | 53 | 113 |
-| stock | metal | 45 | 57 |
+| stock | metal | 75 | 76 |
 | stock | wood | 45 | 55 |
 | stock | bark | 45 | 57 |
 | stock | twine | 43 | 46 |
@@ -58,9 +58,9 @@
 | stock | nail | 61 | 63 |
 | stock | fore | 55 | 66 |
 | stock | burn | 52 | 49 |
-| grip | metal | 45 | 60 |
-| grip | wood | 45 | 62 |
-| grip | bark | 40 | 51 |
-| grip | twine | 35 | 41 |
+| grip | metal | 79 | 80 |
+| grip | wood | 45 | 63 |
+| grip | bark | 43 | 62 |
+| grip | twine | 40 | 58 |
 | grip | towel | 25 | 11 |
 

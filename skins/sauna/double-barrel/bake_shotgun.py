@@ -396,45 +396,92 @@ def is_fore_cap(i, c, n):
     return i in FORE_ISL and c.z > 0.405 and n.z > 0.45
 
 
-def fore_cap(low):
-    """v1.5: торец цевья — дерево в торец, как у оригинала (screenshots/original_3p_front.png): годичные кольца
-    бороздками (поздняя древесина темнее), сердцевина не по центру, две радиальные трещины-усушки, тёмная кромка.
-    В v1.4 торец был ровной заливкой, на которую ещё легли потёки и копоть — в игре серо-белая плашка."""
-    ob = copy_faces(low, is_fore_cap, "hp_fore_cap")
-    subdivided(ob, 5)
+def end_grain(low, pred, name, center, ident="fore", seed=51, cracks=((0.6, 0.022), (2.9, 0.016)), level=5):
+    """Дерево в торец по граням pred: годичные кольца бороздками (~3 мм: при 12-19 px/см это 4-6 px), поздняя
+    древесина темнее, сердцевина `center` (не по центру, как у настоящего бруска), трещины-усушки, тёмная кромка
+    там, где торец скругляется. Кольца считаются в плоскости, перпендикулярной средней нормали торца.
+    v1.5 - передний торец цевья; v1.6 - все торцы: задние торцы цевья, затыльник приклада, торец рукояти GRIP
+    (до этого на затыльник легли продольные волокна, остальные были заливкой)."""
+    ob = copy_faces(low, pred, name)
+    if not ob.data.polygons:
+        print("end_grain: no faces for", name, flush=True)
+        return ob
+    nsum = Vector()
+    for p in ob.data.polygons:
+        nsum += p.normal * p.area
+    N0 = nsum.normalized()
+    a = Vector((1, 0, 0)) if abs(N0.x) < 0.9 else Vector((0, 1, 0))
+    U = N0.cross(a).normalized()
+    W = N0.cross(U)
+    subdivided(ob, level)
     for p in ob.data.polygons:
         p.use_smooth = True
-    cx, cy = 0.004, -0.044
+    C = np.array(center)
+    Un, Wn, Nn = np.array(U), np.array(W), np.array(N0)
     early, late = np.array(lin("B9A07A")), np.array(lin("7A5E40"))
 
     def fn(co, nr):
-        x, y = co[:, 0], co[:, 1]
-        dx, dy = x - cx, (y - cy) * 1.08
+        rel = co - C
+        dx, dy = rel @ Un, (rel @ Wn) * 1.08
         r = np.hypot(dx, dy)
         ang = np.arctan2(dy, dx)
-        wob = NN.fbm(np.stack([x * 90, y * 90, np.full_like(x, 3.0)], -1), 3, 51) - 0.5
-        ph = r / 0.0032 + wob * 1.3   # кольцо ~3 мм: при 19 px/см это 6 px
+        wob = NN.fbm(np.stack([dx * 90, dy * 90, np.full_like(dx, 3.0)], -1), 3, seed) - 0.5
+        ph = r / 0.0032 + wob * 1.3
         fr = ph - np.floor(ph)
         lw = NN.smooth((fr - 0.55) / 0.2) * (1 - NN.smooth((fr - 0.95) / 0.05))   # поздняя древесина
         d = -0.00012 * lw
         cols = early + (late - early) * lw[:, None] * 0.85
-        # сердцевина
         pith = np.exp(-(r / 0.0016) ** 2)
         cols = cols * (1 - pith[:, None] * 0.6) + np.array(lin("4E3A28")) * pith[:, None] * 0.6
-        # трещины-усушки от сердцевины: два луча
         crack = np.zeros_like(r)
-        for a0, ln in ((0.6, 0.022), (2.9, 0.016)):
+        for a0, ln in cracks:
             da = np.angle(np.exp(1j * (ang - a0)))
             dist = np.abs(np.sin(da)) * r
-            crack = np.maximum(crack, np.exp(-(dist / (0.00025 + 0.00004 * r / 0.01)) ** 2) * (np.cos(da) > 0) * NN.smooth((ln - r) / 0.004) * NN.smooth(r / 0.003))
+            crack = np.maximum(crack, np.exp(-(dist / (0.00025 + 0.00004 * r / 0.01)) ** 2) * (np.cos(da) > 0)
+                               * NN.smooth((ln - r) / 0.004) * NN.smooth(r / 0.003))
         d -= 0.0006 * crack
         cols = cols * (1 - crack[:, None] * 0.8) + np.array(lin("33261A")) * crack[:, None] * 0.8
-        # кромка: где торец скругляется (нормаль уходит от +z) — темнее, как подкорье
-        rim = NN.smooth((0.85 - nr[:, 2]) / 0.3)
+        rim = NN.smooth((0.85 - nr @ Nn) / 0.3)
         cols = cols * (1 - rim[:, None] * 0.45) + np.array(lin("6A5038")) * rim[:, None] * 0.45
-        return d, cols.astype(np.float32), np.full(len(co), IDS["fore"])
+        return d, cols.astype(np.float32), np.full(len(co), IDS[ident])
     cols, ids = displace(ob, fn)
     set_attrs_np(ob.data, cols, ids)
+    return ob
+
+
+FORE_PITH = (0.004, -0.044)   # сердцевина бруска цевья (одна для переднего и задних торцов)
+FORE_REAR = {31, 32}          # задние торцы цевья (z 0.216...0.220)
+
+
+def fore_cap(low):
+    return end_grain(low, is_fore_cap, "hp_fore_cap", (FORE_PITH[0], FORE_PITH[1], 0.42), "fore", 51)
+
+
+def grain_copy(low, pred, name, ident, seed=31):
+    """Продольное дерево: копия граней, подразделена, волокна вдоль z рельефом и цветом."""
+    ob = copy_faces(low, pred, name)
+    subdivided(ob, 3)
+    for p in ob.data.polygons:
+        p.use_smooth = True
+    cw, cd = np.array(lin(HEX["wood"])), np.array(lin(HEX["wood_dark"]))
+
+    def fn(co, nr):
+        x, y, z = co[:, 0], co[:, 1], co[:, 2]
+        g = NN.fbm(np.stack([x * 120, y * 120, z * 9], -1), 3, seed) * 2 - 1
+        fib = NN.vnoise(np.stack([x * 1200, y * 1200, z * 50], -1), seed + 1) * 2 - 1
+        ring = np.sin((y * 260 + x * 140 + g * 3.0) * np.pi)
+        d = 0.00010 * fib + 0.00006 * ring
+        t = 0.5 * NN.smooth(ring * 0.5 + 0.2) + 0.25 * (g * 0.5 + 0.5)
+        return d, (cw + (cd - cw) * t[:, None]).astype(np.float32), np.full(len(co), IDS[ident])
+    cols, ids = displace(ob, fn)
+    set_attrs_np(ob.data, cols, ids)
+    return ob
+
+
+def metal_copy(low, islands, name):
+    """Точная копия железа (нормали потом - оригинальные Facepunch, texture_v1.py)."""
+    ob = copy_polys(low, islands, name)
+    set_attrs(ob.data, lin(HEX["metal"]), "metal")
     return ob
 
 
@@ -443,27 +490,23 @@ def fore_end(low, rng):
     FORE = {4, 23, 31, 32}
     TUBES = {1, 18, 17, 2}
     hp = []
-    base = copy_faces(low, lambda i, c, n: i not in TUBES and not is_fore_cap(i, c, n), "hp_barrel_rest")
+    # v1.6: цевьё отдельно от железа: бока и полоса между стволами - продольное дерево с волокнами (было заливкой),
+    # передний и задние торцы - дерево в торец
+    base = copy_faces(low, lambda i, c, n: i not in TUBES and i not in FORE, "hp_barrel_rest")
     set_attrs(base.data, lin(HEX["metal"]), "metal")
-    # цевьё под берестой — тоже дерево (видно в щелях и на торцах)
-    isl = low["isl"]
-    fore_v = {v for p in low.data.polygons if isl[p.index] in FORE for v in p.vertices}
-    ids = ["fore" if i in fore_v else "metal" for i in range(len(base.data.vertices))]
-    # copy_polys переиндексирует вершины — пересчитаем по положению
-    fore_pts = kdtree.KDTree(len(fore_v))
-    for i, vi in enumerate(fore_v):
-        fore_pts.insert(low.data.vertices[vi].co, i)
-    fore_pts.balance()
-    ids = ["fore" if fore_pts.find(v.co)[2] < 1e-6 else "metal" for v in base.data.vertices]
-    cols = [lin(HEX["fore"]) if i == "fore" else lin(HEX["metal"]) for i in ids]
-    set_attrs(base.data, cols, ids)
     hp.append(base)
+    hp.append(grain_copy(low, lambda i, c, n: i in FORE and i not in FORE_REAR and not is_fore_cap(i, c, n),
+                         "hp_fore_wood", "fore", 61))
+    hp.append(end_grain(low, lambda i, c, n: i in FORE_REAR, "hp_fore_rear", (FORE_PITH[0], FORE_PITH[1], 0.218),
+                        "fore", 52, cracks=((0.6, 0.022),)))
 
     hp += pitted_tubes(low, TUBES, rng)
     hp.append(fore_cap(low))
     hp += barrel_sleeves(low, rng)
 
     bvh = bvh_of(low, FORE)
+    isl = low["isl"]
+    fore_v = {v for p in low.data.polygons if isl[p.index] in FORE for v in p.vertices}
     fv = [low.data.vertices[v].co.copy() for v in fore_v]
     ax = Axis(fv, (0, 0, 1), (1, 0, 0)).refine(bvh)
     # Угол θ: 0 — правый бок (+x), 90° — верх, 180° — левый бок, 270° — низ. Сверху на цевье лежат
@@ -806,9 +849,14 @@ def ornament_np(co):
     return m * zone
 
 
-def wood_copy(low, name, butt=False):
+def is_butt_end(i, c, n):
+    """Затыльник приклада: острова 5, 6 и середина (часть острова 1), смотрящая назад."""
+    return i in (5, 6) or (i == 1 and n.z < -0.6 and c.z < -0.43)
+
+
+def wood_copy(low, name, butt=False, exclude=()):
     """Дерево: копия, подразделена; волокна вдоль приклада, на прикладе — сучок и орнамент."""
-    ob = copy_polys(low, set(range(1, 100)), name)
+    ob = copy_faces(low, lambda i, c, n: i not in exclude and not (butt and is_butt_end(i, c, n)), name)
     subdivided(ob, 3)
     knot = Vector(KNOT)
     if butt:
@@ -1182,11 +1230,24 @@ def build(part, rng):
     elif part == "main":
         hp = lever_details(low, rng)
     elif part == "stock":
-        hp = wood_copy(low, "hp_stock_wood", butt=True) + stock_details(low, rng)
+        # v1.6: спусковая скоба (остров 4) - железо, как у оригинала (была деревом: весь приклад копировался
+        # деревом целиком); затыльник (5, 6) - дерево в торец (на нём лежали продольные волокна)
+        hp = wood_copy(low, "hp_stock_wood", butt=True, exclude={4}) + stock_details(low, rng)
+        hp.append(metal_copy(low, {4}, "hp_stock_guard"))
+        cen = [p.center for p in low.data.polygons if is_butt_end(low["isl"][p.index], p.center, p.normal)]
+        c0 = sum(cen, Vector()) / len(cen)
+        hp.append(end_grain(low, is_butt_end, "hp_stock_butt", (c0.x + 0.003, c0.y - 0.012, c0.z),
+                            "wood", 53, cracks=((1.2, 0.03), (3.6, 0.02))))
     elif part == "grip":
         # GRIP занимает то же место, что шейка STOCK: обмотку строим по прикладу, дерево — своё
         stock = load_low("stock")
-        hp = wood_copy(low, "hp_grip_wood") + stock_details(stock, rng)
+        # v1.6: скоба GRIP (остров 3) - железо; торец рукояти (4) - дерево в торец
+        hp = wood_copy(low, "hp_grip_wood", exclude={3, 4}) + stock_details(stock, rng)
+        hp.append(metal_copy(low, {3}, "hp_grip_guard"))
+        cen = [p.center for p in low.data.polygons if low["isl"][p.index] == 4]
+        c0 = sum(cen, Vector()) / len(cen)
+        hp.append(end_grain(low, lambda i, c, n: i == 4, "hp_grip_end", (c0.x, c0.y - 0.006, c0.z), "wood", 54,
+                            cracks=((0.9, 0.018),), level=4))
         bpy.data.objects.remove(stock)
     return low, [o for o in hp if o is not None]
 
@@ -1238,8 +1299,10 @@ LOOKS = {
              ("top", (0.0, 0.12, -0.12), (0.0, -0.02, -0.06), 50)],
     "stock": [("left", (-0.55, -0.09, -0.26), (0, -0.09, -0.26), 50),
               ("wrist", (-0.15, -0.05, -0.15), (0, -0.09, -0.22), 50),
-              ("butt", (-0.18, -0.11, -0.40), (0, -0.11, -0.40), 50)],
-    "grip": [("left", (-0.4, -0.09, -0.15), (0, -0.09, -0.15), 50)],
+              ("butt", (-0.18, -0.11, -0.40), (0, -0.11, -0.40), 50),
+              ("buttend", (0.05, -0.10, -0.70), (0, -0.10, -0.45), 50)],
+    "grip": [("left", (-0.4, -0.09, -0.15), (0, -0.09, -0.15), 50),
+             ("end", (-0.12, -0.25, -0.40), (0, -0.12, -0.25), 50)],
 }
 
 
