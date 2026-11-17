@@ -877,10 +877,12 @@ def crossbar_details(low):
     ax = Axis(verts, (1, 0, 0), (0, 1, 0), step=0.002).refine(bar_bvh)
     out = []
     # лист на задней грани у правой обмотки (x > 0 — левый бок стрелка; у правой руки лист не на виду)
-    p0 = ax.center(0.0185)
-    hit, n, _, _ = bar_bvh.ray_cast(Vector((0.0185, p0.y + 0.001, -0.2)), Vector((0, 0, 1)), 0.4)
+    # v1.4: лист лежит вдоль перемычки — черешок под бечёвкой, кончик к центру. В v1.3 стоял поперёк под
+    # бечёвкой: из-под неё торчал полукруг (screenshots/ingame_v1.3_aim_close.webp)
+    p0 = ax.center(0.011)
+    hit, n, _, _ = bar_bvh.ray_cast(Vector((0.011, p0.y + 0.0005, -0.2)), Vector((0, 0, 1)), 0.4)
     if hit is not None:
-        out += leaf_mesh(hit + n * 0.0003, n, Vector((0.35, -1, 0)), 0.020, "hp_leaf_bar", conform=bar_bvh)
+        out += leaf_mesh(hit + n * 0.0003, n, Vector((-1, -0.12, 0)), 0.019, "hp_leaf_bar", conform=bar_bvh)
     under = join_bvh([o for o in out if o.name == "hp_leaf_bar"]) if out else None
     r = 0.0008
     for side, xc in (("r", 0.0185), ("l", -0.0185)):
@@ -901,19 +903,12 @@ def crossbar_details(low):
             if len(pts) > 3:
                 out.append(tube_mesh(pts + pts[:2], r, f"hp_bar_twine_{side}{coil}", lin(HEX["twine"]), "twine",
                                      twist=0.9, col_fn=twine_col))
-    # узел на задней грани правой обмотки и два хвостика вниз
-    th_k = math.radians(-90)   # e1 = +y, e2 = A×e1 = +z → -90° смотрит на -z (к глазу)
+    # v1.4: узла на видимой грани нет — в игре тень между петлями читалась чёрной дырой. Узел — сверху (+y)
+    th_k = 0.0   # e1 = +y
     hit, d, _ = surf(bar_bvh, ax, 0.0185, th_k, far=0.05)
     if hit is not None:
-        for kk in range(2):
-            loop = []
-            for i in range(25):
-                a = 2 * math.pi * i / 24
-                off = Vector((1, 0, 0)) * (math.cos(a) * 0.0018) + Vector((0, 1, 0)) * (math.sin(a) * 0.0013 + (kk - 0.5) * 0.0016)
-                loop.append(hit + d * (2.2 * r + 0.001 * (1 + math.sin(a))) + off)
-            out.append(tube_mesh(loop, r * 0.95, f"hp_bar_knot_{kk}", lin(HEX["twine"]), "twine", twist=0.9, col_fn=twine_col))
         for sgn in (-1, 1):
-            tail = [hit + d * (r * (2.0 - 1.0 * t)) + Vector((sgn * 0.0015 * t, -0.007 * t, 0)) for t in (i / 15 for i in range(16))]
+            tail = [hit + d * (r * (2.0 - 1.0 * t)) + Vector((sgn * 0.002 * t, 0, -0.004 * t)) for t in (i / 15 for i in range(16))]
             out.append(tube_mesh(tail, r * 0.85, f"hp_bar_tail_{sgn}", lin(HEX["twine"]), "twine", twist=0.9, col_fn=twine_col))
     return out
 

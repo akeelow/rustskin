@@ -324,15 +324,16 @@ def make(part):
     if part == "barrel":
         cu = island_mask("barrel", {2, 3, 15, 30}, S)[..., None]
         ox = smooth((nw - 0.35) * 2.5)[..., None]
-        cu_col = hexc("4A3022") * (1 - ox * 0.5) + hexc("2C1E16") * ox * 0.5
+        # v1.4: в игре медь v1.3 блестела как новая труба — темнее, коричневее, блик и глянец ниже
+        cu_col = hexc("3A2618") * (1 - ox * 0.6) + hexc("22170F") * ox * 0.6
         e3 = smooth(edge * 1.3)[..., None]
-        cu_col = cu_col * (1 - e3 * 0.7) + hexc("9A6A44") * e3 * 0.7
-        pat = smooth((cav * 1.5 + (fbm(P * 700, 2, seed + 41) - 0.5) * 0.8 - 0.45) * 3)[..., None]  # ярь-медянка во впадинах
-        cu_col = cu_col * (1 - pat * 0.6) + hexc("4F6B58") * pat * 0.6
-        cu_spec = np.array([0.42, 0.30, 0.22]) * (1 - pat) + np.array([0.62, 0.45, 0.33]) * e3 + 0.08 * pat
+        cu_col = cu_col * (1 - e3 * 0.55) + hexc("7E5638") * e3 * 0.55
+        pat = smooth((cav * 1.5 + (fbm(P * 700, 2, seed + 41) - 0.5) * 0.9 - 0.35) * 3)[..., None]  # ярь-медянка во впадинах
+        cu_col = cu_col * (1 - pat * 0.7) + hexc("48604F") * pat * 0.7
+        cu_spec = np.array([0.27, 0.19, 0.14]) * (1 - pat) * (0.8 + 0.3 * (1 - ox)) + np.array([0.24, 0.17, 0.12]) * e3 + 0.06 * pat
         col = col * (1 - cu) + cu_col * cu
         spec = spec * (1 - cu) + np.clip(cu_spec, 0, 1) * cu
-        gloss = gloss * (1 - cu[..., 0]) + (0.34 + 0.18 * e3[..., 0] - 0.2 * pat[..., 0]) * cu[..., 0]
+        gloss = gloss * (1 - cu[..., 0]) + (0.24 + 0.14 * e3[..., 0] - 0.12 * pat[..., 0] - 0.06 * ox[..., 0]) * cu[..., 0]
         st = island_mask("barrel", {13, 21, 22, 33}, S)[..., None]
         col = col * (1 - st) + (col * 0.75 + hexc("5A5853") * 0.25 * smooth(edge * 1.5)[..., None]) * st
         spec = spec * (1 - st) + 0.36 * st

@@ -1,7 +1,7 @@
-main high-poly: {'hp_main': 5221, 'hp_towel_lever': 2625, 'hp_leaf_top': 960, 'hp_leaf_top_stalk': 36, 'hp_leaf_bar': 960, 'hp_leaf_bar_stalk': 36, 'hp_bar_twine_r0': 976, 'hp_bar_twine_r1': 976, 'hp_bar_twine_r2': 976, 'hp_bar_twine_r3': 976, 'hp_bar_twine_l0': 976, 'hp_bar_twine_l1': 976, 'hp_bar_twine_l2': 976, 'hp_bar_twine_l3': 976, 'hp_bar_knot_0': 192, 'hp_bar_knot_1': 192, 'hp_bar_tail_-1': 120, 'hp_bar_tail_1': 120}
-C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:948: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+main high-poly: {'hp_main': 5221, 'hp_towel_lever': 2625, 'hp_leaf_top': 960, 'hp_leaf_top_stalk': 36, 'hp_leaf_bar': 960, 'hp_leaf_bar_stalk': 36, 'hp_bar_twine_r0': 976, 'hp_bar_twine_r1': 976, 'hp_bar_twine_r2': 976, 'hp_bar_twine_r3': 976, 'hp_bar_twine_l0': 976, 'hp_bar_twine_l1': 976, 'hp_bar_twine_l2': 976, 'hp_bar_twine_l3': 976, 'hp_bar_tail_-1': 120, 'hp_bar_tail_1': 120}
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:943: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   m.use_nodes = True
-C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:1029: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:1024: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   lm.use_nodes = True
 baking main normal group 0 ...
 Info: Baking map saved to internal image, save it externally or pack it
@@ -20,6 +20,6 @@ Info: Baking map saved to internal image, save it externally or pack it
   -> main pos
 done
 Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
-OBJ import of 'main.obj' took 8.70 ms
+OBJ import of 'main.obj' took 8.08 ms
 
 Blender quit
