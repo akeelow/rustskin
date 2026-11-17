@@ -53,6 +53,13 @@
 | 6 | `Sauna Towel Wrap` | Burlap Headwrap | `burlap-headwrap` | [3840341829](https://steamcommunity.com/sharedfiles/filedetails/?id=3840341829) |
 | 7 | `Sauna Robe` | Snow Jacket | `snow-jacket` | [3840344106](https://steamcommunity.com/sharedfiles/filedetails/?id=3840344106) |
 
+Вторая волна (пакеты и шаги — в `<папка>/workshop/README.md`, не в этом файле):
+
+| # | Название | Предмет в редакторе | Папка | Страница |
+|---|---|---|---|---|
+| 8 | `Sauna Door` | Wooden Door | `wooden-door` | [3841006157](https://steamcommunity.com/sharedfiles/filedetails/?id=3841006157) (16.11) |
+| 9 | `Sauna Boiler` | Furnace | `furnace` | [3841360723](https://steamcommunity.com/sharedfiles/filedetails/?id=3841360723) (17.11) |
+
 ---
 
 ## 1. Sauna Stove — Electric Furnace
@@ -270,6 +277,11 @@ Part of the Sauna set.
 | 5 | Sauna Changing Locker | https://steamcommunity.com/sharedfiles/filedetails/?id=3840340102 |
 | 6 | Sauna Towel Wrap | https://steamcommunity.com/sharedfiles/filedetails/?id=3840341829 |
 | 7 | Sauna Robe | https://steamcommunity.com/sharedfiles/filedetails/?id=3840344106 |
+| 8 | Sauna Door | https://steamcommunity.com/sharedfiles/filedetails/?id=3841006157 |
+| 9 | Sauna Boiler | https://steamcommunity.com/sharedfiles/filedetails/?id=3841360723 |
+
+Предметы 8 и 9 добавлены в коллекцию 16–17.11 (проверено по Steam API 17.11: в коллекции 9 предметов). Новое
+описание и категории коллекции — [ниже](#обновление-коллекции-после-второй-волны).
 
 ### Шаг 1. Создать коллекцию
 
@@ -320,6 +332,37 @@ Part of the [url=https://steamcommunity.com/sharedfiles/filedetails/?id=38403489
 ```
 
 Так покупатель с любой страницы попадёт ко всему сету. Это можно сделать и позже.
+
+## Обновление коллекции после второй волны
+
+> 17.11.2026. Публичная страница — правит только пользователь. Сейчас в описании «Seven skins», а предметов 9;
+> в категориях нет Wooden Door и Furnace.
+
+1. Открыть коллекцию https://steamcommunity.com/sharedfiles/filedetails/?id=3840348906 → **Редактировать**
+   (Edit collection).
+2. **Описание** — заменить целиком на текст ниже.
+3. **Категории:** дополнительно отметить Deployables — **Wooden Door** и **Furnace** (Electric Furnace оставить).
+4. **Сохранить и продолжить** → на списке предметов ничего не менять (дверь и котёл уже в коллекции) →
+   **Опубликовать**.
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+A sauna scrap-built by a survivor: an old cooker clad in aspen slats with
+glowing rocks in the firebox, a barrel boiler heating water over birch logs,
+a bed frame turned into a slatted bench, an armchair from the changing room,
+a crate of hot stones and embers by the stove, a changing locker with lit
+niches, a steam room door with a fogged window - and a towel wrap and a
+waffle robe for the dash into the snow.
+
+Nine skins, one house.
+```
+
+Если в сет добавятся новые предметы — поменять число в последней строке и дописать предмет в перечисление.
+
+**Мелочь на странице двери:** последняя строка описания Sauna Door — `Part of the Sauna set:` и голая ссылка на
+следующей строке; у остальных восьми — `Part of the [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3840348906]Sauna set[/url].`
+Для единообразия можно заменить (Edit title & description), работает и так.
 
 ## Если что-то пошло не так
 

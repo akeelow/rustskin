@@ -21,6 +21,10 @@
 
 Hide Poncho пропущено (20.10.2026).
 
+Вторая волна, добавлены в коллекцию: 8 — `Sauna Door` (Wooden Door, [пакет](wooden-door/workshop/README.md), 16.11),
+9 — `Sauna Boiler` (Furnace, [пакет](furnace/workshop/README.md), 17.11). Новое описание коллекции на девять
+предметов — в [PUBLISH.md](PUBLISH.md#обновление-коллекции-после-второй-волны); текст ниже — первоначальный, на семь.
+
 ## Картинка коллекции
 
 `workshop/collection.png` (1024×1024; JPG — `workshop/collection.jpg`): вечер в бане сверху от двери, все семь

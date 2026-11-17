@@ -1,6 +1,7 @@
 # Sauna: сет скинов
 
 > Статус: **опубликован 15.11.2026** — все семь предметов и [коллекция Sauna](https://steamcommunity.com/sharedfiles/filedetails/?id=3840348906) в Steam Workshop (старт 18.10.2026).
+> Вторая волна: Sauna Door (16.11) и Sauna Boiler (17.11) опубликованы и добавлены в коллекцию — в ней 9 предметов.
 > Выбор темы: [docs/themes.md](../../docs/themes.md).
 > Продвижение после публикации (каналы, тексты, календарь до 10.12, замеры): [PROMO.md](PROMO.md).
 
@@ -62,10 +63,10 @@
 
 Пять предметов, каждый в своей папке; шансы — по [data/item-ranking.csv](../../data/item-ranking.csv), срез 18.10.2026.
 
-| # | Предмет | Название в Workshop | Образ | Шанс | Статус (17.11.2026) |
+| # | Предмет | Название в Workshop | Образ | Шанс | Статус (17.11.2026, вечер) |
 |---|---|---|---|---:|---|
-| 9 | Wooden Door | Sauna Door | Дверь парилки: вагонка на старом железе, запотевшее окошко со светом каменки, полотенце на крючке | 1 из 17 | 🟢 [v1.2](wooden-door/README.md) проверена в редакторе днём и ночью; с замками не снята · [пакет Workshop](wooden-door/workshop/README.md), папка `upload/8 Sauna Door` · не опубликована |
-| 10 | Furnace | Sauna Boiler | Дровяной водогрейный котёл из бочки: бак с обручами, тлеющая топка, камни и ковш | 1 из 18 | 🟡 [v1](furnace/README.md) готов к загрузке в редактор, в игре не проверен · [пакет Workshop](furnace/workshop/README.md) |
+| 9 | Wooden Door | Sauna Door | Дверь парилки: вагонка на старом железе, запотевшее окошко со светом каменки, полотенце на крючке | 1 из 17 | 🚀 [опубликован 16.11](https://steamcommunity.com/sharedfiles/filedetails/?id=3841006157) · [v1.2](wooden-door/README.md) (проверена в редакторе днём и ночью; с замками не снята) · [пакет Workshop](wooden-door/workshop/README.md) |
+| 10 | Furnace | Sauna Boiler | Дровяной водогрейный котёл из бочки: бак с обручами, тлеющая топка, камни и ковш | 1 из 18 | 🚀 [опубликован 17.11](https://steamcommunity.com/sharedfiles/filedetails/?id=3841360723) · [v3](furnace/README.md) (проверена и снята в редакторе) · [пакет Workshop](furnace/workshop/README.md) |
 | 11 | Double Barrel Shotgun | Sauna Shotgun | Двустволка банщика: берёзовое ложе, береста и бечёвка на цевье | 1 из 7 | ⏳ [бриф](double-barrel/README.md); ждёт оригиналы из редактора |
 | 12 | Bucket Helmet | Sauna Bucket | Шайка на голове: клёпки, обручи, жестяной вкладыш | 1 из 19 | ⏳ [бриф](bucket-helmet/README.md); ждёт оригиналы из редактора |
 | 13 | Tactical Gloves | Sauna Mitts | Войлочные перчатки истопника с кожаными заплатами | 1 из 15 | ⏳ [бриф](tactical-gloves/README.md); ждёт оригиналы из редактора |
