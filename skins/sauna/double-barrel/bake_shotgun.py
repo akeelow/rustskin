@@ -631,12 +631,14 @@ def fore_end(low, rng):
     return hp
 
 
-def barrel_sleeves(low, rng):
-    """Манжеты бересты на стволах у казённика (z 0.142…0.206) + 4 витка бечёвки по переднему краю.
-    Видно от первого лица — сверху на цевье всё закрывают стволы. Оба ствола делят один остров UV
-    (общие vt), поэтому манжету строим на одном и копируем на второй тем же преобразованием, каким
-    второй ствол получен из первого (зеркало или сдвиг — проверяем по вершинам): иначе два разных
-    рисунка запеклись бы в одни и те же пиксели."""
+_BT = {}
+
+
+def barrel_transform(low):
+    """Второй ствол = M·первый + T (по вершинам с одинаковыми UV, метод наименьших квадратов). Кэш + bake/barrel_copy.json
+    (texture_v1.py переводит положение точек второго ствола в систему первого, чтобы узоры совпали)."""
+    if "M" in _BT:
+        return _BT["M"], _BT["T"], _BT["ca"], _BT["cb"], _BT["A"]
     OUTER = {1}
     isl = low["isl"]
     vs = {v for p in low.data.polygons if isl[p.index] in OUTER for v in p.vertices}
@@ -644,7 +646,6 @@ def barrel_sleeves(low, rng):
     Bv = [low.data.vertices[v].co.copy() for v in vs if low.data.vertices[v].co.x < 0]
     ca = sum(A, Vector()) / len(A)
     cb = sum(Bv, Vector()) / len(Bv)
-    # соответствие вершин по общим UV: одинаковые UV на обоих стволах — одна и та же точка развёртки
     uvl = low.data.uv_layers.active.data
     byuv = {}
     for p in low.data.polygons:
@@ -659,18 +660,30 @@ def barrel_sleeves(low, rng):
         pb_ = [low.data.vertices[i].co for i in vset if low.data.vertices[i].co.x < 0]
         if pa_ and pb_:
             pairs.append((pa_[0], pb_[0]))
-    # общий вид: B = M·A + t (М — 3×3) по методу наименьших квадратов; М покажет зеркало/поворот
     PA = np.array([list(p[0]) + [1.0] for p in pairs])
     PB = np.array([list(p[1]) for p in pairs])
-    X, res, *_ = np.linalg.lstsq(PA, PB, rcond=None)
+    X, *_ = np.linalg.lstsq(PA, PB, rcond=None)
     err = float(np.abs(PA @ X - PB).max())
     M = X[:3].T
     T = X[3]
     print("barrel B = M A + t:", np.round(M, 3).tolist(), np.round(T, 4).tolist(), "max err", round(err, 5), flush=True)
+    OUT.mkdir(exist_ok=True)
+    json.dump({"M": M.tolist(), "T": T.tolist(), "mx": (ca.x + cb.x) / 2, "axisA": [ca.x, ca.y]},
+              open(OUT / "barrel_copy.json", "w"), indent=1)
+    _BT.update(M=M, T=T, ca=ca, cb=cb, A=A)
+    return M, T, ca, cb, A
+
+
+def barrel_sleeves(low, rng):
+    """Манжеты бересты на стволах у казённика (z 0.142…0.206) + 4 витка бечёвки по переднему краю.
+    Видно от первого лица — сверху на цевье всё закрывают стволы. Оба ствола делят один остров UV
+    (общие vt), поэтому манжету строим на одном и копируем на второй тем же преобразованием, каким
+    второй ствол получен из первого (зеркало или сдвиг — проверяем по вершинам): иначе два разных
+    рисунка запеклись бы в одни и те же пиксели."""
+    OUTER = {1}
+    isl = low["isl"]
+    M, T, ca, cb, A = barrel_transform(low)
     mx = (ca.x + cb.x) / 2
-    mirror = False
-    err_mirror = err_shift = err
-    print("barrel B from A:", "mirror" if mirror else "shift", round(err_mirror, 4), round(err_shift, 4), flush=True)
 
     pa = [p for p in low.data.polygons if isl[p.index] in OUTER and p.center.x > 0]
     bvh = BVHTree.FromPolygons([v.co.copy() for v in low.data.vertices], [list(p.vertices) for p in pa])
@@ -807,18 +820,117 @@ def refine_zone(ob, inside, cuts=3):
     bm.free()
 
 
+def even_mesh(ob, max_edge):
+    """Дробит рёбра длиннее max_edge (по одному разрезу за проход, пока не останется длинных), n-угольники —
+    в треугольники. У трубы ствола одна грань идёт на 37 см вдоль: простое подразделение давало шаг 2.3 см
+    вдоль ствола, и ямки вытягивались в полосы."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    for _ in range(12):
+        long_e = [e for e in bm.edges if e.calc_length() > max_edge]
+        if not long_e:
+            break
+        bmesh.ops.subdivide_edges(bm, edges=long_e, cuts=1, use_grid_fill=True)
+        bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
+    bm.to_mesh(ob.data)
+    bm.free()
+
+
 def pitted_tubes(low, TUBES, rng):
+    """v1.7: рельеф труб стволов геометрией, в размерах, которые держит текстура (19 px/см, пиксель ~0.5 мм):
+    вмятины 4-9 мм шириной до 0.5 мм глубиной, гнёзда раковин Ø 1.5-2.5 мм (гуще у дула и снизу), сварной шов
+    вдоль трубы (валик 2 мм с чешуйками — стволы из водопроводной трубы), глубокие продольные царапины.
+    Узор считается в системе первого ствола: второй — его повёрнутая копия в тех же UV, и точки второго
+    переводятся обратно (M⁻¹), поэтому рельеф у обоих одинаковый. В v1-v1.6 ямки были 0.25 мм (меньше пикселя)
+    и у стволов разные — в одних пикселях смешивались два рисунка, трубы выглядели нарисованными.
+    Цвет вершин — маски для texture_v1.py: R — ржавчина (ямки, дно вмятин), G — светлый металл (царапины,
+    гребень шва), B — вмятины."""
     ob = copy_polys(low, TUBES, "hp_barrel_tubes")
-    subdivided(ob, 3)
+    even_mesh(ob, 0.004)
+    subdivided(ob, 2)
+    for p in ob.data.polygons:
+        p.use_smooth = True
+    M, T, ca, cb, _ = barrel_transform(low)
+    Minv = np.linalg.inv(M)
+    mx = (ca.x + cb.x) / 2
+    cx, cy = ca.x, ca.y
+    R = 0.031
+    rg = np.random.default_rng(7)
+    dents = [(rg.uniform(-np.pi, np.pi), rg.uniform(0.09, 0.42), rg.uniform(0.004, 0.009), rg.uniform(0.00025, 0.0005))
+             for _ in range(10)]
+    scratches = [(rg.uniform(-np.pi, np.pi), rg.uniform(0.08, 0.36), rg.uniform(0.03, 0.08), rg.uniform(-0.08, 0.08))
+                 for _ in range(7)]
+    SEAM = np.radians(60)   # на первом стволе — сверху снаружи; на втором (поворот ≈ -99°) — сбоку снизу
 
     def fn(co, nr):
-        # раковины: мелкие ямки гуще к дулу и снизу (там конденсат), до 0.25 мм
-        dens = 0.35 + 0.4 * NN.smooth((co[:, 2] - 0.30) / 0.12) + 0.25 * NN.smooth(-co[:, 1] / 0.02)
-        q = NN.vnoise(co * 1100.0, 21)
-        q2 = NN.fbm(co * 300.0, 3, 22)
-        thr = 0.80 - 0.16 * dens
-        d = -0.00025 * np.clip((q - thr) * 6, 0, 1) - 0.00008 * np.clip(q2 - 0.5, 0, 1) * 2
-        cols = np.tile(np.array(lin(HEX["metal"]), np.float32), (len(co), 1))
+        pc = co.copy()
+        b = co[:, 0] < mx
+        pc[b] = (co[b] - T) @ Minv.T
+        nc = nr.copy()
+        nc[b] = nr[b] @ Minv.T
+        dx, dy, z = pc[:, 0] - cx, pc[:, 1] - cy, pc[:, 2]
+        r = np.hypot(dx, dy)
+        th = np.arctan2(dy, dx)
+        outer = (z > 0.075) & (r > 0.024) & (np.abs(nc[:, 2]) < 0.5)
+        u = th * R
+        d = np.zeros(len(co))
+        rust = np.zeros(len(co))
+        bright = np.zeros(len(co))
+        dent = np.zeros(len(co))
+        for t0, z0, rr, dp in dents:
+            du = np.angle(np.exp(1j * (th - t0))) * R
+            g = np.exp(-((du ** 2 + (z - z0) ** 2) / rr ** 2))
+            d -= dp * g
+            dent = np.maximum(dent, g)
+            rim = np.exp(-((np.sqrt(du ** 2 + (z - z0) ** 2) - rr * 1.1) / (rr * 0.25)) ** 2)
+            bright = np.maximum(bright, rim * 0.15)
+        # раковины: ячейки ~2.2 мм, гуще у дула (z > 0.34), снизу (θ ≈ -90°) и в вмятинах
+        bottom = np.exp(-(np.angle(np.exp(1j * (th + np.pi / 2))) / 0.9) ** 2)
+        dens = 0.06 + 0.42 * NN.smooth((z - 0.36) / 0.06) + 0.22 * bottom + 0.35 * dent   # реже: россыпь читалась краской
+        # круглые раковины: ячейки 2.2 мм, в каждой — чаша со случайным центром и радиусом 0.5-1.2 мм,
+        # есть она или нет — по плотности (первый вариант на value noise давал квадратные пятна)
+        cell = 0.0022
+        gu, gz = np.floor(u / cell).astype(np.int64), np.floor(z / cell).astype(np.int64)
+        pit = np.zeros(len(co))
+
+        def h(a, b, k):
+            x = (a * 73856093) ^ (b * 19349663) ^ (k * 83492791)
+            x = (x ^ (x >> 13)) * 1274126177
+            return ((x ^ (x >> 16)) & 0xFFFF).astype(np.float64) / 65535
+
+        for oa in (-1, 0, 1):
+            for ob_ in (-1, 0, 1):
+                ca_, cb_ = gu + oa, gz + ob_
+                pu = (ca_ + h(ca_, cb_, 1)) * cell
+                pz = (cb_ + h(ca_, cb_, 2)) * cell
+                rad = 0.0005 + 0.0007 * h(ca_, cb_, 3)
+                on = h(ca_, cb_, 4) < dens
+                dist = np.hypot(u - pu, z - pz) / rad
+                bowl = np.clip(1 - dist ** 2, 0, 1) ** 0.8 * on
+                pit = np.maximum(pit, bowl * (0.6 + 0.4 * h(ca_, cb_, 5)))
+        d -= 0.00038 * pit
+        rust = np.maximum(rust, pit)
+        rust = np.maximum(rust, dent * 0.35)
+        # сварной шов: валик Ø ~2 мм с чешуйками через 2.5 мм
+        dus = np.angle(np.exp(1j * (th - SEAM))) * R
+        zs = NN.smooth((z - 0.078) / 0.004) * NN.smooth((0.432 - z) / 0.004)
+        ripple = 1 + 0.3 * np.sin(z * 2 * np.pi / 0.0025)
+        bead = np.exp(-(dus / 0.0011) ** 2) * ripple * zs
+        d += 0.00035 * bead
+        bright = np.maximum(bright, np.exp(-(dus / 0.0005) ** 2) * zs * 0.8)
+        rust = np.maximum(rust, np.exp(-((np.abs(dus) - 0.0016) / 0.0006) ** 2) * zs * 0.5)   # окалина у шва
+        # продольные царапины
+        for t0, z0, ln, sl in scratches:
+            du = np.angle(np.exp(1j * (th - t0))) * R - sl * (z - z0)
+            inz = NN.smooth((z - z0) / 0.006) * NN.smooth((z0 + ln - z) / 0.006)
+            g = np.exp(-(du / 0.0006) ** 2) * inz
+            d -= 0.00016 * g
+            bright = np.maximum(bright, g)
+        d *= outer
+        rust *= outer
+        bright *= outer
+        dent *= outer
+        cols = np.stack([rust, bright, dent], -1).astype(np.float32)
         return d, cols, np.full(len(co), IDS["metal"])
     cols, ids = displace(ob, fn)
     set_attrs_np(ob.data, cols, ids)
@@ -1293,7 +1405,8 @@ LOOKS = {
                ("under", (-0.12, -0.25, 0.30), (0, -0.04, 0.32), 50),
                ("knot", (0.12, -0.04, 0.24), (0.02, -0.04, 0.24), 50),
                ("sleeve", (0.10, 0.12, 0.05), (0.0, 0.0, 0.18), 50),
-               ("cap", (0.0, -0.04, 0.60), (0.0, -0.04, 0.42), 50)],
+               ("cap", (0.0, -0.04, 0.60), (0.0, -0.04, 0.42), 50),
+               ("tubes", (0.16, 0.06, 0.36), (0.0, 0.0, 0.30), 50)],
     "main": [("lever", (0.10, 0.10, 0.10), (0.09, -0.04, -0.054), 50),
              ("bar", (0.0, 0.03, -0.20), (0.0, 0.0, -0.05), 50),
              ("top", (0.0, 0.12, -0.12), (0.0, -0.02, -0.06), 50)],

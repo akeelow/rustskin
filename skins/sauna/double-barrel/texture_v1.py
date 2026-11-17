@@ -232,7 +232,7 @@ def steam_and_soot(col, gloss, spec, P, part, seed, tubes=None, metal=None):
     if metal is not None:   # v1.5: минеральные потёки — только на железе (на торце цевья выходила белая плашка)
         m = m * metal
     if tubes is not None:   # на общих островах стволов потёки по x/y повернулись бы — только пятна
-        m = m * (1 - tubes) + np.clip(blot * 0.45, 0, 1) * tubes
+        m = m * (1 - tubes)   # v1.7: на трубах ни потёков, ни пятен — их облик даёт смоделированный рельеф
     col = col * (1 - m[..., None] * 0.55) + MINERAL * m[..., None] * 0.55
     gloss = gloss * (1 - 0.5 * m)
     return col, gloss, spec
@@ -273,7 +273,10 @@ def make(part):
         # (screenshots/ingame_v1.1_fp_inspect.webp). На трубах AO — только мягкий общий, без направленных полос.
         tb = island_mask("barrel", {1, 2, 17, 18}, S)
         ao_o = ao_o * (1 - tb) + np.maximum(ao_o, 0.92) * tb
-        ao_b = ao_b * (1 - tb) + np.maximum(ao_b, 0.88) * tb
+        # v1.7: мелкое (ямки, вмятины, шов) оставляем — оно одинаково у обеих копий; крупное — мягкое
+        ao_lo = blur(ao_b, 12)
+        ao_hp = np.clip(ao_b / np.maximum(ao_lo, 1e-3), 0, 1)
+        ao_b = ao_b * (1 - tb) + np.maximum(ao_lo, 0.9) * ao_hp * tb
     cav = np.clip((1 - ao_o) * 1.6 + (1 - ao_b) * 0.8, 0, 1)
     edge = np.clip(blur(curvature(nrm_o), 1) * 18, 0, 1)
 
@@ -306,6 +309,27 @@ def make(part):
     col = np.where(nail, col * (1 - 0.6 * rn) + RUST * 0.6 * rn, col)
 
     col = np.where(metal[..., None], col_i, col)
+    if part == "barrel":
+        # v1.7: трубы стволов — цвет из геометрии (маски в цвете вершин high-poly: R ржавчина в ямках и вмятинах,
+        # G светлый металл на царапинах и гребне шва). Положение второго ствола переводится в систему первого
+        # (bake/barrel_copy.json), чтобы тон и копоть совпали. В v1-v1.6 здесь были нарисованные шумом пятна.
+        import json
+        bt = json.load(open(os.path.join(B, "barrel_copy.json")))
+        Mi = np.linalg.inv(np.array(bt["M"]))
+        Pc = np.where((P[..., 0] < bt["mx"])[..., None], (P - np.array(bt["T"])) @ Mi.T, P)
+        tt = (island_mask("barrel", {1, 17, 18}, S) * (ids == IDS["metal"]))[..., None]   # не по коре и бечёвке манжет
+        mk = np.clip(col_b, 0, 1) ** 2.2
+        rm, bm = mk[..., 0:1], mk[..., 1:2]
+        tone = (0.9 + 0.2 * fbm(Pc * 25, 3, 81))[..., None]
+        tcol = IRON * tone
+        rv = fbm(Pc * 500, 2, 82)[..., None]
+        rcol = hexc("3E1E10") * (1 - rv * 0.5) + RUST * rv * 0.5   # ямки — тёмно-бурые, чтобы читались углублением
+        tcol = tcol * (1 - rm * 0.85) + rcol * rm * 0.85
+        tcol = tcol * (1 - bm * 0.6) + (EDGE * 1.35) * bm * 0.6
+        col = col * (1 - tt) + tcol * tt
+        tube_sg = (tt[..., 0], 0.30 + 0.18 * bm[..., 0] - 0.2 * rm[..., 0], 0.30 + 0.15 * bm[..., 0] - 0.22 * rm[..., 0])
+    else:
+        tube_sg = None
     spec = np.full((S, S), 0.17, np.float32)
     gloss = np.full((S, S), 0.2, np.float32)
     table = {"wood": (0.18, 0.20), "fore": (0.18, 0.26), "burn": (0.14, 0.10), "bark": (0.19, 0.15),
@@ -318,6 +342,10 @@ def make(part):
     gloss = np.where(wood, gloss + 0.22 * gz, gloss)
     spec = np.where(metal, spec_i, spec)
     gloss = np.where(metal, gloss_i, gloss)
+    if tube_sg is not None:
+        tw, tsp, tgl = tube_sg
+        spec = spec * (1 - tw) + tsp * tw
+        gloss = gloss * (1 - tw) + tgl * tw
     col, gloss, spec = steam_and_soot(col, gloss, spec, P, part, seed + 20, tubes, metal.astype(np.float32))
 
     # --- v1.3: в прицеле всё было одного тёмного железа (screenshots/ingame_v1.2_aim_*). Разные металлы
@@ -358,7 +386,10 @@ def make(part):
     n = nrm_b.copy()
     if part == "barrel":
         tubes = island_mask("barrel", {1, 2, 17, 18}, S)[..., None]
-        n_metal = whiteout(nrm_o, nrm_b) * tubes + nrm_o * (1 - tubes)
+        flat = np.zeros_like(nrm_o)
+        flat[..., :] = (0.5, 0.5, 1.0)
+        nrm_o_soft = flat * 0.65 + nrm_o * 0.35   # v1.7: точки и пятна оригинала на трубах ослаблены
+        n_metal = whiteout(nrm_o_soft, nrm_b) * tubes + nrm_o * (1 - tubes)
     else:
         n_metal = nrm_o
     n = np.where(metal[..., None], n_metal, n)
