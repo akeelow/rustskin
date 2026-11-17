@@ -23,7 +23,7 @@ sys.path.insert(0, str(HERE))
 import layout as L  # noqa: E402
 
 BAKE, OUT = HERE / "bake", HERE / "export"
-VERSION = "v2"
+VERSION = "v3"
 EMIT_GAIN = 1.0
 
 
@@ -174,8 +174,10 @@ def main():
     for hy, _ in L.HOOPS:
         below = hy - L.HOOP_W / 2 - y
         length = 0.02 + 0.24 * sstep(0.45, 0.9, vnoise(x * 11, x * 0 + hy * 9, z * 11, 6)) ** 2
-        drip = sstep(0.42, 0.54, fbm(x * 30, y * 1.6, z * 30, 3, 21))       # v2: потёки шире и реже, длина разная
-        lime = np.maximum(lime, (below > -0.006) * np.exp(-np.clip(below, 0, None) / length) * drip * sstep(0.18, 0.42, streak_w))
+        dn = np.clip(below, 0, None) / length
+        # v3: потёк сужается книзу (в игре v2 читались ровными белыми «зубцами»)
+        drip = sstep(0.46 + 0.07 * dn, 0.56 + 0.07 * dn, fbm(x * 42, y * 1.6, z * 42, 3, 21))
+        lime = np.maximum(lime, (below > -0.006) * np.exp(-dn) * drip * sstep(0.18, 0.42, streak_w))
     lime = np.maximum(lime, 0.5 * sstep(0.004, 0.03, rivet_halo) * sstep(0.58, 0.74, streak) * 0.6)
     py, pt = L.PLUG[1], L.PLUG[0]
     drop = np.clip(py - 0.02 - y, 0, None)
@@ -188,14 +190,15 @@ def main():
     # ---------------- железо: бак, обручи, клёпки, рамка, основание
     tank = is_("tank")
     # v2: темнее и контрастнее (в игре v1 был ровный светло-серый), чистый металл блестит пятнами
-    c = IRON * (0.70 + 0.42 * tr[:, None]) * (0.74 + 0.45 * blot[:, None])
+    c = IRON * (0.62 + 0.40 * tr[:, None]) * (0.70 + 0.45 * blot[:, None])
     c = mix(c, IRON_DK, sstep(0.55, 0.25, ao) * 0.6)
     c = mix(c, RUST_DK, rust * 0.8)
     c = mix(c, RUST, rust * sstep(0.40, 0.8, fine) * 0.8)
     c = mix(c, STEEL, sstep(0.25, 0.7, curv) * 0.45)
     col[tank] = c[tank]
-    spec[tank] = (85 - 45 * rust)[tank]
-    gloss[tank] = (150 - 110 * rust - 30 * (1 - blot))[tank]
+    # v3: spec ниже (у оригинала в среднем 48): в игре v2 отражение неба делало бак светло-серым
+    spec[tank] = (52 - 22 * rust)[tank]
+    gloss[tank] = (110 - 75 * rust - 25 * (1 - blot))[tank]
     bump[tank] = (-0.5 * rust * fine)[tank]
 
     hoop = is_("hoop")
@@ -205,14 +208,14 @@ def main():
     c = mix(c, RUST, hrust * sstep(0.5, 0.8, fine) * 0.6)
     c = mix(c, STEEL, sstep(0.15, 0.6, curv) * 0.55)
     col[hoop] = c[hoop]
-    spec[hoop] = (100 - 50 * hrust)[hoop]
-    gloss[hoop] = (130 - 90 * hrust)[hoop]
+    spec[hoop] = (60 - 28 * hrust)[hoop]
+    gloss[hoop] = (105 - 70 * hrust)[hoop]
 
     riv = is_("rivet")
     c = mix(IRON * 0.95, STEEL, sstep(0.0, 0.6, curv) * (0.35 + 0.5 * tr))
     c = mix(c, RUST, sstep(0.55, 0.9, 1 - ao) * 0.8)
     col[riv] = c[riv]
-    spec[riv], gloss[riv] = 110, 105
+    spec[riv], gloss[riv] = 70, 95
 
     frame = is_("frame")
     c = mix(IRON_DK * 0.8, RUST_DK, rust * 0.35)
@@ -234,7 +237,7 @@ def main():
     # накипь поверх железа: матовая корка, по краю светлее
     lt = np.where(iron & ~frame, lime, 0) * np.where(drum, 0.45, 1.0)   # v2: на поясе у реек накипь пятнами, не коркой
     scale_c = mix(np.broadcast_to(SCALE_DK, (n, 3)), SCALE, sstep(0.35, 0.9, lt * (0.6 + 0.6 * fine)))
-    col = mix(col, scale_c, np.clip(lt * 1.1, 0, 0.9))
+    col = mix(col, scale_c, np.clip(lt * 0.9, 0, 0.72))   # v3: полупрозрачная корка, не краска
     spec = spec * (1 - lt) + 48 * lt
     gloss = gloss * (1 - lt) + 12 * lt
     bump += 0.5 * lt * fine
@@ -246,7 +249,7 @@ def main():
     # ---------------- ограждение: рейки, гвозди, проволока
     slat = is_("slat")
     heat = sstep(0.50, 0.10, front) * sstep(0.26, 0.46, y)                 # жар из топки на верхние рейки
-    c = ASPEN * (0.55 + 0.32 * tr[:, None]) * (0.86 + 0.22 * blot[:, None])        # v2: темнее — в игре v1 рейки выгорали добела
+    c = ASPEN * (0.48 + 0.30 * tr[:, None]) * (0.86 + 0.22 * blot[:, None])        # v2: темнее — в игре v1 рейки выгорали добела
     c = mix(c, hexc("A8977C") * (0.8 + 0.3 * tr[:, None]), sstep(0.55, 0.9, vnoise(tr * 40, tr * 0, tr * 0, 8)))   # серые, выветренные
     c = c * (0.70 + 0.50 * grain[:, None])
     wet = sstep(0.19, 0.03, y + 0.07 * (streak_w - 0.5))
@@ -267,7 +270,7 @@ def main():
     col[nail] = mix(IRON_DK * 0.9, RUST, sstep(0.3, 0.8, fine) * 0.55)[nail]
     spec[nail], gloss[nail] = 85, 70
     wire = is_("wire")
-    col[wire] = mix(mix(RUST_DK * 0.8 * np.ones((n, 1)), RUST, sstep(0.45, 0.75, fine) * 0.8), STEEL, sstep(0.3, 0.7, curv) * 0.35)[wire]
+    col[wire] = mix(mix(RUST * 0.95 * np.ones((n, 1)), hexc("B0603A"), sstep(0.4, 0.75, fine) * 0.7), STEEL, sstep(0.3, 0.7, curv) * 0.3)[wire]   # v3: светлая рыжая — тёмная читалась щелью
     spec[wire], gloss[wire] = 75, 50
 
     # ---------------- топка
