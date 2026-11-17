@@ -1,6 +1,6 @@
 # Sauna Boiler — публикация в Workshop
 
-> Подготовлено 17.11.2026 для **v1** (`Furnace_v1_*`). **В игре не проверено** — сначала пройти список
+> Подготовлено 17.11.2026 для **v2** (`Furnace_v2_*`). **В игре не проверено** — сначала пройти список
 > «Что проверить в игре» в [../README.md](../README.md). Публикует пользователь из игрового редактора.
 
 ## Название и описание (англ.)
@@ -27,11 +27,11 @@ Part of the Sauna set.
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `../export/Furnace_v1_diffuse.png` · Color 255/255/255 · Alpha Cutoff 0.00 |
-| Normal | `../export/Furnace_v1_normal.png` · Normal Scale 1.00 |
-| Specular/Gloss | `../export/Furnace_v1_specgloss.png` · Spec Color 255/255/255 · Glossiness 1.00 |
-| Occlusion | `../export/Furnace_v1_occlusion.png` · Occlusion Scale 0.65 |
-| Emission | `../export/Furnace_v1_emission.png` · **Emission Color 255/255/255** (по умолчанию 255/107/36 — сменить) |
+| Diffuse | `../export/Furnace_v2_diffuse.png` · Color 255/255/255 · Alpha Cutoff 0.00 |
+| Normal | `../export/Furnace_v2_normal.png` · Normal Scale 1.00 |
+| Specular/Gloss | `../export/Furnace_v2_specgloss.png` · Spec Color 255/255/255 · Glossiness 1.00 |
+| Occlusion | `../export/Furnace_v2_occlusion.png` · Occlusion Scale 0.65 |
+| Emission | `../export/Furnace_v2_emission.png` · **Emission Color 255/255/255** (по умолчанию 255/107/36 — сменить) |
 | Detail-слоты | по умолчанию |
 
 Иконку генерирует редактор при Publish — не заменять.
@@ -57,7 +57,7 @@ Part of the Sauna set.
 
 ## Чек-лист публикации
 
-- [ ] v1 проверен в игре, замечания исправлены (или записаны как известные).
+- [ ] v2 проверен в игре, замечания исправлены (или записаны как известные).
 - [ ] Emission Color = 255/255/255.
 - [ ] Title `Sauna Boiler`, описание выше.
 - [ ] Кадры из игры загружены в порядке таблицы.

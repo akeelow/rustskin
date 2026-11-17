@@ -375,9 +375,9 @@ def build_shell(low, reg, mats, info):
 
     rng = random.Random(11)
     dents = []
-    for _ in range(16):
+    for _ in range(46):                               # v2: больше и глубже — кованые вмятины как на референсе
         yy = rng.uniform(0.62, 1.45)
-        dents.append((rng.uniform(-math.pi, math.pi), yy, rng.uniform(0.035, 0.085), rng.uniform(0.004, 0.009)))
+        dents.append((rng.uniform(-math.pi, math.pi), yy, rng.uniform(0.03, 0.08), rng.uniform(0.005, 0.012)))
     plate_rand = {}
     tone = np.zeros((nv, 4), np.float32)
     tone[:, 3] = 1.0
@@ -403,7 +403,7 @@ def build_shell(low, reg, mats, info):
                 q = (ang_diff(ti, dt) * rr) ** 2 + (yi - dy) ** 2
                 if q < (2.2 * dr) ** 2:
                     d -= dd * math.exp(-q / (2 * (dr * 0.6) ** 2))
-            d += 0.0016 * noise.noise(p * 7.0) + 0.0005 * noise.noise(p * 38.0)
+            d += 0.0026 * noise.noise(p * 7.0) + 0.0011 * noise.noise(p * 19.0) + 0.0005 * noise.noise(p * 38.0)
         if near[i] and not lip[i]:
             if dist[i] < 0.06:
                 h = smoothstep(0.006, 0.011, dist[i]) * (1 - smoothstep(0.050, 0.055, dist[i]))
@@ -634,22 +634,23 @@ def build_slats(hp, S, info, rng):
                             v.co.x *= 1.2
                         hp.add("nail", b, M, tone=rng.random())
             t = a1
-    # проволока: две нитки поверх реек со скруткой
-    for wi, wy in enumerate((L.WIRE_Y, L.WIRE_Y + 0.012)):
+    # проволока: две нитки поверх реек со скруткой, внизу ещё виток (v2: толще — в игре v1 не читалась)
+    for wbase, tw in ((L.WIRE_Y, 95), (L.WIRE_Y2, 250)):
+        for wi, wy in enumerate((wbase, wbase + 0.013)):
+            pts = []
+            for i in range(260):
+                th = 2 * math.pi * i / 260
+                yy = wy + 0.006 * math.sin(th * 3 + wi * 2.0 + wbase * 9) + 0.002 * noise.noise(Vector((th * 5, wi * 3.0, wbase * 7)))
+                p, nn = S.at(th, yy)
+                pts.append(p + nn * 0.0195)
+            hp.add("wire", tube(pts, 0.0045, 6, closed=True), tone=0.3 + 0.4 * wi)
+        th = math.radians(tw)
+        p, nn = S.at(th, wbase)
         pts = []
-        for i in range(260):
-            th = 2 * math.pi * i / 260
-            yy = wy + 0.005 * math.sin(th * 3 + wi * 2.0) + 0.002 * noise.noise(Vector((th * 5, wi * 3.0, 0)))
-            p, nn = S.at(th, yy)
-            pts.append(p + nn * 0.0165)
-        hp.add("wire", tube(pts, 0.0032, 6, closed=True), tone=0.3 + 0.4 * wi)
-    th = math.radians(95)
-    p, nn = S.at(th, L.WIRE_Y)
-    pts = []
-    for i in range(26):                                   # скрутка: спираль из двух концов
-        a = i * 0.9
-        pts.append(p + nn * (0.019 + 0.0035 * math.cos(a)) + et(th) * (0.0035 * math.sin(a)) + Vector((0, 0.005 - i * 0.0022, 0)))
-    hp.add("wire", tube(pts, 0.0028, 6), tone=0.5)
+        for i in range(26):                               # скрутка: спираль из двух концов
+            a = i * 0.9
+            pts.append(p + nn * (0.023 + 0.004 * math.cos(a)) + et(th) * (0.004 * math.sin(a)) + Vector((0, 0.006 - i * 0.0024, 0)))
+        hp.add("wire", tube(pts, 0.0036, 6), tone=0.5)
     info["boards"] = boards
 
 

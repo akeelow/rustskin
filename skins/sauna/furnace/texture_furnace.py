@@ -23,7 +23,7 @@ sys.path.insert(0, str(HERE))
 import layout as L  # noqa: E402
 
 BAKE, OUT = HERE / "bake", HERE / "export"
-VERSION = "v1"
+VERSION = "v2"
 EMIT_GAIN = 1.0
 
 
@@ -37,7 +37,7 @@ ASPEN, STEAMED, CHARWOOD = hexc("C2A77E"), hexc("7A5A3C"), hexc("45332A")
 BASALT, CORE, AMBER = hexc("3D3E41"), hexc("FF6A1F"), hexc("FFB347")
 LINEN, STRIPE, BIRCH, RUST = hexc("CFC6B4"), hexc("8E3A30"), hexc("E3DDCF"), hexc("8C4A26")
 IRON, IRON_DK, STEEL = hexc("403C39"), hexc("282524"), hexc("7C766F")
-RUST_DK, SCALE, SCALE_DK = hexc("5A2E1B"), hexc("CFC6B4"), hexc("8F887C")
+RUST_DK, SCALE, SCALE_DK = hexc("5A2E1B"), hexc("CBCDBD"), hexc("8A8A7C")   # v2: накипь с зеленцой, как на референсе
 SOOT, ASH, ASH_LT = hexc("120E0C"), hexc("4C4946"), hexc("9A948A")
 
 
@@ -163,8 +163,8 @@ def main():
     front = dth(oc)
     # копоть: веер вверх от проёма, по кромке проёма, вокруг отверстия в крышке
     up = np.clip(y - op["y1"] + 0.04, 0, None)
-    soot = np.exp(-up / 0.15) * sstep(ow + 0.07 + up * 0.5, ow * 0.5, front) * (y > op["y0"])
-    soot = np.clip(soot * (0.55 + 0.9 * streak_w) + 0.4 * sstep(0.09, 0.01, np.hypot(front - 0, y - (op["y0"] + op["y1"]) / 2) - ow), 0, 1)
+    soot = np.exp(-up / 0.22) * sstep(ow + 0.10 + up * 0.5, ow * 0.4, front) * (y > op["y0"])   # v2: в игре v1 копоть почти не читалась
+    soot = np.clip(soot * (0.75 + 0.7 * streak_w) + 0.55 * sstep(0.09, 0.01, np.hypot(front - 0, y - (op["y0"] + op["y1"]) / 2) - ow), 0, 1)
     top = y > 1.535
     soot_top = sstep(0.17, 0.05, r) * top
     soot = np.clip(np.maximum(soot, soot_top * (0.6 + 0.5 * blot)), 0, 1)
@@ -173,35 +173,40 @@ def main():
     lime = np.zeros(n, np.float32)
     for hy, _ in L.HOOPS:
         below = hy - L.HOOP_W / 2 - y
-        length = 0.025 + 0.20 * sstep(0.55, 0.85, vnoise(x * 7, x * 0 + hy * 9, z * 7, 6))
-        lime = np.maximum(lime, (below > -0.004) * np.exp(-np.clip(below, 0, None) / length) * sstep(0.50, 0.68, streak) * sstep(0.32, 0.58, streak_w))
+        length = 0.02 + 0.24 * sstep(0.45, 0.9, vnoise(x * 11, x * 0 + hy * 9, z * 11, 6)) ** 2
+        drip = sstep(0.42, 0.54, fbm(x * 30, y * 1.6, z * 30, 3, 21))       # v2: потёки шире и реже, длина разная
+        lime = np.maximum(lime, (below > -0.006) * np.exp(-np.clip(below, 0, None) / length) * drip * sstep(0.18, 0.42, streak_w))
     lime = np.maximum(lime, 0.5 * sstep(0.004, 0.03, rivet_halo) * sstep(0.58, 0.74, streak) * 0.6)
     py, pt = L.PLUG[1], L.PLUG[0]
     drop = np.clip(py - 0.02 - y, 0, None)
     plug_run = (y < py - 0.015) * sstep(0.022 + drop * 0.20, 0.004, dth(pt) * (1 + 0.6 * (streak - 0.5))) * np.exp(-drop / 0.45)
-    lime = np.clip(np.maximum(lime, plug_run * (0.55 + 0.6 * streak)) + 0.16 * sstep(0.62, 0.8, blot) * (y > 0.6), 0, 1)
+    lime = np.clip(np.maximum(lime, plug_run * (0.55 + 0.6 * streak)) + 0.10 * sstep(0.62, 0.8, blot) * (y > 0.6), 0, 1)
     lime *= (1 - soot) ** 2
 
-    rust = sstep(0.50, 0.70, 0.55 * blot + 0.25 * fine + 0.35 * (1 - ao) + 0.30 * np.clip(-curv, 0, 1))
+    rust = sstep(0.46, 0.68, 0.55 * blot + 0.25 * fine + 0.40 * (1 - ao) + 0.35 * np.clip(-curv, 0, 1))
 
     # ---------------- железо: бак, обручи, клёпки, рамка, основание
     tank = is_("tank")
-    c = IRON * (0.78 + 0.5 * tr[:, None]) * (0.85 + 0.3 * blot[:, None])
-    c = mix(c, RUST_DK, rust * 0.75)
-    c = mix(c, RUST, rust * sstep(0.45, 0.8, fine) * 0.7)
-    c = mix(c, STEEL, sstep(0.25, 0.7, curv) * 0.35)
+    # v2: темнее и контрастнее (в игре v1 был ровный светло-серый), чистый металл блестит пятнами
+    c = IRON * (0.70 + 0.42 * tr[:, None]) * (0.74 + 0.45 * blot[:, None])
+    c = mix(c, IRON_DK, sstep(0.55, 0.25, ao) * 0.6)
+    c = mix(c, RUST_DK, rust * 0.8)
+    c = mix(c, RUST, rust * sstep(0.40, 0.8, fine) * 0.8)
+    c = mix(c, STEEL, sstep(0.25, 0.7, curv) * 0.45)
     col[tank] = c[tank]
-    spec[tank] = (95 - 50 * rust)[tank]
-    gloss[tank] = (92 - 62 * rust)[tank]
+    spec[tank] = (85 - 45 * rust)[tank]
+    gloss[tank] = (150 - 110 * rust - 30 * (1 - blot))[tank]
     bump[tank] = (-0.5 * rust * fine)[tank]
 
     hoop = is_("hoop")
     c = IRON_DK * (0.85 + 0.4 * tr[:, None]) * (0.8 + 0.4 * blot[:, None])
-    c = mix(c, RUST_DK, rust * 0.6)
-    c = mix(c, STEEL, sstep(0.15, 0.6, curv) * 0.6)
+    hrust = np.clip(rust + 0.45 * sstep(0.62, 0.8, fbm(x * 25, y * 60, z * 25, 3, 22)), 0, 1)
+    c = mix(c, RUST_DK, hrust * 0.75)
+    c = mix(c, RUST, hrust * sstep(0.5, 0.8, fine) * 0.6)
+    c = mix(c, STEEL, sstep(0.15, 0.6, curv) * 0.55)
     col[hoop] = c[hoop]
-    spec[hoop] = (105 - 50 * rust)[hoop]
-    gloss[hoop] = (100 - 60 * rust)[hoop]
+    spec[hoop] = (100 - 50 * hrust)[hoop]
+    gloss[hoop] = (130 - 90 * hrust)[hoop]
 
     riv = is_("rivet")
     c = mix(IRON * 0.95, STEEL, sstep(0.0, 0.6, curv) * (0.35 + 0.5 * tr))
@@ -217,7 +222,7 @@ def main():
 
     drum = is_("drum")
     ledge = drum & (y > 0.5)
-    c = mix(IRON_DK * (0.9 + 0.4 * blot[:, None]), RUST_DK, np.clip(rust + 0.35, 0, 1))
+    c = mix(IRON_DK * (0.9 + 0.5 * blot[:, None]), RUST_DK, np.clip(rust + 0.12, 0, 1) * 0.85)
     c = mix(c, RUST, sstep(0.5, 0.8, fine) * 0.3)
     dust = ledge * sstep(0.45, 0.15, front) * (0.5 + 0.5 * fine)          # зола, просыпанная у топки
     c = mix(c, ASH_LT * 0.8, dust * 0.8)
@@ -227,9 +232,9 @@ def main():
 
     iron = tank | hoop | riv | frame | drum
     # накипь поверх железа: матовая корка, по краю светлее
-    lt = np.where(iron & ~frame, lime, 0)
+    lt = np.where(iron & ~frame, lime, 0) * np.where(drum, 0.45, 1.0)   # v2: на поясе у реек накипь пятнами, не коркой
     scale_c = mix(np.broadcast_to(SCALE_DK, (n, 3)), SCALE, sstep(0.35, 0.9, lt * (0.6 + 0.6 * fine)))
-    col = mix(col, scale_c, np.clip(lt * 0.95, 0, 0.85))
+    col = mix(col, scale_c, np.clip(lt * 1.1, 0, 0.9))
     spec = spec * (1 - lt) + 48 * lt
     gloss = gloss * (1 - lt) + 12 * lt
     bump += 0.5 * lt * fine
@@ -241,9 +246,9 @@ def main():
     # ---------------- ограждение: рейки, гвозди, проволока
     slat = is_("slat")
     heat = sstep(0.50, 0.10, front) * sstep(0.26, 0.46, y)                 # жар из топки на верхние рейки
-    c = ASPEN * (0.74 + 0.42 * tr[:, None]) * (0.90 + 0.2 * blot[:, None])
+    c = ASPEN * (0.55 + 0.32 * tr[:, None]) * (0.86 + 0.22 * blot[:, None])        # v2: темнее — в игре v1 рейки выгорали добела
     c = mix(c, hexc("A8977C") * (0.8 + 0.3 * tr[:, None]), sstep(0.55, 0.9, vnoise(tr * 40, tr * 0, tr * 0, 8)))   # серые, выветренные
-    c = c * (0.78 + 0.40 * grain[:, None])
+    c = c * (0.70 + 0.50 * grain[:, None])
     wet = sstep(0.19, 0.03, y + 0.07 * (streak_w - 0.5))
     c = mix(c, STEAMED * (0.85 + 0.3 * grain[:, None]), np.clip(wet * 0.9 + 0.25 * sstep(0.5, 0.8, streak_w) * (y < 0.3), 0, 1))
     c = mix(c, CHARWOOD, np.clip(heat * (0.6 + 0.6 * blot) + 0.5 * sstep(0.6, 1.0, 1 - ao), 0, 0.9))
@@ -262,7 +267,7 @@ def main():
     col[nail] = mix(IRON_DK * 0.9, RUST, sstep(0.3, 0.8, fine) * 0.55)[nail]
     spec[nail], gloss[nail] = 85, 70
     wire = is_("wire")
-    col[wire] = mix(mix(RUST_DK * np.ones((n, 1)), RUST, sstep(0.35, 0.7, fine)), STEEL, sstep(0.3, 0.7, curv) * 0.5)[wire]
+    col[wire] = mix(mix(RUST_DK * 0.8 * np.ones((n, 1)), RUST, sstep(0.45, 0.75, fine) * 0.8), STEEL, sstep(0.3, 0.7, curv) * 0.35)[wire]
     spec[wire], gloss[wire] = 75, 50
 
     # ---------------- топка
@@ -350,7 +355,7 @@ def main():
     bump[rag] = (0.5 * (weave - 0.5))[rag]
 
     # грязь в щелях для всего, кроме топки
-    dirt = sstep(0.7, 0.25, ao) * 0.45
+    dirt = sstep(0.75, 0.25, ao) * 0.6
     outside = ~(wall | ash | emb | bark | end)
     col = np.where(outside[:, None], col * (1 - dirt[:, None]) + SOOT * 1.5 * dirt[:, None], col)
 
