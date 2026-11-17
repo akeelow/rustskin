@@ -411,6 +411,7 @@ def end_grain(low, pred, name, center, ident="fore", seed=51, cracks=((0.6, 0.02
     v1.5 - передний торец цевья; v1.6 - все торцы: задние торцы цевья, затыльник приклада, торец рукояти GRIP
     (до этого на затыльник легли продольные волокна, остальные были заливкой)."""
     ob = copy_faces(low, pred, name)
+    src = src_polys(low, pred)
     if not ob.data.polygons:
         print("end_grain: no faces for", name, flush=True)
         return ob
@@ -421,7 +422,8 @@ def end_grain(low, pred, name, center, ident="fore", seed=51, cracks=((0.6, 0.02
     a = Vector((1, 0, 0)) if abs(N0.x) < 0.9 else Vector((0, 1, 0))
     U = N0.cross(a).normalized()
     W = N0.cross(U)
-    subdivided(ob, level)
+    rounded(ob, low, 2, src)
+    subdivided(ob, max(level - 2, 1))
     for p in ob.data.polygons:
         p.use_smooth = True
     C = np.array(center)
@@ -468,7 +470,8 @@ def fore_cap(low):
 def grain_copy(low, pred, name, ident, seed=31):
     """Продольное дерево: копия граней, подразделена, волокна вдоль z рельефом и цветом."""
     ob = copy_faces(low, pred, name)
-    subdivided(ob, 3)
+    rounded(ob, low, 2, src_polys(low, pred))
+    subdivided(ob, 1)
     for p in ob.data.polygons:
         p.use_smooth = True
     cw, cd = np.array(lin(HEX["wood"])), np.array(lin(HEX["wood_dark"]))
@@ -512,7 +515,7 @@ def fore_end(low, rng):
     hp.append(fore_cap(low))
     hp += barrel_sleeves(low, rng)
 
-    bvh = bvh_of(low, FORE)
+    bvh = round_bvh(low, lambda i, c, n: i in FORE)
     isl = low["isl"]
     fore_v = {v for p in low.data.polygons if isl[p.index] in FORE for v in p.vertices}
     fv = [low.data.vertices[v].co.copy() for v in fore_v]
@@ -693,8 +696,13 @@ def barrel_sleeves(low, rng):
     M, T, ca, cb, A = barrel_transform(low)
     mx = (ca.x + cb.x) / 2
 
-    pa = [p for p in low.data.polygons if isl[p.index] in OUTER and p.center.x > 0]
-    bvh = BVHTree.FromPolygons([v.co.copy() for v in low.data.vertices], [list(p.vertices) for p in pa])
+    # v1.9: манжеты ложатся на скруглённую трубу (на гранёной low-poly они выходили многоугольными)
+    pr_ = lambda i, c, n: i in OUTER and c.x > 0
+    proxy = copy_faces(low, pr_, "proxy_round_tube")
+    even_mesh(proxy, 0.004)
+    rounded(proxy, low, 1, src_polys(low, pr_))
+    bvh = join_bvh([proxy])
+    bpy.data.objects.remove(proxy)
     ax = Axis(A, (0, 0, 1), (1, 0, 0)).refine(bvh)
     TH = 0.0009
     # второй ствол — копия первого, повёрнутая ≈ на -99° вокруг оси z (не зеркало: см. лог). Стык коры
@@ -844,6 +852,87 @@ def even_mesh(ob, max_edge):
     bm.free()
 
 
+_PH = {}
+
+
+def src_polys(low, pred):
+    """Индексы граней low-poly, из которых сделана копия (pred(остров, центр, нормаль))."""
+    isl = low["isl"]
+    return [p.index for p in low.data.polygons if pred(isl[p.index], p.center, p.normal)]
+
+
+def phong_smooth(ob, low, src, alpha=1.0):
+    """Скругление Phong: каждая точка копии переносится на гладкую поверхность, которую задают вершины low-poly
+    и их собственные сглаженные нормали (vn из OBJ) — ту самую форму, которую игра показывает сглаживанием.
+    Проходит через вершины оригинала и наружу не выпирает (Catmull-Clark уводил внутрь: углы граней торчали
+    сквозь обмотку)."""
+    # v1.9: ближайший треугольник ищется только среди граней, из которых сделана копия. Первая сборка v1.9 искала
+    # по всей части — точки цевья липли к стволам, шейки к соседним деталям: дыры в бересте и полотенце
+    key = (low.name, len(src), sum(src[:50]), sum(src[-50:]))
+    if key not in _PH:
+        me = low.data
+        verts = [v.co.copy() for v in me.vertices]
+        cn_all = [c.vector.copy() for c in me.corner_normals]
+        polys, loops = [], []
+        for k in src:
+            p = me.polygons[k]
+            polys.append(list(p.vertices))
+            loops.append(list(p.loop_indices))
+        _PH[key] = (BVHTree.FromPolygons(verts, polys), verts, polys, cn_all, loops)
+    bvh, verts, polys, cn, loops = _PH[key]
+    me = ob.data
+    for v in me.vertices:
+        loc, _, idx, _ = bvh.find_nearest(v.co)
+        if loc is None or len(polys[idx]) != 3:
+            continue
+        a, b, c = (verts[k] for k in polys[idx])
+        na, nb, nc = (cn[k] for k in loops[idx])
+        v0, v1, v2 = b - a, c - a, loc - a
+        d00, d01, d11 = v0.dot(v0), v0.dot(v1), v1.dot(v1)
+        d20, d21 = v2.dot(v0), v2.dot(v1)
+        den = d00 * d11 - d01 * d01
+        if abs(den) < 1e-18:
+            continue
+        wb = (d11 * d20 - d01 * d21) / den
+        wc = (d00 * d21 - d01 * d20) / den
+        wa = 1 - wb - wc
+        # Изгиб по рёбрам (как у PN-треугольников): выпуклость ребра i-j = -½·wᵢwⱼ·(Pⱼ−Pᵢ)·(Nᵢ−Nⱼ) вдоль нормали
+        # грани. Длинные рёбра (> 6 см) не изгибаются — по длине труба прямая, а нормали её концов сглажены с
+        # торцами (Phong по ним раздувал поверхность на 7–19 мм). Предел ±1.5 мм.
+        fn_ = (b - a).cross(c - a)
+        if fn_.length < 1e-12:
+            continue
+        fn_.normalize()
+        if fn_.dot(na + nb + nc) < 0:
+            fn_ = -fn_
+        off = 0.0
+        for (pi, ni, wi), (pj, nj, wj) in (((a, na, wa), (b, nb, wb)), ((b, nb, wb), (c, nc, wc)), ((c, nc, wc), (a, na, wa))):
+            e = pj - pi
+            if e.length > 0.06:
+                continue
+            off += -0.5 * wi * wj * e.dot(ni - nj) * 4.0 / 4.0
+        off = max(-0.0015, min(0.0015, off))
+        v.co = loc + fn_ * (off * alpha)
+    me.update()
+
+
+def rounded(ob, low, levels, src):
+    """v1.9: копия без гранёности — подразделить и перенести на гладкую поверхность Phong. В v1.7–v1.8 копия
+    трубы была с плоскими гранями, и гранёность ушла в запечённую нормаль — в игре стволы стали многоугольниками."""
+    if levels > 0:
+        subdivided(ob, levels)
+    phong_smooth(ob, low, src)
+
+
+def round_bvh(low, pred, name="proxy_round"):
+    """BVH скруглённой копии граней (для обмоток и всего, что кладётся на поверхность лучами) — v1.9."""
+    proxy = copy_faces(low, pred, name)
+    rounded(proxy, low, 3, src_polys(low, pred))
+    b = join_bvh([proxy])
+    bpy.data.objects.remove(proxy)
+    return b
+
+
 def pitted_tubes(low, TUBES, rng):
     """v1.7: рельеф труб стволов геометрией, в размерах, которые держит текстура (19 px/см, пиксель ~0.5 мм):
     вмятины 4-9 мм шириной до 0.5 мм глубиной, гнёзда раковин Ø 1.5-2.5 мм (гуще у дула и снизу), сварной шов
@@ -854,8 +943,9 @@ def pitted_tubes(low, TUBES, rng):
     Цвет вершин — маски для texture_v1.py: R — ржавчина (ямки, дно вмятин), G — светлый металл (царапины,
     гребень шва), B — вмятины."""
     ob = copy_polys(low, TUBES, "hp_barrel_tubes")
-    even_mesh(ob, 0.004)
-    subdivided(ob, 2)
+    even_mesh(ob, 0.004)        # v1.9: мелкая сетка, потом на гладкую поверхность, потом ещё мельче
+    rounded(ob, low, 0, src_polys(low, lambda i, c, n: i in TUBES))
+    subdivided(ob, 1)
     for p in ob.data.polygons:
         p.use_smooth = True
     M, T, ca, cb, _ = barrel_transform(low)
@@ -1045,7 +1135,7 @@ def cloth_band(low, faces, name, seed=5.0):
     ob = bpy.data.objects.new(name, me2)
     bpy.context.scene.collection.objects.link(ob)
     even_mesh(ob, 0.003)
-    subdivided(ob, 2)
+    rounded(ob, low, 1, sorted(faces))
     for p in ob.data.polygons:
         p.use_smooth = True
     kd = kdtree.KDTree(len(edge_pts))
@@ -1116,7 +1206,9 @@ def wood_copy(low, name, butt=False, exclude=(), skip=frozenset()):
     """Дерево: копия, подразделена; волокна вдоль приклада, на прикладе — сучок и орнамент."""
     ob = copy_polys_idx(low, lambda p: low["isl"][p.index] not in exclude and p.index not in skip
                         and not (butt and is_butt_end(low["isl"][p.index], p.center, p.normal)), name)
-    subdivided(ob, 3)
+    rounded(ob, low, 2, [p.index for p in low.data.polygons if low["isl"][p.index] not in exclude and p.index not in skip
+                         and not (butt and is_butt_end(low["isl"][p.index], p.center, p.normal))])  # v1.9: без гранёности
+    subdivided(ob, 1)
     knot = Vector(KNOT)
     if butt:
         def inside(c):
@@ -1230,7 +1322,7 @@ def towel_wrap(bvh, ax, s_a, s_b, th0, turns, width, name, seed):
 def stock_details(low, rng):
     """STOCK/GRIP: полотенце на шейке приклада (общая с GRIP форма) + гвоздик на конце."""
     W = {2}
-    bvh = bvh_of(low, W | {3})
+    bvh = round_bvh(low, lambda i, c, n: i in (W | {3}))
     verts = [low.data.vertices[v].co.copy() for p in polys_of(low, W) for v in p.vertices]
     ax = Axis(verts, (0, 0, 1), (1, 0, 0)).refine(bvh)
     ob = towel_wrap(bvh, ax, -0.238, -0.196, math.radians(200), 3.4, 0.021, "hp_towel_wrist", 4.2)
@@ -1249,7 +1341,7 @@ def crossbar_details(low):
     под правую подсунут берёзовый лист — на задней грани (-z), обращённой к глазу; узел с хвостиками там же."""
     BAR = {5, 27}
     verts = [low.data.vertices[v].co.copy() for p in polys_of(low, BAR) for v in p.vertices]
-    bar_bvh = bvh_of(low, BAR)
+    bar_bvh = round_bvh(low, lambda i, c, n: i in BAR)
     ax = Axis(verts, (1, 0, 0), (0, 1, 0), step=0.002).refine(bar_bvh)
     out = []
     # лист на задней грани у правой обмотки (x > 0 — левый бок стрелка; у правой руки лист не на виду)
@@ -1298,7 +1390,7 @@ def lever_details(low, rng):
     H = {8, 31}
     verts = [low.data.vertices[v].co.copy() for p in polys_of(low, H) for v in p.vertices]
     ax = Axis(verts, (1, 0, 0), (0, 1, 0), step=0.002)
-    bvh = bvh_of(low, H)
+    bvh = round_bvh(low, lambda i, c, n: i in H)
     ob = towel_wrap(bvh, ax, 0.074, 0.122, math.radians(90), 3.2, 0.016, "hp_towel_lever", 9.1)
     hp.append(ob)
     # лист на верхней планке хвоста колодки (остров 16). v1.3: был шире планки (2.1 см на 2.4) и под углом —
