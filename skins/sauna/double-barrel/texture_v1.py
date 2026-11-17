@@ -287,7 +287,7 @@ def make(part):
     col = col_b.copy()
     dirt = np.clip((1 - ao_b) * 1.4, 0, 1)
     col = col * (1 - 0.45 * dirt[..., None])
-    col = grade_to(col, ids == IDS["wood"], WOOD_SET)
+    col = grade_to(col, ids == IDS["wood"], WOOD_SET, k=1.0)   # v1.8: рисунок волокон не сжимать
     col = grade_to(col, ids == IDS["fore"], WOOD_SET * 0.82)
     gz = grip_zones(P, part)
     n_w = fbm(P * 220, 3, seed + 5)
@@ -308,6 +308,17 @@ def make(part):
     rn = smooth((fbm(P * 2500, 2, 9) - 0.4) * 3)[..., None]
     col = np.where(nail, col * (1 - 0.6 * rn) + RUST * 0.6 * rn, col)
 
+    # v1.8: смоделированный рельеф деталей виден в цвете — тень во впадинах, светлее на гребнях (из запечённой
+    # нормали, то есть из той же геометрии). В игре v1.7 береста, бечёвка, листья и кольца читались нарисованными
+    # Только мелкий рельеф (высокие частоты нормали: кольца, бороздки, свив, жилки) — крупные перепады между
+    # гладкой копией и гранями оригинала первый вариант v1.8 превращал в «складки ткани» на прикладе
+    detail = ~metal
+    nrm_hp = nrm_b - blur(nrm_b, 5) + 0.5
+    cvb = blur(curvature(nrm_hp), 1) * 14
+    cav_d = np.clip(-cvb, 0, 1)[..., None]
+    rid_d = np.clip(cvb, 0, 1)[..., None]
+    ao_hp = np.clip(ao_b / np.maximum(blur(ao_b, 8), 1e-3), 0, 1)[..., None]
+    col = np.where(detail[..., None], col * (1 - 0.30 * cav_d) * (0.85 + 0.15 * ao_hp) + 0.08 * rid_d, col)
     col = np.where(metal[..., None], col_i, col)
     if part == "barrel":
         # v1.7: трубы стволов — цвет из геометрии (маски в цвете вершин high-poly: R ржавчина в ямках и вмятинах,
@@ -392,7 +403,12 @@ def make(part):
         n_metal = whiteout(nrm_o_soft, nrm_b) * tubes + nrm_o * (1 - tubes)
     else:
         n_metal = nrm_o
-    n = np.where(metal[..., None], n_metal, n)
+    # v1.8: у деталей (не железо) рельеф в карте нормалей в 1.5 раза сильнее — тонкое в игре терялось
+    nb = n.copy()
+    xy = (nb[..., :2] - 0.5) + 0.5 * (nb[..., :2] - blur(nb, 4)[..., :2])   # усиливается только мелкое
+    zz = np.sqrt(np.clip(0.25 - (xy ** 2).sum(-1), 0.02, 0.25))
+    nb = np.concatenate([xy + 0.5, (zz + 0.5)[..., None]], -1)
+    n = np.where(metal[..., None], n_metal, nb)
     # --- AO
     ao = np.where(metal, ao_b * ao_o, ao_b * np.sqrt(ao_o))
 

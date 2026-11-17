@@ -86,7 +86,12 @@ def load_low(part):
     for i, f in enumerate(F):
         kd.insert(sum((V[j] for j in f), Vector()) / len(f), i)
     kd.balance()
-    low["isl"] = [isl[kd.find(p.center)[1]] for p in low.data.polygons]
+    idx = [kd.find(p.center)[1] for p in low.data.polygons]
+    low["isl"] = [isl[i] for i in idx]
+    cpath = HERE / "uv" / f"faces_{part}_class.json"
+    if cpath.exists():   # v1.8: класс грани по оригинальной текстуре (classify_stock.py): cloth / metal / wood
+        cls = json.load(open(cpath))
+        low["cls"] = [cls[i] for i in idx]
     return low
 
 
@@ -298,7 +303,7 @@ def tube_mesh(points, radius, name, color, ident, seg=8, twist=0.0, col_fn=None)
         for k in range(seg):
             a = 2 * math.pi * k / seg
             # волокна: витая верёвка — канавки по спирали
-            groove = 1.0 - 0.18 * max(0.0, math.cos(3 * a + twist * i)) ** 4
+            groove = 1.0 - 0.32 * max(0.0, math.cos(3 * a + twist * i)) ** 3   # v1.8: свив глубже
             verts.append(p + (b1 * math.cos(a) + b2 * math.sin(a)) * radius * groove)
             cols.append(col_fn(i, k, a) if col_fn else color)
     faces = []
@@ -342,12 +347,15 @@ def leaf_mesh(center, normal, along, length, name, conform=None):
         w = max(w * (1 + 0.05 * math.sin(u * 46.0)), 0.004)
         for j in range(nv + 1):
             v = (-1 + 2 * j / nv) * w
-            h = 0.0006 + 0.07 * length * v * v - 0.0005 * math.exp(-(v / 0.03) ** 2) * (u < 0.92)
+            h = 0.0005 + 0.05 * length * v * v + 0.0004 * math.exp(-(v / 0.04) ** 2) * (u < 0.92)   # загиб краёв ~0.6 мм, жилка — валиком
             # боковые жилки — неглубокие бороздки ёлочкой
-            vein = 0.00012 * max(0.0, math.cos((u * 7 + abs(v) * 5) * math.pi)) ** 8
+            vein = 0.00030 * max(0.0, math.cos((u * 7 + abs(v) * 5) * math.pi)) ** 6
             p = center + ax * (u * half) + side * (v * half)
-            if conform is not None:   # лист мокрый и прилип: ложится по поверхности (плоский отходил на 4–5 мм)
-                loc, n2, _, _ = conform.find_nearest(p)
+            if conform is not None:   # лист мокрый и прилип: ложится по ВНЕШНЕЙ поверхности (луч снаружи;
+                # ближайшая точка в v1.8 нашла нижнее кольцо бересты — лист ушёл под соседнее и вышел «рваным»)
+                loc, n2, _, _ = conform.ray_cast(p + nrm * 0.02, -nrm, 0.04)
+                if loc is None:
+                    loc, n2, _, _ = conform.find_nearest(p)
                 if loc is not None:
                     verts.append(loc + n2.normalized() * (h - vein))
                 else:
@@ -429,7 +437,7 @@ def end_grain(low, pred, name, center, ident="fore", seed=51, cracks=((0.6, 0.02
         ph = r / 0.0032 + wob * 1.3
         fr = ph - np.floor(ph)
         lw = NN.smooth((fr - 0.55) / 0.2) * (1 - NN.smooth((fr - 0.95) / 0.05))   # поздняя древесина
-        d = -0.00012 * lw
+        d = -0.00035 * lw   # v1.8: кольца бороздками 0.35 мм (0.12 мм в игре не читались)
         cols = early + (late - early) * lw[:, None] * 0.85
         pith = np.exp(-(r / 0.0016) ** 2)
         cols = cols * (1 - pith[:, None] * 0.6) + np.array(lin("4E3A28")) * pith[:, None] * 0.6
@@ -437,9 +445,9 @@ def end_grain(low, pred, name, center, ident="fore", seed=51, cracks=((0.6, 0.02
         for a0, ln in cracks:
             da = np.angle(np.exp(1j * (ang - a0)))
             dist = np.abs(np.sin(da)) * r
-            crack = np.maximum(crack, np.exp(-(dist / (0.00025 + 0.00004 * r / 0.01)) ** 2) * (np.cos(da) > 0)
+            crack = np.maximum(crack, np.exp(-(dist / (0.0005 + 0.00008 * r / 0.01)) ** 2) * (np.cos(da) > 0)
                                * NN.smooth((ln - r) / 0.004) * NN.smooth(r / 0.003))
-        d -= 0.0006 * crack
+        d -= 0.0014 * crack
         cols = cols * (1 - crack[:, None] * 0.8) + np.array(lin("33261A")) * crack[:, None] * 0.8
         rim = NN.smooth((0.85 - nr @ Nn) / 0.3)
         cols = cols * (1 - rim[:, None] * 0.45) + np.array(lin("6A5038")) * rim[:, None] * 0.45
@@ -470,7 +478,7 @@ def grain_copy(low, pred, name, ident, seed=31):
         g = NN.fbm(np.stack([x * 120, y * 120, z * 9], -1), 3, seed) * 2 - 1
         fib = NN.vnoise(np.stack([x * 1200, y * 1200, z * 50], -1), seed + 1) * 2 - 1
         ring = np.sin((y * 260 + x * 140 + g * 3.0) * np.pi)
-        d = 0.00010 * fib + 0.00006 * ring
+        d = 0.00018 * fib + 0.00012 * ring   # v1.8: волокна глубже
         t = 0.5 * NN.smooth(ring * 0.5 + 0.2) + 0.25 * (g * 0.5 + 0.5)
         return d, (cw + (cd - cw) * t[:, None]).astype(np.float32), np.full(len(co), IDS[ident])
     cols, ids = displace(ob, fn)
@@ -517,7 +525,7 @@ def fore_end(low, rng):
     n_bands = 7
     band_w = 0.031
     step = (z1 - z0 - band_w) / (n_bands - 1)
-    TH = 0.0010  # толщина коры
+    TH = 0.0014  # толщина коры (v1.8: 1.4 мм — при 1 мм в игре береста читалась нарисованной)
 
     def bark_color(seed):
         def fn(t, v, u_m):
@@ -544,9 +552,9 @@ def fore_end(low, rng):
         def fn(t, v, u_m):
             e = abs(v) * 2
             edge = 1.0 - 0.75 * smooth01((e - 0.82) / 0.18)  # кромка: толщина сходит на нет
-            curl = 0.0007 * smooth01((v * 2 - 0.85) / 0.15)  # передняя рваная кромка чуть отгибается
+            curl = 0.0012 * smooth01((v * 2 - 0.8) / 0.2)  # передняя рваная кромка отгибается
             q = noise.noise(Vector((u_m * 140, v * band_w * 2600, k + 3.3)))
-            lent = -0.00018 if q > 0.48 else 0.0  # чечевички — бороздки
+            lent = -0.00035 * min((q - 0.48) * 8, 1.0) if q > 0.48 else 0.0  # чечевички — бороздки 0.35 мм
             wav = 0.00012 * noise.noise(Vector((u_m * 40, v * 6, k)))
             tuck = smooth01(min(t, 1 - t) / 0.04)  # концы заправлены под стволы — сходят к поверхности
             return (layer + TH * edge + curl + lent + wav) * (0.35 + 0.65 * tuck)
@@ -856,8 +864,10 @@ def pitted_tubes(low, TUBES, rng):
     cx, cy = ca.x, ca.y
     R = 0.031
     rg = np.random.default_rng(7)
-    dents = [(rg.uniform(-np.pi, np.pi), rg.uniform(0.09, 0.42), rg.uniform(0.004, 0.009), rg.uniform(0.00025, 0.0005))
-             for _ in range(10)]
+    dents = []
+    for _ in range(6):   # v1.8: меньше и разного размера: 3–14 мм, глубина растёт с размером
+        rr = 0.003 + 0.011 * rg.random() ** 2
+        dents.append((rg.uniform(-np.pi, np.pi), rg.uniform(0.09, 0.42), rr, 0.00015 + rr * 0.04))
     scratches = [(rg.uniform(-np.pi, np.pi), rg.uniform(0.08, 0.36), rg.uniform(0.03, 0.08), rg.uniform(-0.08, 0.08))
                  for _ in range(7)]
     SEAM = np.radians(60)   # на первом стволе — сверху снаружи; на втором (поворот ≈ -99°) — сбоку снизу
@@ -886,11 +896,13 @@ def pitted_tubes(low, TUBES, rng):
             bright = np.maximum(bright, rim * 0.15)
         # раковины: ячейки ~2.2 мм, гуще у дула (z > 0.34), снизу (θ ≈ -90°) и в вмятинах
         bottom = np.exp(-(np.angle(np.exp(1j * (th + np.pi / 2))) / 0.9) ** 2)
-        dens = 0.06 + 0.42 * NN.smooth((z - 0.36) / 0.06) + 0.22 * bottom + 0.35 * dent   # реже: россыпь читалась краской
+        dens = 0.05 + 0.40 * NN.smooth((z - 0.36) / 0.06) + 0.20 * bottom + 0.35 * dent   # реже: россыпь читалась краской
         # круглые раковины: ячейки 2.2 мм, в каждой — чаша со случайным центром и радиусом 0.5-1.2 мм,
         # есть она или нет — по плотности (первый вариант на value noise давал квадратные пятна)
-        cell = 0.0022
-        gu, gz = np.floor(u / cell).astype(np.int64), np.floor(z / cell).astype(np.int64)
+        # v1.8: раковины двух масштабов — мелкие (ячейка 2.6 мм, Ø 0.7–1.8 мм) и редкие крупные (ячейка 8 мм,
+        # Ø 2.4–6 мм), размер по степенному закону (много мелких, мало крупных), гнёздами по низкочастотной маске.
+        # В v1.7 все ямки были одного размера и ровной россыпью — «странно» (пользователь)
+        nest = NN.smooth((NN.fbm(np.stack([u * 70, z * 70, np.full_like(z, 2.0)], -1), 3, 73) - 0.48) * 5)
         pit = np.zeros(len(co))
 
         def h(a, b, k):
@@ -898,18 +910,21 @@ def pitted_tubes(low, TUBES, rng):
             x = (x ^ (x >> 13)) * 1274126177
             return ((x ^ (x >> 16)) & 0xFFFF).astype(np.float64) / 65535
 
-        for oa in (-1, 0, 1):
-            for ob_ in (-1, 0, 1):
-                ca_, cb_ = gu + oa, gz + ob_
-                pu = (ca_ + h(ca_, cb_, 1)) * cell
-                pz = (cb_ + h(ca_, cb_, 2)) * cell
-                rad = 0.0005 + 0.0007 * h(ca_, cb_, 3)
-                on = h(ca_, cb_, 4) < dens
-                dist = np.hypot(u - pu, z - pz) / rad
-                bowl = np.clip(1 - dist ** 2, 0, 1) ** 0.8 * on
-                pit = np.maximum(pit, bowl * (0.6 + 0.4 * h(ca_, cb_, 5)))
-        d -= 0.00038 * pit
-        rust = np.maximum(rust, pit)
+        for cell, rmin, rmax, prob, salt in ((0.0026, 0.00035, 0.0009, 0.85, 0), (0.008, 0.0012, 0.003, 0.35, 10)):
+            gu, gz = np.floor(u / cell).astype(np.int64), np.floor(z / cell).astype(np.int64)
+            for oa in (-1, 0, 1):
+                for ob_ in (-1, 0, 1):
+                    ca_, cb_ = gu + oa, gz + ob_
+                    pu = (ca_ + h(ca_, cb_, 1 + salt)) * cell
+                    pz = (cb_ + h(ca_, cb_, 2 + salt)) * cell
+                    rad = rmin + (rmax - rmin) * h(ca_, cb_, 3 + salt) ** 2.5
+                    on = h(ca_, cb_, 4 + salt) < dens * prob * (0.25 + 0.75 * nest)
+                    dist = np.hypot((u - pu) * (1 + 0.25 * h(ca_, cb_, 6 + salt)), z - pz) / rad
+                    bowl = np.clip(1 - dist ** 2, 0, 1) ** 0.7 * on
+                    depth = (0.55 + 0.45 * h(ca_, cb_, 5 + salt)) * (0.6 + 0.8 * (rad - rmin) / (rmax - rmin + 1e-9))
+                    pit = np.maximum(pit, bowl * np.clip(depth, 0, 1.3))
+        d -= 0.00045 * pit
+        rust = np.maximum(rust, np.clip(pit * 1.2, 0, 1))
         rust = np.maximum(rust, dent * 0.35)
         # сварной шов: валик Ø ~2 мм с чешуйками через 2.5 мм
         dus = np.angle(np.exp(1j * (th - SEAM))) * R
@@ -961,14 +976,146 @@ def ornament_np(co):
     return m * zone
 
 
+def copy_polys_idx(low, pred, name):
+    """Копия граней по условию на полигон low (pred(p) -> bool)."""
+    keep = {p.index for p in low.data.polygons if pred(p)}
+    bm = bmesh.new()
+    bm.from_mesh(low.data)
+    bm.faces.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in keep], context="FACES")
+    m2 = bpy.data.meshes.new(name)
+    bm.to_mesh(m2)
+    bm.free()
+    ob = bpy.data.objects.new(name, m2)
+    bpy.context.scene.collection.objects.link(ob)
+    return ob
+
+
 def is_butt_end(i, c, n):
-    """Затыльник приклада: острова 5, 6 и середина (часть острова 1), смотрящая назад."""
-    return i in (5, 6) or (i == 1 and n.z < -0.6 and c.z < -0.43)
+    """Затыльник приклада между железными пластинами: задняя грань острова 1 (v1.8; в v1.6 сюда попадали и
+    пластины 5, 6 — у оригинала это красные железные уголки на пятке и носке)."""
+    return i == 1 and n.z < -0.6 and c.z < -0.43
 
 
-def wood_copy(low, name, butt=False, exclude=()):
+BUTT_PLATES = {5, 6}
+
+
+def cloth_faces(low, isl_set):
+    """Грани ткани (класс cloth) на островах isl_set, со сглаживанием класса по соседям (одиночные огрехи)."""
+    cls = list(low["cls"])
+    isl = low["isl"]
+    me = low.data
+    edge_f = {}
+    for p in me.polygons:
+        for ek in p.edge_keys:
+            edge_f.setdefault(ek, []).append(p.index)
+    for _ in range(2):
+        new = list(cls)
+        for p in me.polygons:
+            nb = [q for ek in p.edge_keys for q in edge_f[ek] if q != p.index]
+            if nb:
+                c = sum(1 for q in nb if cls[q] == "cloth")
+                if c >= 2 and cls[p.index] != "cloth":
+                    new[p.index] = "cloth"
+                elif c == 0 and cls[p.index] == "cloth":
+                    new[p.index] = "wood"
+        cls = new
+    return {p.index for p in me.polygons if cls[p.index] == "cloth" and isl[p.index] in isl_set}
+
+
+def cloth_band(low, faces, name, seed=5.0):
+    """v1.8: крестовая обмотка на прикладе. У оригинала здесь выпуклая полоса ткани (своя геометрия), у v1-v1.7
+    она была закрашена деревом — в игре читалась непонятной ступенькой («граница», пользователь). Теперь это
+    полоса застиранного полотенца поверх выпуклости: плетение, поперечные складки, подшитые кромки со
+    стежками, выцветшая кирпичная полоса посередине, бахрома на концах. Всё — рельефом."""
+    bm = bmesh.new()
+    bm.from_mesh(low.data)
+    bm.faces.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.index not in faces], context="FACES")
+    # граница полосы — рёбра с одной гранью; расстояние до неё — «поперёк полосы»
+    edge_pts = []
+    for e in bm.edges:
+        if len(e.link_faces) == 1:
+            a, b = e.verts[0].co, e.verts[1].co
+            for t in np.linspace(0, 1, 6):
+                edge_pts.append(a.lerp(b, t))
+    me2 = bpy.data.meshes.new(name)
+    bm.to_mesh(me2)
+    bm.free()
+    ob = bpy.data.objects.new(name, me2)
+    bpy.context.scene.collection.objects.link(ob)
+    even_mesh(ob, 0.003)
+    subdivided(ob, 2)
+    for p in ob.data.polygons:
+        p.use_smooth = True
+    kd = kdtree.KDTree(len(edge_pts))
+    for i, p in enumerate(edge_pts):
+        kd.insert(p, i)
+    kd.balance()
+    n = len(ob.data.vertices)
+    dist = np.array([kd.find(v.co)[2] for v in ob.data.vertices])
+    half = max(np.percentile(dist, 97), 0.004)
+    cw, cs, cd = np.array(lin(HEX["towel"])), np.array(lin(HEX["stripe"])), np.array(lin("9C927E"))
+
+    def fn(co, nr):
+        x, y, z = co[:, 0], co[:, 1], co[:, 2]
+        e = dist / half   # 0 на кромке, 1 посередине
+        weave = 0.00006 * np.sin(x * 9000 + z * 9000) * np.sin(y * 9000 - z * 9000)
+        fold = 0.00045 * np.clip(NN.fbm(np.stack([x * 160, y * 160, z * 160], -1), 3, 91) - 0.45, 0, 1) * 3
+        hem = 0.00035 * np.exp(-((dist - 0.0016) / 0.0007) ** 2)            # подшитая кромка — валик
+        stitch = -0.00025 * np.exp(-((dist - 0.0016) / 0.00035) ** 2) * (np.sin(z * 2 * np.pi / 0.004 + y * 900) > 0.3)
+        edge_drop = -0.0004 * NN.smooth((0.0008 - dist) / 0.0008)            # край ткани опускается к дереву
+        d = 0.0006 + weave + fold + hem + stitch + edge_drop
+        col = cw + (cd - cw) * (0.35 * NN.smooth((NN.fbm(co * 90, 3, 92) - 0.5) * 3))[:, None]
+        stripe = NN.smooth((e - 0.62) / 0.06) * NN.smooth((0.88 - e) / 0.06)
+        fade = 0.6 + 0.3 * NN.fbm(co * 60, 2, 93)
+        col = col * (1 - (stripe * fade)[:, None]) + cs * (stripe * fade)[:, None]
+        col = col * (1 - 0.35 * NN.smooth((0.0012 - dist) / 0.0012))[:, None]   # грязь по кромке
+        return d, col.astype(np.float32), np.full(len(co), IDS["towel"])
+    cols, ids = displace(ob, fn)
+    set_attrs_np(ob.data, cols, ids)
+    return ob
+
+
+def plate_screws(low, plates, name):
+    """v1.8: на железных уголках затыльника — по шурупу с прорезью (у оригинала там винты, у v1.6 — дерево)."""
+    out = []
+    bvh = bvh_of(low)
+    for k in plates:
+        ps = polys_of(low, {k})
+        c = sum((p.center for p in ps), Vector()) / len(ps)
+        for sx in (1, -1):
+            hit, n, _, _ = bvh.ray_cast(Vector((sx * 0.2, c.y, c.z + 0.012)), Vector((-sx, 0, 0)), 0.4)
+            if hit is None:
+                continue
+            n = n.normalized()
+            a = Vector((0, 1, 0))
+            t1 = n.cross(a).normalized()
+            t2 = n.cross(t1)
+            verts, faces = [], []
+            nr_, nv_ = 10, 24
+            for i in range(nr_ + 1):
+                rr = 0.0024 * i / nr_
+                for j in range(nv_):
+                    ang = 2 * math.pi * j / nv_
+                    dd = t1 * math.cos(ang) + t2 * math.sin(ang)
+                    p = hit + dd * rr
+                    hgt = 0.0008 * math.sqrt(max(1 - (rr / 0.0024) ** 2, 0))
+                    slot = abs((p - hit).dot(t1)) < 0.00035 and rr < 0.0021
+                    verts.append(p + n * (hgt - (0.0005 if slot else 0)))
+            for i in range(nr_):
+                for j in range(nv_):
+                    j2 = (j + 1) % nv_
+                    faces.append((i * nv_ + j, i * nv_ + j2, (i + 1) * nv_ + j2, (i + 1) * nv_ + j))
+            out.append(new_mesh(f"{name}_{k}_{sx}", verts, faces, lin(HEX["nail"]), "nail",
+                                outward=lambda p, h_=hit, n_=n: n_))
+    return out
+
+
+def wood_copy(low, name, butt=False, exclude=(), skip=frozenset()):
     """Дерево: копия, подразделена; волокна вдоль приклада, на прикладе — сучок и орнамент."""
-    ob = copy_faces(low, lambda i, c, n: i not in exclude and not (butt and is_butt_end(i, c, n)), name)
+    ob = copy_polys_idx(low, lambda p: low["isl"][p.index] not in exclude and p.index not in skip
+                        and not (butt and is_butt_end(low["isl"][p.index], p.center, p.normal)), name)
     subdivided(ob, 3)
     knot = Vector(KNOT)
     if butt:
@@ -981,12 +1128,14 @@ def wood_copy(low, name, butt=False, exclude=()):
 
     def fn(co, nr):
         x, y, z = co[:, 0], co[:, 1], co[:, 2]
-        g = NN.fbm(np.stack([x * 120, y * 120, z * 9], -1), 3, 31) * 2 - 1
+        g = NN.fbm(np.stack([x * 120, y * 120, z * 3], -1), 3, 31) * 2 - 1   # вдоль приклада медленнее — длинные волокна
         fib = NN.vnoise(np.stack([x * 1200, y * 1200, z * 50], -1), 32) * 2 - 1
         ring = np.sin((y * 260 + g * 3.0) * np.pi)
-        d = 0.00010 * fib + 0.00006 * ring
-        t = 0.5 * NN.smooth(ring * 0.5 + 0.2) + 0.25 * (g * 0.5 + 0.5)
-        cw, cd = np.array(lin(HEX["wood"])), np.array(lin(HEX["wood_dark"]))
+        d = 0.00018 * fib + 0.00012 * ring   # v1.8: волокна глубже
+        # v1.8: волокна контрастнее — поздняя древесина заметно темнее (приклад читался «одного цвета»)
+        late = NN.smooth((ring - 0.35) / 0.4)
+        t = 0.55 * late + 0.2 * (g * 0.5 + 0.5) + 0.08 * (fib * 0.5 + 0.5)   # спокойнее: 0.85 давало «зебру»
+        cw, cd = np.array(lin(HEX["wood"])), np.array(lin("7E6142"))
         cols = cw + (cd - cw) * t[:, None]
         ids = np.full(len(co), IDS["wood"])
         if butt:
@@ -1246,7 +1395,7 @@ def bake(low, hp, part, size, extr, groups=None):
         o.data.materials.append(mat[0])
     if scene.world is None:
         scene.world = bpy.data.worlds.new("bake")
-    scene.world.light_settings.distance = 0.03   # AO: 3 см — масштаб оружия
+    scene.world.light_settings.distance = 0.012   # AO: 1.2 см (с 3 см лист и узлы давали тёмный ореол)
     lm = bpy.data.materials.new("bake_target")
     lm.use_nodes = True
     tex = lm.node_tree.nodes.new("ShaderNodeTexImage")
@@ -1344,8 +1493,12 @@ def build(part, rng):
     elif part == "stock":
         # v1.6: спусковая скоба (остров 4) - железо, как у оригинала (была деревом: весь приклад копировался
         # деревом целиком); затыльник (5, 6) - дерево в торец (на нём лежали продольные волокна)
-        hp = wood_copy(low, "hp_stock_wood", butt=True, exclude={4}) + stock_details(low, rng)
-        hp.append(metal_copy(low, {4}, "hp_stock_guard"))
+        # v1.8: уголки затыльника (5, 6) — железо с шурупами; крестовая полоса ткани на острове 1 — обмотка
+        band = cloth_faces(low, {1})
+        hp = wood_copy(low, "hp_stock_wood", butt=True, exclude={4} | BUTT_PLATES, skip=band) + stock_details(low, rng)
+        hp.append(metal_copy(low, {4} | BUTT_PLATES, "hp_stock_guard"))
+        hp.append(cloth_band(low, band, "hp_stock_band"))
+        hp += plate_screws(low, BUTT_PLATES, "hp_screw")
         cen = [p.center for p in low.data.polygons if is_butt_end(low["isl"][p.index], p.center, p.normal)]
         c0 = sum(cen, Vector()) / len(cen)
         hp.append(end_grain(low, is_butt_end, "hp_stock_butt", (c0.x + 0.003, c0.y - 0.012, c0.z),
@@ -1413,7 +1566,8 @@ LOOKS = {
     "stock": [("left", (-0.55, -0.09, -0.26), (0, -0.09, -0.26), 50),
               ("wrist", (-0.15, -0.05, -0.15), (0, -0.09, -0.22), 50),
               ("butt", (-0.18, -0.11, -0.40), (0, -0.11, -0.40), 50),
-              ("buttend", (0.05, -0.10, -0.70), (0, -0.10, -0.45), 50)],
+              ("buttend", (0.05, -0.10, -0.70), (0, -0.10, -0.45), 50),
+              ("band", (0.30, -0.08, -0.33), (0, -0.09, -0.33), 50)],
     "grip": [("left", (-0.4, -0.09, -0.15), (0, -0.09, -0.15), 50),
              ("end", (-0.12, -0.25, -0.40), (0, -0.12, -0.25), 50)],
 }
