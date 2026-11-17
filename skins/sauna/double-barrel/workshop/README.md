@@ -1,7 +1,7 @@
 # Sauna Shotgun — публикация в Workshop
 
-> Подготовлено 17.11.2026 для **v1.2** (файлы `DoubleBarrel_v1.2_*`). Публикует пользователь сам из игрового редактора.
-> v1 и v1.1 сняты в игре (хром в v1, чёрная полоса на стволе в v1.1 — исправлены). **v1.2 в игре ещё не снята.** Сначала загрузить и посмотреть по [../README.md](../README.md), раздел
+> Подготовлено 17.11.2026 для **v1.3** (файлы `DoubleBarrel_v1.3_*`). Публикует пользователь сам из игрового редактора.
+> v1–v1.2 сняты в игре (хром, полоса на стволе, скучный вид в прицеле — исправлены). **v1.3 в игре ещё не снята.** Сначала загрузить и посмотреть по [../README.md](../README.md), раздел
 > «Что проверить в игре», потом публиковать.
 
 ## Название и описание (англ.)
@@ -14,7 +14,8 @@
 Every Rust life starts naked. Might as well warm up properly.
 
 The sauna keeper's shotgun, kept by the changing-room door. Pipe barrels
-sleeved in birch bark against the heat and tied off with hemp twine, the
+sleeved in birch bark against the heat and tied off with hemp twine, old
+copper fittings at the breech, twine and a leaf on the hammer bar, the
 fore-end wrapped in more bark, a strip of old linen towel round the grip
 and the break lever. A pale aspen stock gone dark where the hands hold it,
 a knot weeping resin, a simple pattern burnt in with a hot nail. Soot at

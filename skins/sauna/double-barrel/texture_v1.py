@@ -316,6 +316,38 @@ def make(part):
     gloss = np.where(metal, gloss_i, gloss)
     col, gloss, spec = steam_and_soot(col, gloss, spec, P, part, seed + 20, tubes)
 
+    # --- v1.3: в прицеле всё было одного тёмного железа (screenshots/ingame_v1.2_aim_*). Разные металлы
+    # самоделки: задние муфты стволов — старая медь (фитинг), внутренние кольца — светлее и глаже,
+    # гайки — воронёная сталь со светлыми рёбрами. Блик у меди цветной (Unity Specular: цвет металла — в блике).
+    spec = np.repeat(spec[..., None], 3, -1)
+    nw = fbm(P * 300, 3, seed + 40)
+    if part == "barrel":
+        cu = island_mask("barrel", {2, 3, 15, 30}, S)[..., None]
+        ox = smooth((nw - 0.35) * 2.5)[..., None]
+        cu_col = hexc("4A3022") * (1 - ox * 0.5) + hexc("2C1E16") * ox * 0.5
+        e3 = smooth(edge * 1.3)[..., None]
+        cu_col = cu_col * (1 - e3 * 0.7) + hexc("9A6A44") * e3 * 0.7
+        pat = smooth((cav * 1.5 + (fbm(P * 700, 2, seed + 41) - 0.5) * 0.8 - 0.45) * 3)[..., None]  # ярь-медянка во впадинах
+        cu_col = cu_col * (1 - pat * 0.6) + hexc("4F6B58") * pat * 0.6
+        cu_spec = np.array([0.42, 0.30, 0.22]) * (1 - pat) + np.array([0.62, 0.45, 0.33]) * e3 + 0.08 * pat
+        col = col * (1 - cu) + cu_col * cu
+        spec = spec * (1 - cu) + np.clip(cu_spec, 0, 1) * cu
+        gloss = gloss * (1 - cu[..., 0]) + (0.34 + 0.18 * e3[..., 0] - 0.2 * pat[..., 0]) * cu[..., 0]
+        st = island_mask("barrel", {13, 21, 22, 33}, S)[..., None]
+        col = col * (1 - st) + (col * 0.75 + hexc("5A5853") * 0.25 * smooth(edge * 1.5)[..., None]) * st
+        spec = spec * (1 - st) + 0.36 * st
+        gloss = gloss * (1 - st[..., 0]) + (0.40 + 0.12 * smooth(edge)) * st[..., 0]
+    if part == "main":
+        nu = island_mask("main", {9, 10, 11, 12, 13}, S)[..., None]
+        e3 = smooth(edge * 1.4)[..., None]
+        nut_col = hexc("151618") * (0.9 + 0.2 * nw[..., None])
+        nut_col = nut_col * (1 - e3 * 0.75) + hexc("6A6A6C") * e3 * 0.75
+        rs = smooth((cav * 2.0 - 0.75) * 3)[..., None]
+        nut_col = nut_col * (1 - rs * 0.7) + RUST_DARK * rs * 0.7
+        col = col * (1 - nu) + nut_col * nu
+        spec = spec * (1 - nu) + (np.array([0.30, 0.31, 0.34]) + 0.2 * e3 - 0.15 * rs) * nu
+        gloss = gloss * (1 - nu[..., 0]) + (0.42 + 0.15 * e3[..., 0] - 0.2 * rs[..., 0]) * nu[..., 0]
+
     # --- нормали
     n = nrm_b.copy()
     if part == "barrel":
@@ -335,7 +367,7 @@ def make(part):
         sg_o = load(os.path.join(O, "barrel_sg.png"), S, mode="RGBA")
         col[sh] = bc_o[sh]
         n[sh] = masked_blur(nrm_o, sh, 10)[sh]   # на нормалях гильз надписи выдавлены — тоже размываем
-        spec[sh] = sg_o[..., :3].mean(-1)[sh]
+        spec[sh] = sg_o[..., :3][sh]
         gloss[sh] = sg_o[..., 3][sh]
         ao[sh] = ao_o[sh]
     if part == "grip":  # нет слота AO — немного в цвет
@@ -365,7 +397,8 @@ def write(part, col, n, spec, gloss, ao, sizes, suffix):
     save(rgba, f"{pre}_diffuse{suffix}.png", sd, "RGBA")
     nn = np.concatenate([n[..., :2], np.ones_like(n[..., :1]), np.ones_like(n[..., :1])], -1)  # B = 255
     save(nn, f"{pre}_normal{suffix}.png", sn, "RGBA")
-    sg = np.concatenate([np.repeat(spec[..., None], 3, -1), gloss[..., None]], -1)
+    sp = spec if spec.ndim == 3 else np.repeat(spec[..., None], 3, -1)
+    sg = np.concatenate([sp, gloss[..., None]], -1)
     save(sg, f"{pre}_specgloss{suffix}.png", ss, "RGBA")
     if so:
         save(np.repeat(ao[..., None], 3, -1), f"{pre}_occlusion{suffix}.png", so, "RGB")

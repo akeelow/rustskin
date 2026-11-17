@@ -867,6 +867,57 @@ def stock_details(low, rng):
     return hp
 
 
+def crossbar_details(low):
+    """v1.3: перемычка курков (MAIN, острова 5 и 27, одна копия) — главное, что видно в прицеле.
+    Две обмотки бечёвкой по 4 витка между центральной стойкой (|x| < 0.013) и гайками (|x| > 0.023);
+    под правую подсунут берёзовый лист — на задней грани (-z), обращённой к глазу; узел с хвостиками там же."""
+    BAR = {5, 27}
+    verts = [low.data.vertices[v].co.copy() for p in polys_of(low, BAR) for v in p.vertices]
+    bar_bvh = bvh_of(low, BAR)
+    ax = Axis(verts, (1, 0, 0), (0, 1, 0), step=0.002).refine(bar_bvh)
+    out = []
+    # лист на задней грани у правой обмотки (x > 0 — левый бок стрелка; у правой руки лист не на виду)
+    p0 = ax.center(0.0185)
+    hit, n, _, _ = bar_bvh.ray_cast(Vector((0.0185, p0.y + 0.001, -0.2)), Vector((0, 0, 1)), 0.4)
+    if hit is not None:
+        out += leaf_mesh(hit + n * 0.0003, n, Vector((0.35, -1, 0)), 0.020, "hp_leaf_bar", conform=bar_bvh)
+    under = join_bvh([o for o in out if o.name == "hp_leaf_bar"]) if out else None
+    r = 0.0008
+    for side, xc in (("r", 0.0185), ("l", -0.0185)):
+        for coil in range(4):
+            pts = []
+            for i in range(121):
+                t = i / 120
+                th = math.radians(-90) + 2 * math.pi * t
+                s_ = xc + (coil - 1.5) * 2.1 * r + 0.4 * r * t
+                hit, d, _ = surf(bar_bvh, ax, s_, th, far=0.05)
+                if hit is None:
+                    continue
+                if under is not None:   # бечёвка поверх листа
+                    h2, d2, _ = surf(under, ax, s_, th, far=0.05)
+                    if h2 is not None and (h2 - ax.center(s_)).length > (hit - ax.center(s_)).length:
+                        hit = h2
+                pts.append(hit + d * (r * 0.9))
+            if len(pts) > 3:
+                out.append(tube_mesh(pts + pts[:2], r, f"hp_bar_twine_{side}{coil}", lin(HEX["twine"]), "twine",
+                                     twist=0.9, col_fn=twine_col))
+    # узел на задней грани правой обмотки и два хвостика вниз
+    th_k = math.radians(-90)   # e1 = +y, e2 = A×e1 = +z → -90° смотрит на -z (к глазу)
+    hit, d, _ = surf(bar_bvh, ax, 0.0185, th_k, far=0.05)
+    if hit is not None:
+        for kk in range(2):
+            loop = []
+            for i in range(25):
+                a = 2 * math.pi * i / 24
+                off = Vector((1, 0, 0)) * (math.cos(a) * 0.0018) + Vector((0, 1, 0)) * (math.sin(a) * 0.0013 + (kk - 0.5) * 0.0016)
+                loop.append(hit + d * (2.2 * r + 0.001 * (1 + math.sin(a))) + off)
+            out.append(tube_mesh(loop, r * 0.95, f"hp_bar_knot_{kk}", lin(HEX["twine"]), "twine", twist=0.9, col_fn=twine_col))
+        for sgn in (-1, 1):
+            tail = [hit + d * (r * (2.0 - 1.0 * t)) + Vector((sgn * 0.0015 * t, -0.007 * t, 0)) for t in (i / 15 for i in range(16))]
+            out.append(tube_mesh(tail, r * 0.85, f"hp_bar_tail_{sgn}", lin(HEX["twine"]), "twine", twist=0.9, col_fn=twine_col))
+    return out
+
+
 def lever_details(low, rng):
     """MAIN: колодка как есть + полоса полотенца на рукояти рычага (остров 8, торец 31)."""
     hp = []
@@ -879,13 +930,15 @@ def lever_details(low, rng):
     bvh = bvh_of(low, H)
     ob = towel_wrap(bvh, ax, 0.074, 0.122, math.radians(90), 3.2, 0.016, "hp_towel_lever", 9.1)
     hp.append(ob)
-    # лист на верхней планке хвоста колодки (остров 16) — ближе всего к глазу от первого лица
+    # лист на верхней планке хвоста колодки (остров 16). v1.3: был шире планки (2.1 см на 2.4) и под углом —
+    # свисал с краёв, свисающее не запекалось («порвался»). Теперь 2.2 см, строго вдоль планки.
     top = bvh_of(low, {16})
-    hit, n, _, _ = top.ray_cast(Vector((0.001, 0.2, -0.108)), Vector((0, -1, 0)), 0.4)
+    hit, n, _, _ = top.ray_cast(Vector((0.0, 0.2, -0.108)), Vector((0, -1, 0)), 0.4)
     if hit is not None:
-        hp += leaf_mesh(hit + n * 0.0003, n, Vector((0.25, 0, 1)), 0.030, "hp_leaf_top", conform=bvh_of(low))
+        hp += leaf_mesh(hit + n * 0.0003, n, Vector((0.0, 0, 1)), 0.022, "hp_leaf_top", conform=bvh_of(low))
     else:
         print("leaf_top missed", flush=True)
+    hp += crossbar_details(low)
     return hp
 
 
@@ -1118,6 +1171,7 @@ LOOKS = {
                ("knot", (0.12, -0.04, 0.24), (0.02, -0.04, 0.24), 50),
                ("sleeve", (0.10, 0.12, 0.05), (0.0, 0.0, 0.18), 50)],
     "main": [("lever", (0.10, 0.10, 0.10), (0.09, -0.04, -0.054), 50),
+             ("bar", (0.0, 0.03, -0.20), (0.0, 0.0, -0.05), 50),
              ("top", (0.0, 0.12, -0.12), (0.0, -0.02, -0.06), 50)],
     "stock": [("left", (-0.55, -0.09, -0.26), (0, -0.09, -0.26), 50),
               ("wrist", (-0.15, -0.05, -0.15), (0, -0.09, -0.22), 50),

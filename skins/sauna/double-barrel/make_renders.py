@@ -4,6 +4,7 @@
 Выход (renders/):
   <ver>_sheet.png      6 видов × день/ночь (+ <ver>_view.blend — открыть и покрутить)
   <ver>_fp.png         от первого лица, глаз с обеих сторон × день/ночь (сторона: README «Сторона»)
+  <ver>_aim.png        в прицеле (по оси стволов), день/ночь
   <ver>_fp_grey.png    то же в ч/б — читается ли без цвета
   <ver>_icon.png       вид сбоку и он же 128 и 64 px (как иконка инвентаря)
   <ver>_grip.png       вариант с короткой рукоятью GRIP вместо приклада STOCK
@@ -47,6 +48,9 @@ def main():
     run(parts() + ["--sheet", f"{R}/{VER}_sheet.png", "--blend", f"{R}/{VER}_view.blend", "--light", "both",
                    "--size", "400", "--aspect", "2.0", "--zoom", "0.75"])
     run(parts() + ["--views", "fp", "--sheet", f"{R}/{VER}_fp.png", "--light", "both", "--size", "720", "--aspect", "1.78"])
+    # в прицеле (как в редакторе: Aim) — глаз за колодкой по оси, стволы прямо
+    run(parts() + ["--views", "none", "--cam", "0.0,0.055,-0.24:0.0,0.0,0.4:40", "--cam", "0.0,0.035,-0.16:0.0,0.0,0.3:40",
+                   "--sheet", f"{R}/{VER}_aim.png", "--light", "both", "--size", "600", "--aspect", "1.78"])
     run(parts() + ["--views", "fp", "--sheet", f"{R}/{VER}_fp_grey.png", "--light", "day", "--grey",
                    "--size", "720", "--aspect", "1.78"])
     # иконка: строго сбоку (+x — левый бок стрелка), студийный свет
