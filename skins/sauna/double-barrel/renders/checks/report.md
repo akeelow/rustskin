@@ -1,13 +1,13 @@
-# Самопроверки Sauna Shotgun v1.4 (checks.py)
+# Самопроверки Sauna Shotgun v1.5 (checks.py)
 
 ## 1. Швы развёртки (разница Diffuse по обе стороны шва, 0–255)
 
 | часть | швов | медиана | 95 % | худший | где худший (UV) |
 |---|---:|---:|---:|---:|---|
-| barrel | 911 | 6.6 | 32.7 | 38.5 | (0.695,0.991) |
+| barrel | 911 | 6.8 | 32.7 | 38.5 | (0.695,0.991) |
 | main | 585 | 7.9 | 36.4 | 66.3 | (0.082,0.620) |
-| stock | 157 | 6.0 | 20.6 | 90.5 | (0.434,0.087) |
-| grip | 101 | 12.9 | 39.1 | 99.3 | (0.693,0.182) |
+| stock | 157 | 5.9 | 21.5 | 90.5 | (0.434,0.087) |
+| grip | 101 | 13.4 | 39.5 | 99.5 | (0.693,0.182) |
 | sights | 87 | 1.6 | 15.9 | 21.7 | (0.591,0.074) |
 
 Пурпурным на `seams_<часть>.png` — швы с разницей > 25, жёлтым — остальные из 40 худших.
@@ -33,15 +33,15 @@
 
 | часть | деталь | spec | gloss |
 |---|---|---:|---:|
-| barrel | metal | 66 | 68 |
-| barrel | wood | 50 | 58 |
-| barrel | bark | 44 | 35 |
-| barrel | twine | 38 | 18 |
+| barrel | metal | 65 | 67 |
+| barrel | wood | 50 | 59 |
+| barrel | bark | 45 | 37 |
+| barrel | twine | 40 | 20 |
 | barrel | towel | 35 | 41 |
-| barrel | leaf | 52 | 110 |
-| barrel | resin | 61 | 151 |
-| barrel | nail | 65 | 58 |
-| barrel | fore | 39 | 53 |
+| barrel | leaf | 53 | 111 |
+| barrel | resin | 61 | 152 |
+| barrel | nail | 66 | 59 |
+| barrel | fore | 41 | 58 |
 | main | metal | 63 | 63 |
 | main | wood | 63 | 55 |
 | main | bark | 52 | 43 |
@@ -50,17 +50,17 @@
 | main | leaf | 53 | 113 |
 | stock | metal | 45 | 57 |
 | stock | wood | 45 | 55 |
-| stock | bark | 45 | 56 |
+| stock | bark | 45 | 57 |
 | stock | twine | 43 | 46 |
 | stock | towel | 25 | 11 |
 | stock | leaf | 54 | 65 |
-| stock | resin | 60 | 125 |
-| stock | nail | 60 | 63 |
+| stock | resin | 60 | 127 |
+| stock | nail | 61 | 63 |
 | stock | fore | 55 | 66 |
 | stock | burn | 52 | 49 |
-| grip | metal | 45 | 59 |
+| grip | metal | 45 | 60 |
 | grip | wood | 45 | 62 |
 | grip | bark | 40 | 51 |
-| grip | twine | 35 | 40 |
+| grip | twine | 35 | 41 |
 | grip | towel | 25 | 11 |
 

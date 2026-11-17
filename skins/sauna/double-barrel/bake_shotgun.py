@@ -372,12 +372,78 @@ def leaf_mesh(center, normal, along, length, name, conform=None):
 
 
 # ----------------------------------------------------------------- parts
+def copy_faces(low, pred, name):
+    """Как copy_polys, но по условию на грань: pred(остров, центр, нормаль) -> bool."""
+    bm = bmesh.new()
+    bm.from_mesh(low.data)
+    bm.faces.ensure_lookup_table()
+    isl = low["isl"]
+    drop = [f for f in bm.faces if not pred(isl[f.index], f.calc_center_median(), f.normal)]
+    bmesh.ops.delete(bm, geom=drop, context="FACES")
+    m2 = bpy.data.meshes.new(name)
+    bm.to_mesh(m2)
+    bm.free()
+    ob = bpy.data.objects.new(name, m2)
+    bpy.context.scene.collection.objects.link(ob)
+    return ob
+
+
+FORE_ISL = {4, 23, 31, 32}
+
+
+def is_fore_cap(i, c, n):
+    """Передний торец цевья: острова цевья, z > 0.405, нормаль смотрит вперёд (без скруглённой кромки)."""
+    return i in FORE_ISL and c.z > 0.405 and n.z > 0.45
+
+
+def fore_cap(low):
+    """v1.5: торец цевья — дерево в торец, как у оригинала (screenshots/original_3p_front.png): годичные кольца
+    бороздками (поздняя древесина темнее), сердцевина не по центру, две радиальные трещины-усушки, тёмная кромка.
+    В v1.4 торец был ровной заливкой, на которую ещё легли потёки и копоть — в игре серо-белая плашка."""
+    ob = copy_faces(low, is_fore_cap, "hp_fore_cap")
+    subdivided(ob, 5)
+    for p in ob.data.polygons:
+        p.use_smooth = True
+    cx, cy = 0.004, -0.044
+    early, late = np.array(lin("B9A07A")), np.array(lin("7A5E40"))
+
+    def fn(co, nr):
+        x, y = co[:, 0], co[:, 1]
+        dx, dy = x - cx, (y - cy) * 1.08
+        r = np.hypot(dx, dy)
+        ang = np.arctan2(dy, dx)
+        wob = NN.fbm(np.stack([x * 90, y * 90, np.full_like(x, 3.0)], -1), 3, 51) - 0.5
+        ph = r / 0.0032 + wob * 1.3   # кольцо ~3 мм: при 19 px/см это 6 px
+        fr = ph - np.floor(ph)
+        lw = NN.smooth((fr - 0.55) / 0.2) * (1 - NN.smooth((fr - 0.95) / 0.05))   # поздняя древесина
+        d = -0.00012 * lw
+        cols = early + (late - early) * lw[:, None] * 0.85
+        # сердцевина
+        pith = np.exp(-(r / 0.0016) ** 2)
+        cols = cols * (1 - pith[:, None] * 0.6) + np.array(lin("4E3A28")) * pith[:, None] * 0.6
+        # трещины-усушки от сердцевины: два луча
+        crack = np.zeros_like(r)
+        for a0, ln in ((0.6, 0.022), (2.9, 0.016)):
+            da = np.angle(np.exp(1j * (ang - a0)))
+            dist = np.abs(np.sin(da)) * r
+            crack = np.maximum(crack, np.exp(-(dist / (0.00025 + 0.00004 * r / 0.01)) ** 2) * (np.cos(da) > 0) * NN.smooth((ln - r) / 0.004) * NN.smooth(r / 0.003))
+        d -= 0.0006 * crack
+        cols = cols * (1 - crack[:, None] * 0.8) + np.array(lin("33261A")) * crack[:, None] * 0.8
+        # кромка: где торец скругляется (нормаль уходит от +z) — темнее, как подкорье
+        rim = NN.smooth((0.85 - nr[:, 2]) / 0.3)
+        cols = cols * (1 - rim[:, None] * 0.45) + np.array(lin("6A5038")) * rim[:, None] * 0.45
+        return d, cols.astype(np.float32), np.full(len(co), IDS["fore"])
+    cols, ids = displace(ob, fn)
+    set_attrs_np(ob.data, cols, ids)
+    return ob
+
+
 def fore_end(low, rng):
     """BARREL: цевьё — береста кольцами, бечёвка, лист, гвоздики; трубы стволов с раковинами."""
     FORE = {4, 23, 31, 32}
     TUBES = {1, 18, 17, 2}
     hp = []
-    base = copy_polys(low, set(range(1, 100)) - TUBES, "hp_barrel_rest")
+    base = copy_faces(low, lambda i, c, n: i not in TUBES and not is_fore_cap(i, c, n), "hp_barrel_rest")
     set_attrs(base.data, lin(HEX["metal"]), "metal")
     # цевьё под берестой — тоже дерево (видно в щелях и на торцах)
     isl = low["isl"]
@@ -394,6 +460,7 @@ def fore_end(low, rng):
     hp.append(base)
 
     hp += pitted_tubes(low, TUBES, rng)
+    hp.append(fore_cap(low))
     hp += barrel_sleeves(low, rng)
 
     bvh = bvh_of(low, FORE)
@@ -1164,7 +1231,8 @@ LOOKS = {
     "barrel": [("left", (-0.35, -0.02, 0.32), (0, -0.035, 0.32), 50),
                ("under", (-0.12, -0.25, 0.30), (0, -0.04, 0.32), 50),
                ("knot", (0.12, -0.04, 0.24), (0.02, -0.04, 0.24), 50),
-               ("sleeve", (0.10, 0.12, 0.05), (0.0, 0.0, 0.18), 50)],
+               ("sleeve", (0.10, 0.12, 0.05), (0.0, 0.0, 0.18), 50),
+               ("cap", (0.0, -0.04, 0.60), (0.0, -0.04, 0.42), 50)],
     "main": [("lever", (0.10, 0.10, 0.10), (0.09, -0.04, -0.054), 50),
              ("bar", (0.0, 0.03, -0.20), (0.0, 0.0, -0.05), 50),
              ("top", (0.0, 0.12, -0.12), (0.0, -0.02, -0.06), 50)],

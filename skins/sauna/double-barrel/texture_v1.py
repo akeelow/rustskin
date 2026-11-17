@@ -213,11 +213,13 @@ def iron_paint(size, pos, cav, edge, seed, part, tubes=None):
     return col, spec, gloss, rust
 
 
-def steam_and_soot(col, gloss, spec, P, part, seed, tubes=None):
+def steam_and_soot(col, gloss, spec, P, part, seed, tubes=None, metal=None):
     """Копоть у дула и белые минеральные потёки (вертикальные: не зависят от высоты y)."""
     if part in ("barrel", "sights"):
         z = P[..., 2]
         soot = smooth((z - 0.32) / 0.10) * (0.7 + 0.3 * fbm(P * 140, 3, seed + 3))
+        if metal is not None:   # v1.5: на дереве и коре копоть вдвое слабее (торец цевья был серым)
+            soot = soot * (0.5 + 0.5 * metal)
         col = col * (1 - soot[..., None] * 0.8) + SOOT * soot[..., None] * 0.8
         gloss = gloss * (1 - 0.6 * soot)
         spec = spec * (1 - 0.5 * soot)
@@ -227,6 +229,8 @@ def steam_and_soot(col, gloss, spec, P, part, seed, tubes=None):
     fade = smooth((fbm(P * np.array([30, 120, 30]), 3, seed + 12) - 0.42) * 3)
     blot = smooth((fbm(P * 160, 4, seed + 13) - 0.62) * 4)  # засохшие капли пятнами
     m = np.clip(streak * fade * 0.45 + blot * 0.30, 0, 1) * 0.8
+    if metal is not None:   # v1.5: минеральные потёки — только на железе (на торце цевья выходила белая плашка)
+        m = m * metal
     if tubes is not None:   # на общих островах стволов потёки по x/y повернулись бы — только пятна
         m = m * (1 - tubes) + np.clip(blot * 0.45, 0, 1) * tubes
     col = col * (1 - m[..., None] * 0.55) + MINERAL * m[..., None] * 0.55
@@ -314,7 +318,7 @@ def make(part):
     gloss = np.where(wood, gloss + 0.22 * gz, gloss)
     spec = np.where(metal, spec_i, spec)
     gloss = np.where(metal, gloss_i, gloss)
-    col, gloss, spec = steam_and_soot(col, gloss, spec, P, part, seed + 20, tubes)
+    col, gloss, spec = steam_and_soot(col, gloss, spec, P, part, seed + 20, tubes, metal.astype(np.float32))
 
     # --- v1.3: в прицеле всё было одного тёмного железа (screenshots/ingame_v1.2_aim_*). Разные металлы
     # самоделки: задние муфты стволов — старая медь (фитинг), внутренние кольца — светлее и глаже,
@@ -330,10 +334,11 @@ def make(part):
         cu_col = cu_col * (1 - e3 * 0.55) + hexc("7E5638") * e3 * 0.55
         pat = smooth((cav * 1.5 + (fbm(P * 700, 2, seed + 41) - 0.5) * 0.9 - 0.35) * 3)[..., None]  # ярь-медянка во впадинах
         cu_col = cu_col * (1 - pat * 0.7) + hexc("48604F") * pat * 0.7
-        cu_spec = np.array([0.27, 0.19, 0.14]) * (1 - pat) * (0.8 + 0.3 * (1 - ox)) + np.array([0.24, 0.17, 0.12]) * e3 + 0.06 * pat
+        # v1.5: от третьего лица на солнце медь v1.4 всё ещё блестела как новая — блик и глянец ещё ниже
+        cu_spec = np.array([0.21, 0.15, 0.11]) * (1 - pat) * (0.8 + 0.3 * (1 - ox)) + np.array([0.20, 0.14, 0.10]) * e3 + 0.05 * pat
         col = col * (1 - cu) + cu_col * cu
         spec = spec * (1 - cu) + np.clip(cu_spec, 0, 1) * cu
-        gloss = gloss * (1 - cu[..., 0]) + (0.24 + 0.14 * e3[..., 0] - 0.12 * pat[..., 0] - 0.06 * ox[..., 0]) * cu[..., 0]
+        gloss = gloss * (1 - cu[..., 0]) + (0.19 + 0.12 * e3[..., 0] - 0.10 * pat[..., 0] - 0.05 * ox[..., 0]) * cu[..., 0]
         st = island_mask("barrel", {13, 21, 22, 33}, S)[..., None]
         col = col * (1 - st) + (col * 0.75 + hexc("5A5853") * 0.25 * smooth(edge * 1.5)[..., None]) * st
         spec = spec * (1 - st) + 0.36 * st
