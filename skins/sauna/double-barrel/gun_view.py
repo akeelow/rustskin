@@ -27,6 +27,7 @@ def opt(name, default=None, many=False):
 
 
 PARTS = [p.split("=", 1) for p in opt("--part", many=True)]
+CAMS = opt("--cam", many=True)  # ex,ey,ez:tx,ty,tz:lens — в координатах OBJ (y вверх, z к дулу)
 SIZE = int(opt("--size", "512"))
 SHEET = opt("--sheet")
 BLEND = opt("--blend")
@@ -161,9 +162,15 @@ def main():
     scene = bpy.context.scene
     objs = []
     for obj, prefix in PARTS:
+        off = Vector()
+        if "@" in prefix:   # <obj>=<префикс>@dx,dy,dz — сдвиг в координатах OBJ
+            prefix, o = prefix.split("@")
+            ox, oy, oz = [float(v) for v in o.split(",")]
+            off = Vector((ox, -oz, oy))
         bpy.ops.wm.obj_import(filepath=str(Path(obj).resolve()), forward_axis="NEGATIVE_Z", up_axis="Y")
         mat = material(Path(obj).stem, prefix)
         for ob in bpy.context.selected_objects:
+            ob.location = off
             ob.data.materials.clear()
             ob.data.materials.append(mat)
             bpy.context.view_layer.objects.active = ob
@@ -195,11 +202,18 @@ def main():
                     ("left34", c + Vector((-0.7 * D, 0.6 * D, 0.35 * D)), c, 50),
                     ("front34", c + Vector((0.6 * D, -0.75 * D, 0.3 * D)), c, 50)],
         # от первого лица: глаз позади и выше приклада, чуть левее; оружие у правого края кадра
-        "fp": [("fp", Vector((c.x - 0.09, hi.y + 0.16, hi.z + 0.10)),
-                Vector((c.x - 0.03, lo.y - 0.15, c.z + 0.02)), 32),
-               ("fp_close", Vector((c.x - 0.07, c.y + 0.12, hi.z + 0.07)),
-                Vector((c.x + 0.01, lo.y, c.z)), 28)],
-    }[VIEWS]
+        # от первого лица: глаз над хвостом колодки (OBJ z ≈ -0.12), выше стволов и сбоку; оружие внизу
+        # кадра со стороны, противоположной глазу. Какой бок модели — левый бок стрелка, по OBJ не
+        # понять (README: «Сторона»), поэтому два кадра: глаз со стороны +x и со стороны -x.
+        "fp": [("fp_from_xpos", Vector((0.11, 0.36, 0.075)), Vector((-0.03, -0.75, -0.06)), 24),
+               ("fp_from_xneg", Vector((-0.11, 0.36, 0.075)), Vector((0.03, -0.75, -0.06)), 24),
+               # ниже и дальше вбок: оружие у нижнего правого края, виден левый бок (+x) — цевьё и манжеты
+               ("fp_low_xpos", Vector((0.17, 0.30, 0.05)), Vector((0.04, -0.75, -0.05)), 26)],
+    }.get(VIEWS, [])
+    for k, cs in enumerate(CAMS):
+        e, t, ln = cs.split(":")
+        ev, tv = [Vector((a, -c, b)) for a, b, c in ([float(v) for v in x.split(",")] for x in (e, t))]
+        shots.append((f"cam{k}", ev, tv, float(ln)))
 
     modes = {"both": ("day", "night"), "day": ("day",), "night": ("night",), "studio": ("studio",)}[LIGHT]
     if SHEET:

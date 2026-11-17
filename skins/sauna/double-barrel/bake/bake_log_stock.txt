@@ -1,0 +1,25 @@
+stock high-poly: {'hp_stock_wood': 147513, 'hp_resin': 288, 'hp_towel_wrist': 8360, 'hp_nail_towel': 8}
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:887: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:968: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  lm.use_nodes = True
+baking stock normal group 0 ...
+Info: Baking map saved to internal image, save it externally or pack it
+  -> stock normal
+baking stock ao group 0 ...
+Info: Baking map saved to internal image, save it externally or pack it
+  -> stock ao
+baking stock color group 0 ...
+Info: Baking map saved to internal image, save it externally or pack it
+  -> stock color
+baking stock id group 0 ...
+Info: Baking map saved to internal image, save it externally or pack it
+  -> stock id
+baking stock pos group 0 ...
+Info: Baking map saved to internal image, save it externally or pack it
+  -> stock pos
+done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+OBJ import of 'stock.obj' took 5.18 ms
+
+Blender quit

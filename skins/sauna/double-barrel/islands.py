@@ -7,6 +7,7 @@
        uv/islands.md          (таблица: номер, грани, где на модели, нормаль, плотность, перекрытия).
 Оси OBJ: x — вправо от стрелка, y — вверх, z — вперёд (к дулу). Метры.
 """
+import json
 import os
 from collections import defaultdict
 
@@ -17,7 +18,7 @@ from split_materials import load_obj, uv_islands
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PARTS = ["barrel", "main", "sights", "stock", "grip", "shell"]
-TEX = {"shell": "main"}  # у патронов своей вкладки нет (сверено по атласу main: гильзы справа внизу)
+TEX = {"shell": "barrel"}  # у патронов своей вкладки нет: их текстура — BARREL (split_materials.py, фон 1 %)
 RES = 1024
 
 
@@ -74,6 +75,12 @@ def main():
         bc = Image.open(os.path.join(HERE, "originals", f"{TEX.get(part, part)}_bc.png")).convert("RGB")
         texres = bc.size[0]
         isl = sorted(uv_islands(F), key=lambda fs: -len(fs))
+        per_face = [0] * len(F)
+        for k, fs in enumerate(isl, 1):
+            for fi in fs:
+                per_face[fi] = k
+        with open(os.path.join(HERE, "uv", f"faces_{part}.json"), "w") as fh:
+            json.dump(per_face, fh)  # остров (номер из таблицы) для каждой грани OBJ — читает bake_shotgun.py
         buf = np.zeros((RES, RES), np.int32)
         overlaps = defaultdict(set)
         rows = []

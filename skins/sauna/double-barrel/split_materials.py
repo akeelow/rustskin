@@ -114,6 +114,24 @@ def edge_contrast(img, T, F, faces, off=2.5):
     return float(np.mean(diffs)) if diffs else 0.0
 
 
+def island_mask(T, F, faces, res):
+    """Пиксели атласа (res×res), которые занимает остров (центры пикселей внутри треугольников)."""
+    m = np.zeros((res, res), bool)
+    for fi in faces:
+        p = np.array([[u * res, (1 - v) * res] for u, v in T[[c[1] for c in F[fi]]]])
+        x0, y0 = np.maximum(np.floor(p.min(0)).astype(int), 0)
+        x1, y1 = np.minimum(np.ceil(p.max(0)).astype(int), res - 1)
+        if x1 < x0 or y1 < y0:
+            continue
+        ys, xs = np.mgrid[y0:y1 + 1, x0:x1 + 1]
+        px, py = xs + 0.5, ys + 0.5
+        a, b, c = p
+        e = lambda p0, p1: (p1[0] - p0[0]) * (py - p0[1]) - (p1[1] - p0[1]) * (px - p0[0])
+        w0, w1, w2 = e(b, c), e(c, a), e(a, b)
+        m[y0:y1 + 1, x0:x1 + 1] |= ((w0 >= 0) & (w1 >= 0) & (w2 >= 0)) | ((w0 <= 0) & (w1 <= 0) & (w2 <= 0))
+    return m
+
+
 def write_obj(path, name, V, T, N, F, faces):
     vi, ti, ni = {}, {}, {}
     lines_v, lines_t, lines_n, lines_f = [], [], [], []
@@ -150,7 +168,15 @@ def main():
     islands = uv_islands(F)
     assign = defaultdict(list)
     rows = []
-    for k, faces in enumerate(islands):
+    # Свести всё вместе: острова от больших к малым; каждый — в тот материал, где он не лежит на фоне,
+    # не налезает на уже разложенные острова этого материала (в атласе одного материала куски не
+    # перекрываются, кроме копий с общими vt — они внутри одного «острова») и где край совпадает с краем
+    # нарисованного куска. Первая версия брала только фон + край — гайки корпуса ушли в стволы.
+    R = 512
+    occ = {m: np.zeros((R, R), bool) for m in BODY_MATS}
+    order = sorted(range(len(islands)), key=lambda k: -len(islands[k]))
+    for k in order:
+        faces = islands[k]
         # точки: центры треугольников + вершины (сдвинутые к центру, чтобы не попасть в кайму)
         pts = []
         for fi in faces:
@@ -163,9 +189,14 @@ def main():
         edge = {m: edge_contrast(texs[m], T, F, faces) for m in BODY_MATS}
         # 1) остров не должен лежать на фоне; 2) из оставшихся — где граница острова
         #    совпадает с краем нарисованного куска (резкий перепад цвета поперёк границы)
-        ok = [m for m in BODY_MATS if bgfrac[m] < 0.3] or BODY_MATS
-        best = max(ok, key=lambda m: edge[m])
-        bgfrac = {m: (round(bgfrac[m], 2), round(edge[m], 1)) for m in BODY_MATS}
+        mask = island_mask(T, F, faces, R)
+        npx = max(mask.sum(), 1)
+        ovl = {m: float((occ[m] & mask).sum() / npx) for m in BODY_MATS}
+        emax = max(edge.values()) or 1.0
+        cost = {m: 2.0 * bgfrac[m] + 3.0 * ovl[m] - edge[m] / emax for m in BODY_MATS}
+        best = min(cost, key=cost.get)
+        occ[best] |= mask
+        bgfrac = {m: (round(bgfrac[m], 2), round(edge[m], 1), round(ovl[m], 2)) for m in BODY_MATS}
         assign[best].extend(faces)
         vs = V[[c[0] for fi in faces for c in F[fi]]]
         rows.append((best, len(faces), bgfrac, vs.min(0), vs.max(0)))
@@ -177,7 +208,7 @@ def main():
     report.append("|---|---:|---:|---:|")
     for m in BODY_MATS:
         rs = [r for r in rows if r[0] == m]
-        unsure = sum(1 for r in rs if sorted(v[1] for v in r[2].values())[-2] > 0.6 * r[2][m][1])
+        unsure = sum(1 for r in rs if r[2][m][0] > 0.3 or r[2][m][2] > 0.2)
         report.append(f"| {m} | {len(assign[m])} | {len(rs)} | {unsure} |")
         write_obj(os.path.join(OUT, f"{m}.obj"), m, V, T, N, F, assign[m])
     report.append("")
@@ -188,10 +219,18 @@ def main():
         report.append(f"- `{part}`: {len(F2)} граней, bbox {V2.min(0).round(3)} … {V2.max(0).round(3)}")
 
     report.append("")
-    report.append("Неуверенные острова: у второй текстуры перепад на границе > 60 % от лучшей "
-                  "(материал, граней, {текстура: (доля фона, перепад)}, bbox):")
+    # патроны: своей вкладки нет — какая текстура их? (тот же разбор фона и края)
+    V3, T3, N3, F3 = load_obj(os.path.join(ORIG, FILES["shell"]))
+    sh = []
+    for m in BODY_MATS:
+        pts = np.array([T3[[c[1] for c in f]].mean(0) for f in F3])
+        sh.append(f"{m}: фон {sample(masks[m][0], pts).mean():.2f}, край {edge_contrast(texs[m], T3, F3, range(len(F3))):.1f}")
+    report.append("Патроны (shell) по текстурам корпуса — " + "; ".join(sh))
+    report.append("")
+    report.append("Неуверенные острова: на фоне > 30 % или налезают на другие > 20 % "
+                  "(материал, граней, {текстура: (доля фона, перепад на краю, перекрытие)}, bbox):")
     for r in rows:
-        if sorted(v[1] for v in r[2].values())[-2] > 0.6 * r[2][r[0]][1]:
+        if r[2][r[0]][0] > 0.3 or r[2][r[0]][2] > 0.2:
             report.append(f"- {r[0]} {r[1]} {r[2]} {r[3].round(3)} {r[4].round(3)}")
     os.makedirs(os.path.join(HERE, "uv"), exist_ok=True)
     with open(os.path.join(HERE, "uv", "materials.md"), "w", encoding="utf-8") as fh:

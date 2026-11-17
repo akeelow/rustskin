@@ -1,0 +1,26 @@
+grip high-poly: {'hp_grip_wood': 76608, 'hp_towel_wrist': 8360, 'hp_nail_towel': 8}
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:887: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_shotgun.py:968: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  lm.use_nodes = True
+baking grip normal group 0 ...
+Info: Baking map saved to internal image, save it externally or pack it
+  -> grip normal
+baking grip ao group 0 ...
+Info: Baking map saved to internal image, save it externally or pack it
+  -> grip ao
+baking grip color group 0 ...
+Info: Baking map saved to internal image, save it externally or pack it
+  -> grip color
+baking grip id group 0 ...
+Info: Baking map saved to internal image, save it externally or pack it
+  -> grip id
+baking grip pos group 0 ...
+Info: Baking map saved to internal image, save it externally or pack it
+  -> grip pos
+done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+OBJ import of 'grip.obj' took 4.71 ms
+OBJ import of 'stock.obj' took 2.41 ms
+
+Blender quit
