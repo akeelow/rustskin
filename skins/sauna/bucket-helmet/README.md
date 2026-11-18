@@ -1,7 +1,9 @@
 # Sauna Bucket (Bucket Helmet)
 
-> Статус: ⏳ **ждём оригиналы из редактора** (15.11.2026). Модели и текстур Bucket Helmet в репозитории нет,
-> без них текстуры не делаются. Что скачать — раздел «Что нужно от пользователя» ниже.
+> Статус: 🟡 **план моделирования на согласовании** (18.11.2026): [PLAN.md](PLAN.md) — каждая деталь, размеры,
+> как и зачем, вопросы перед запеканием. Оригиналы получены 18.11 (`originals/`, панель — `screenshots/orig_editor_panel_*`),
+> развёртка разобрана — [uv/islands.md](uv/islands.md). Референсы: Nano Banana `references/nb_main_v1.jpg`, принятые
+> Fish Bucket и Deep Sea — `references/accepted_*.webp`.
 > Сет: [Sauna](../README.md), вторая волна. Образцы процесса: [../wood-storage-box/](../wood-storage-box/README.md)
 > (клёпки, обручи), [../burlap-headwrap/](../burlap-headwrap/README.md) (головной убор, альфа, манекен).
 
