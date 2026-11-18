@@ -1,4 +1,4 @@
-# Самопроверки Sauna Shotgun v1.10 (checks.py)
+# Самопроверки Sauna Shotgun v1.11 (checks.py)
 
 ## 1. Швы развёртки (разница Diffuse по обе стороны шва, 0–255)
 
@@ -33,7 +33,7 @@
 
 | часть | деталь | spec | gloss |
 |---|---|---:|---:|
-| barrel | metal | 67 | 70 |
+| barrel | metal | 68 | 70 |
 | barrel | wood | 60 | 92 |
 | barrel | bark | 45 | 37 |
 | barrel | twine | 40 | 20 |

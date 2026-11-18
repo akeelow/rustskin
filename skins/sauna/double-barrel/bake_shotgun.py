@@ -1031,10 +1031,11 @@ def pitted_tubes(low, TUBES, rng):
         dus = np.angle(np.exp(1j * (th - SEAM))) * R
         zs = NN.smooth((z - 0.078) / 0.004) * NN.smooth((0.432 - z) / 0.004)
         ripple = 1 + 0.3 * np.sin(z * 2 * np.pi / 0.0025)
-        bead = np.exp(-(dus / 0.0011) ** 2) * ripple * zs
-        d += 0.00035 * bead
-        bright = np.maximum(bright, np.exp(-(dus / 0.0005) ** 2) * zs * 0.8)
-        rust = np.maximum(rust, np.exp(-((np.abs(dus) - 0.0016) / 0.0006) ** 2) * zs * 0.5)   # окалина у шва
+        # v1.11: шов шире и положе (в v1.10 узкий крутой валик с тёмной окалиной по бокам читался в игре трещиной)
+        bead = np.exp(-(dus / 0.0018) ** 2) * (0.85 + 0.15 * (ripple - 1) / 0.3 + 0.15) * zs
+        d += 0.00028 * bead
+        bright = np.maximum(bright, np.exp(-(dus / 0.0008) ** 2) * zs * 0.45)
+        rust = np.maximum(rust, np.exp(-((np.abs(dus) - 0.0024) / 0.0008) ** 2) * zs * 0.12)   # лёгкая окалина у шва
         # продольные царапины
         for t0, z0, ln, sl in scratches:
             du = np.angle(np.exp(1j * (th - t0))) * R - sl * (z - z0)
