@@ -933,6 +933,9 @@ def round_bvh(low, pred, name="proxy_round"):
     return b
 
 
+TUBE_BASE = []
+
+
 def pitted_tubes(low, TUBES, rng):
     """v1.7: рельеф труб стволов геометрией, в размерах, которые держит текстура (19 px/см, пиксель ~0.5 мм):
     вмятины 4-9 мм шириной до 0.5 мм глубиной, гнёзда раковин Ø 1.5-2.5 мм (гуще у дула и снизу), сварной шов
@@ -943,9 +946,17 @@ def pitted_tubes(low, TUBES, rng):
     Цвет вершин — маски для texture_v1.py: R — ржавчина (ямки, дно вмятин), G — светлый металл (царапины,
     гребень шва), B — вмятины."""
     ob = copy_polys(low, TUBES, "hp_barrel_tubes")
-    even_mesh(ob, 0.004)        # v1.9: мелкая сетка, потом на гладкую поверхность, потом ещё мельче
-    rounded(ob, low, 0, src_polys(low, lambda i, c, n: i in TUBES))
+    even_mesh(ob, 0.004)
     subdivided(ob, 1)
+    # v1.10: гранёная копия без рельефа — для второго запекания нормали; texture_v1.py вычитает её из основной,
+    # и гранёность (одинаковая у обеих) уходит целиком, остаётся только смоделированный рельеф. Скругление v1.9
+    # оставляло излом на стыках граней, и в игре стволы всё ещё были гранёными
+    base = ob.data.copy()
+    bo = bpy.data.objects.new("hp_barrel_tubes_base", base)
+    bpy.context.scene.collection.objects.link(bo)
+    set_attrs(base, lin(HEX["metal"]), "metal")
+    bo.hide_render = True   # не участвует в основных проходах: над вмятинами давала чёрное затенение (AO)
+    TUBE_BASE[:] = [bo]
     for p in ob.data.polygons:
         p.use_smooth = True
     M, T, ca, cb, _ = barrel_transform(low)
@@ -1475,7 +1486,7 @@ def island_raster(part, size):
     return ids  # строки снизу вверх, как pixels Blender
 
 
-def bake(low, hp, part, size, extr, groups=None):
+def bake(low, hp, part, size, extr, groups=None, base=None):
     """groups: [(острова, [high-poly])] — каждая группа печётся отдельно и кладётся по своей маске островов;
     последняя группа без островов (None) — всё остальное. Нужно, когда острова делят копии геометрии
     (оба ствола в одном месте UV): иначе на трубу ствола попадает то, что лежит у его копии рядом."""
@@ -1573,6 +1584,44 @@ def bake(low, hp, part, size, extr, groups=None):
             im2.file_format = "PNG"
             im2.save()
         print("  ->", part, name, flush=True)
+    if base:   # v1.10: нормаль той же копии без рельефа (только для островов группы base[0])
+        isls, objs = base
+        for o in objs:
+            o.hide_render = False
+        for o in hp:   # на время этого прохода прячем остальное high-poly
+            o.hide_render = True
+        for o in objs:
+            o.data.materials.clear()
+            o.data.materials.append(mat[0])
+        set_pass(mat, "view")
+        scene.cycles.samples = 4
+        scene.cycles.filter_width = 1.5
+        bk.margin_type = "EXTEND"
+        lg = lows[[g[0] for g in groups].index(isls)]
+        img = bpy.data.images.new(f"bake_{part}_normal_base", size, size, alpha=False, float_buffer=True)
+        img.colorspace_settings.name = "Non-Color"
+        tex.image = img
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in objs:
+            o.select_set(True)
+        lg.select_set(True)
+        bpy.context.view_layer.objects.active = lg
+        print(f"baking {part} normal_base ...", flush=True)
+        bpy.ops.object.bake(type="NORMAL", use_clear=True, margin=margin)
+        px = np.array(img.pixels[:], np.float32).reshape(size, size, 4)
+        m = np.isin(raster, list(isls))
+        out = np.zeros((size, size, 3), np.float32)
+        out[...] = (0.5, 0.5, 1.0)
+        out[m] = px[m, :3]
+        im2 = bpy.data.images.new(f"{part}_normal_base", size, size, alpha=False)
+        im2.colorspace_settings.name = "Non-Color"
+        buf = np.ones((size, size, 4), np.float32)
+        buf[..., :3] = out
+        im2.pixels[:] = buf.ravel()
+        im2.filepath_raw = str(OUT / f"{part}_normal_base.png")
+        im2.file_format = "PNG"
+        im2.save()
+        print("  ->", part, "normal_base", flush=True)
     set_pass(mat, "view")
 
 
@@ -1692,7 +1741,7 @@ def main():
             if p == "barrel":   # трубы стволов (общие острова) — только со своими манжетами
                 tub = [o for o in hp if o.name.startswith(("hp_barrel_tubes", "hp_sleeve"))]
                 groups = [(TUBE_ISLANDS, tub), (None, [o for o in hp if o not in tub])]
-            bake(low, hp, p, size, EXTR[p], groups)
+            bake(low, hp, p, size, EXTR[p], groups, (TUBE_ISLANDS, list(TUBE_BASE)) if p == "barrel" else None)
     print("done", flush=True)
 
 

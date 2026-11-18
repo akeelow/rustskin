@@ -262,6 +262,14 @@ def make(part):
     lo = load(os.path.join(B, f"{part}_poslo.png"), S, resample=Image.NEAREST)
     P = POS_LO + (np.round(hi * 255) * 256 + np.round(lo * 255)) / 65535 * (POS_HI - POS_LO)
     nrm_o = load(os.path.join(O, f"{part}_nrm.png"), S)
+    nb_path = os.path.join(B, f"{part}_normal_base.png")
+    if os.path.exists(nb_path):
+        # v1.10: вычесть нормаль гранёной копии без рельефа — гранёность уходит, остаётся смоделированный рельеф
+        nbase = load(nb_path, S)
+        tub = (island_mask(part, {1, 2, 17, 18}, S) > 0.5) & (ids == IDS["metal"])
+        nd = nrm_b.copy()
+        nd[..., :2] = np.clip(nrm_b[..., :2] - nbase[..., :2] + 0.5, 0, 1)
+        nrm_b = np.where(tub[..., None], nd, nrm_b)
     ao_o_path = os.path.join(O, f"{part}_ao.png")
     ao_o = load(ao_o_path, S)[..., 0] if os.path.exists(ao_o_path) else np.ones((S, S), np.float32)
     seed = {"barrel": 1, "main": 2, "stock": 3, "grip": 3}[part]
@@ -274,7 +282,7 @@ def make(part):
         tb = island_mask("barrel", {1, 2, 17, 18}, S)
         ao_o = ao_o * (1 - tb) + np.maximum(ao_o, 0.92) * tb
         # v1.7: мелкое (ямки, вмятины, шов) оставляем — оно одинаково у обеих копий; крупное — мягкое
-        ao_lo = blur(ao_b, 12)
+        ao_lo = blur(ao_b, 4)   # v1.10: затенение только от мелкого (ямки, царапины, шов); вмятины давали тёмные кляксы
         ao_hp = np.clip(ao_b / np.maximum(ao_lo, 1e-3), 0, 1)
         ao_b = ao_b * (1 - tb) + np.maximum(ao_lo, 0.9) * ao_hp * tb
     cav = np.clip((1 - ao_o) * 1.6 + (1 - ao_b) * 0.8, 0, 1)
@@ -331,11 +339,16 @@ def make(part):
         tt = (island_mask("barrel", {1, 17, 18}, S) * (ids == IDS["metal"]))[..., None]   # не по коре и бечёвке манжет
         mk = np.clip(col_b, 0, 1) ** 2.2
         rm, bm = mk[..., 0:1], mk[..., 1:2]
+        dm = mk[..., 2:3]
+        # v1.10: дно вмятин в маске было ржавчиной (0.35·вмятина) — в рендере тёмные пятна-кляксы. Вмятина —
+        # только рельеф; ржавчина остаётся в ямках
+        rm = np.where(rm <= 0.36 * dm + 0.03, rm * 0.15, rm)
         tone = (0.9 + 0.2 * fbm(Pc * 25, 3, 81))[..., None]
         tcol = IRON * tone
         rv = fbm(Pc * 500, 2, 82)[..., None]
-        rcol = hexc("3E1E10") * (1 - rv * 0.5) + RUST * rv * 0.5   # ямки — тёмно-бурые, чтобы читались углублением
-        tcol = tcol * (1 - rm * 0.85) + rcol * rm * 0.85
+        rcol = hexc("4E2814") * (1 - rv * 0.6) + RUST * rv * 0.6   # v1.10: светлее — почти чёрные крупные раковины читались кляксами
+        rw = np.clip(rm, 0, 1) ** 1.6 * 0.75   # темнее в глубине чаши, к кромке сходит на нет
+        tcol = tcol * (1 - rw) + rcol * rw
         tcol = tcol * (1 - bm * 0.6) + (EDGE * 1.35) * bm * 0.6
         col = col * (1 - tt) + tcol * tt
         tube_sg = (tt[..., 0], 0.30 + 0.18 * bm[..., 0] - 0.2 * rm[..., 0], 0.30 + 0.15 * bm[..., 0] - 0.22 * rm[..., 0])
