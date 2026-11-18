@@ -23,7 +23,9 @@ RES = 1024
 
 
 def load_obj(path):
+    load_obj.nf = 0
     V, T, F = [], [], []
+    FL = []  # номер строки f (грани OBJ) для каждого треугольника
     for line in open(path):
         p = line.split()
         if not p:
@@ -36,6 +38,9 @@ def load_obj(path):
             c = [[int(i) - 1 if i else -1 for i in (q.split("/") + ["", ""])[:3]] for q in p[1:]]
             for k in range(1, len(c) - 1):  # триангуляция веером
                 F.append([c[0], c[k], c[k + 1]])
+                FL.append(load_obj.nf)
+            load_obj.nf += 1
+    load_obj.fl = FL
     return np.array(V), np.array(T), F
 
 
@@ -94,6 +99,10 @@ def main():
             per_face[fi] = k
     os.makedirs(os.path.join(HERE, "uv"), exist_ok=True)
     json.dump(per_face, open(os.path.join(HERE, "uv", "faces.json"), "w"))
+    per_obj = [0] * load_obj.nf   # остров для каждой грани OBJ (строки f) — читает bake_bucket.py
+    for t, fl in enumerate(load_obj.fl):
+        per_obj[fl] = per_face[t]
+    json.dump(per_obj, open(os.path.join(HERE, "uv", "faces_obj.json"), "w"))
     buf = np.zeros((RES, RES), np.int32)
     overlaps = defaultdict(set)
     rows = []
@@ -148,6 +157,15 @@ def main():
     ids[..., 0] = buf % 256
     ids[..., 1] = buf // 256
     Image.fromarray(ids).save(os.path.join(HERE, "uv", "ids.png"))
+    # то же в 4096 (маски групп запекания без «ступенек» на краях островов)
+    big = np.zeros((4096, 4096), np.int32)
+    for k, faces in enumerate(isl, 1):
+        for fi in faces:
+            raster_tri(big, T[[c[1] for c in F[fi]]], k, 4096)
+    ids4 = np.zeros((4096, 4096, 3), np.uint8)
+    ids4[..., 0] = big % 256
+    ids4[..., 1] = big // 256
+    Image.fromarray(ids4).save(os.path.join(HERE, "uv", "ids_4096.png"))
     md = ["# Острова развёртки Bucket Helmet (islands.py)", "",
           f"OBJ: {len(V)} вершин, {len(F)} треугольников. Метры, y вверх. Габарит x {lo[0]:+.3f}…{hi[0]:+.3f}, "
           f"y {lo[1]:+.3f}…{hi[1]:+.3f}, z {lo[2]:+.3f}…{hi[2]:+.3f}. Ось ведра x={cx:+.3f}, z={cz:+.3f}.",
