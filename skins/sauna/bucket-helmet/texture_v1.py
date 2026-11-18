@@ -178,6 +178,7 @@ def main():
     warm = np.stack([1 + 0.03 * st_warm[k_st], np.ones_like(tone), 1 - 0.03 * st_warm[k_st]], -1)
     stv = (wall & is_wood) | (top & (ID == IDS["endgrain"]) & (rho_top > 0.099))   # доски днища — без «секторов»
     c = np.where(stv[..., None], np.clip(c * tone[..., None] * warm, 0, 1), c)
+    c_dry = c.copy()
     n_big = fbm(np.stack([P[..., 0] * 18, P[..., 1] * 18, P[..., 2] * 18], -1), 4, 7)
     n_mid = fbm(np.stack([P[..., 0] * 60, P[..., 1] * 60, P[..., 2] * 60], -1), 3, 8)
     # мокрое (решение 1): макушка и утор — шайка стояла днищем в воде; верх стенки темнеет к макушке;
@@ -200,6 +201,21 @@ def main():
     tide_l = np.exp(-((rho_top - edge_r) / 0.0022) ** 2) * top * (0.5 + 0.5 * fbm(np.stack([np.cos(ang) * 9, np.sin(ang) * 9, np.full_like(ang, 1.1)], -1), 3, 18))
     c = mix(c, c * 0.72, outer * 0.7 * is_wood)
     c = mix(c, c * 0.8, tide_l * 0.45 * is_wood)
+    # v1.2 (кадры v1.1): закатанная кромка макушки (бортик модели) была тёмно-коричневой и с волнами читалась
+    # обёрнутой тканью → торцы клёпок и их наружная кромка светлые, сухие (кромку вытирают руки, вода стоит внутри
+    # днища), кольца и стыки — из запечённого рельефа. Днище в дневном свете было светлым → само днище мокрее.
+    if lay.get("v12", True):
+        lip_w = smooth((Y - 0.371) / 0.013) * (wall & is_wood)          # плавно, без границы на стенке
+        lip = lip_w > 0.5
+        chime = top & (rho_top > 0.0985) & is_wood
+        lc = c_dry * (0.93 + 0.08 * n_mid[..., None])
+        lc = mix(lc, c_dry * (WOOD_WET / WOOD_SET), 0.22)
+        c = mix(c, lc, np.where(chime, 1.0, lip_w))
+        boards = top & (rho_top <= 0.0985) & is_wood
+        cb = c * np.array([0.80, 0.76, 0.72], np.float32)
+        c = np.where(boards[..., None], cb, c)
+        wet = np.where(chime, 0.2, wet * (1 - lip_w) + 0.2 * lip_w)
+        wet = np.where(boards, np.maximum(wet, 0.9), wet)
     # свежий срез: светлый, чуть грязный у самой кромки
     c = np.where(is_fresh[..., None], mix(col, FRESH, 0.6) * (0.92 + 0.1 * n_mid[..., None]), c)
     # белые минеральные разводы: линии высохших капель на дереве (тонко, полупрозрачно) и на макушке
