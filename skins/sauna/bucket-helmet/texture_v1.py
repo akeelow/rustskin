@@ -164,13 +164,27 @@ def main():
     c = np.where(is_wood[..., None] & ~(wall & (Y < 0.33))[..., None], grade_to(col, is_wood, WOOD_SET, 0.95), c)
     zc = 0.0128
     rho_top = np.sqrt(P[..., 0] ** 2 + (P[..., 2] - zc) ** 2)
+    # v1.1 (кадры из игры 18.11): клёпки были одного тона, волокна — частым «вельветом». Тон каждой клёпки свой
+    # (±11 %, чуть теплее/холоднее), контраст волокон в цвете мягче (рельеф волокон в Normal не меняется).
+    th_all = np.degrees(np.arctan2(P[..., 0], P[..., 2] - (0.0036 + (P[..., 1] - 0.145) * (0.0094 / 0.25))))
+    sb = np.array(lay["staves"])
+    k_st = np.clip(np.searchsorted(sb, th_all, side="right") - 1, 0, len(sb) - 2)
+    st_rng = np.random.default_rng(41)
+    st_tone = st_rng.uniform(-1, 1, len(sb))
+    st_warm = st_rng.uniform(-1, 1, len(sb))
+    soft = blur(c, 3)
+    c = np.where(is_wood[..., None], c * 0.65 + soft * 0.35, c)
+    tone = 1 + 0.11 * st_tone[k_st]
+    warm = np.stack([1 + 0.03 * st_warm[k_st], np.ones_like(tone), 1 - 0.03 * st_warm[k_st]], -1)
+    stv = (wall & is_wood) | (top & (ID == IDS["endgrain"]) & (rho_top > 0.099))   # доски днища — без «секторов»
+    c = np.where(stv[..., None], np.clip(c * tone[..., None] * warm, 0, 1), c)
     n_big = fbm(np.stack([P[..., 0] * 18, P[..., 1] * 18, P[..., 2] * 18], -1), 4, 7)
     n_mid = fbm(np.stack([P[..., 0] * 60, P[..., 1] * 60, P[..., 2] * 60], -1), 3, 8)
     # мокрое (решение 1): макушка и утор — шайка стояла днищем в воде; верх стенки темнеет к макушке;
     # нижний край чуть темнее (дождь на голове)
     wet = np.zeros((S, S), np.float32)
-    wet += wall * (0.55 * smooth((Y - 0.30) / 0.09) + 0.22 * smooth((0.20 - Y) / 0.05))
-    wet += top * (0.55 + 0.25 * smooth((rho_top - 0.085) / 0.03))
+    wet += wall * (0.72 * smooth((Y - 0.29) / 0.10) + 0.22 * smooth((0.20 - Y) / 0.05))
+    wet += top * (0.72 + 0.25 * smooth((rho_top - 0.085) / 0.03))
     wet += inner * 0.35
     wet *= 0.8 + 0.4 * n_big
     wet = np.clip(wet + 0.12 * (n_mid - 0.5), 0, 1)
@@ -227,12 +241,21 @@ def main():
     print("tin", flush=True)
     paint_n = fbm(np.stack([P[..., 0] * 70, P[..., 1] * 70, P[..., 2] * 70], -1), 5, 21)
     paint_n = paint_n + 0.12 * (vnoise(np.stack([P[..., 0] * 400, P[..., 1] * 400, P[..., 2] * 400], -1), 22) - 0.5)
-    paint = smooth((paint_n - 0.40) / 0.025) * inner     # краска держится на ~70 %, облезла сколами
-    chip_edge = np.exp(-((paint_n - 0.40) / 0.008) ** 2) * inner
-    ct = TIN * (0.8 + 0.3 * n_mid[..., None])
-    ct = mix(ct, PAINT * (0.85 + 0.25 * n_big[..., None]), paint)
-    ct = mix(ct, RUST_DARK, np.clip(chip_edge * 0.6 + Gm * 0.6, 0, 1))
-    ct = mix(ct, EDGE * 1.4, Rm * 0.5)
+    # v1.1: в игре снизу белые сколы на синем читались камуфляжем → краски ~85 %, сколы мелкие, голая жесть
+    # тёмная и ржавая, вся краска старая и грязная
+    paint = smooth((paint_n - 0.33) / 0.02) * inner
+    chip_edge = np.exp(-((paint_n - 0.33) / 0.010) ** 2) * inner
+    ct = TIN * 0.5 * (0.8 + 0.3 * n_mid[..., None])
+    ct = mix(ct, mix(RUST_DARK, RUST, n_mid * 0.5), (1 - paint) * 0.55 * inner)
+    ct = mix(ct, PAINT * 0.78 * (0.85 + 0.25 * n_big[..., None]), paint)
+    ct = mix(ct, RUST_DARK, np.clip(chip_edge * 0.8 + Gm * 0.6, 0, 1))
+    ct = mix(ct, EDGE * 1.2, Rm * 0.4)
+    ct = ct * (0.78 + 0.22 * aow[..., None]) if aow.shape[:2] == ct.shape[:2] else ct * 0.85
+    # латка на макушке: тусклая жесть из банки, ржавая по краю и у гвоздей (v1: белая, как наклейка)
+    patch = is_tin & top
+    cp_ = TIN * 0.48 * (0.85 + 0.3 * n_mid[..., None])
+    cp_ = mix(cp_, mix(RUST, RUST_DARK, n_mid), np.clip(Rm * 0.9 + smooth((n_big - 0.55) / 0.25) * 0.35, 0, 1))
+    ct = np.where(patch[..., None], cp_, ct)
     c = np.where(is_tin[..., None], ct, c)
 
     # ---------------------------------------------------------------- проволока, верёвка, лист
@@ -260,9 +283,11 @@ def main():
     iron_spec = 0.28 + 0.18 * Rm - 0.2 * rust_iron
     spec = np.where(is_iron[..., None], np.repeat(iron_spec[..., None], 3, -1) * np.array([1.0, 0.97, 0.93]), spec)
     gloss = np.where(is_iron, 0.30 + 0.2 * Rm - 0.18 * rust_iron, gloss)
-    tin_spec = np.where(paint > 0.5, 0.06, 0.45)
+    tin_spec = np.where(paint > 0.5, 0.06, 0.32)
+    tin_spec = np.where(is_tin & top, 0.22, tin_spec)
     spec = np.where(is_tin[..., None], np.repeat(tin_spec[..., None], 3, -1), spec)
-    gloss = np.where(is_tin, np.where(paint > 0.5, 0.35, 0.45) - 0.2 * Gm, gloss)
+    gloss = np.where(is_tin, np.where(paint > 0.5, 0.30, 0.35) - 0.2 * Gm, gloss)
+    gloss = np.where(is_tin & top, 0.24, gloss)
     spec = np.where(is_wire[..., None], 0.32 - 0.2 * Gm[..., None], spec)
     gloss = np.where(is_wire, 0.35 - 0.2 * Gm, gloss)
     spec = np.where((ID == IDS["lead"])[..., None], 0.38, spec)

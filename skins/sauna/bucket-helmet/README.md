@@ -1,30 +1,33 @@
 # Sauna Bucket (Bucket Helmet)
 
-> Статус: 🟡 **v1 готова к проверке в игре** (18.11.2026). Все детали смоделированы в Blender и запечены в 4096,
-> карты собраны в 1024 (`export/SaunaBucket_v1_*`). **В игре не проверено** — что снять, в разделе «Что проверить в
-> игре». План с номерами деталей: [PLAN.md](PLAN.md). Пакет Workshop: [workshop/README.md](workshop/README.md).
+> Статус: 🟡 **v1.1 — снять в игре** (18.11.2026). v1 снята в игре (`screenshots/ingame_v1_*`): читается банной
+> шайкой, обручи — тёмное железо, лист виден. Исправлено в v1.1 (только цвет, геометрия и запекание те же): латка
+> на макушке была белой «наклейкой», вкладыш снизу — «камуфляжем», клёпки одного тона, волокна «вельветом», мокрая
+> макушка почти не видна. Файлы `export/SaunaBucket_v1.1_*` (v1 лежит рядом). План с номерами деталей: [PLAN.md](PLAN.md). Пакет Workshop: [workshop/README.md](workshop/README.md).
 > Сет: [Sauna](../README.md), вторая волна.
 
-![v1: день и ночь, 6 видов](renders/v1_sheet.png)
+![v1.1: день и ночь, 6 видов](renders/v1.1_sheet.png)
 
-![v1: крупно — окно, лист, нахлёст обруча, днище, ушко, изнутри](renders/v1_close.png)
+![v1.1: крупно — окно, лист, нахлёст обруча, днище, ушко, изнутри](renders/v1.1_close.png)
+
+Кадры v1 из игры: [сзади](screenshots/ingame_v1_back.webp), [3/4](screenshots/ingame_v1_front_q34.webp), [снизу](screenshots/ingame_v1_below.webp), [сумерки](screenshots/ingame_v1_dusk.webp).
 
 Это рендеры Blender на голове-болванке ([helmet_view.py](helmet_view.py)), а не игровые кадры. Сцена для Blender —
-`renders/v1_view.blend`. Обручи в просмотрщике выглядят светлее, чем будут в игре: он переводит блик карты в
+`renders/v1.1_view.blend`. Обручи в просмотрщике выглядят светлее, чем будут в игре: он переводит блик карты в
 металличность грубо (в игре у железа почти чёрный Diffuse, цвет даёт блик — так проверено на двустволке).
 
-## Как загрузить (v1)
+## Как загрузить (v1.1)
 
 Workshop → Create a new item → **Bucket Helmet** → EDIT, вкладка одна — **MAIN**.
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `export/SaunaBucket_v1_diffuse.png` (1024), Color 255/255/255, **Alpha Cutoff 0.00** (альфы нет) |
-| Normal | `export/SaunaBucket_v1_normal.png` (1024, OpenGL, B = 255), Normal Scale 1.00 |
-| Specular/Gloss | `export/SaunaBucket_v1_specgloss.png` (1024, RGB блик, A глянец), Spec Color 255/255/255, **Glossiness 1.00** (по умолчанию 0.92) |
-| Occlusion | `export/SaunaBucket_v1_occlusion.png` — **1024** (слот по умолчанию 256, но 1024 редактор держит — тест 18.11), Occlusion Scale 1.00 |
+| Diffuse | `export/SaunaBucket_v1.1_diffuse.png` (1024), Color 255/255/255, **Alpha Cutoff 0.00** (альфы нет) |
+| Normal | `export/SaunaBucket_v1.1_normal.png` (1024, OpenGL, B = 255), Normal Scale 1.00 |
+| Specular/Gloss | `export/SaunaBucket_v1.1_specgloss.png` (1024, RGB блик, A глянец), Spec Color 255/255/255, **Glossiness 1.00** (по умолчанию 0.92) |
+| Occlusion | `export/SaunaBucket_v1.1_occlusion.png` — **1024** (слот по умолчанию 256, но 1024 редактор держит — тест 18.11), Occlusion Scale 1.00 |
 | Emission | не трогать: None, Emission Color 0/0/0 (свечения нет — одежда) |
-| Fuzz Mask | `export/SaunaBucket_v1_fuzzmask.png` (ворс на верёвке, чуть на сухом дереве, 0 на железе), Fuzz 1.00, Fuzz Scatter 0.50 |
+| Fuzz Mask | `export/SaunaBucket_v1.1_fuzzmask.png` (ворс на верёвке, чуть на сухом дереве, 0 на железе), Fuzz 1.00, Fuzz Scatter 0.50 |
 | Dirt | по умолчанию (Dirt Amount 0.40) |
 
 Тестовые карты `export/test_slotsize_*` из слотов убрать.
@@ -66,7 +69,7 @@ Workshop → Create a new item → **Bucket Helmet** → EDIT, вкладка о
 |---|---|---|
 | 1 | [islands.py](islands.py) (.venv) | острова, плотность, копии → `uv/islands.{md,png}`, `uv/ids*.png`, `uv/faces_obj.json` |
 | 2 | [bake_bucket.py](bake_bucket.py) (Blender `-b -P`) | high-poly всех деталей (PLAN.md, детали 1–50) и запекание 4096 группами → `bake/{normal,ao,aowide,color,id,msk,poshi,poslo}.png`, `bake/layout.json` |
-| 3 | [texture_v1.py](texture_v1.py) (.venv) | палитра, мокрое, разводы, потёки, краска вкладыша, блик/глянец, Fuzz → `export/SaunaBucket_v1_*` |
+| 3 | [texture_v1.py](texture_v1.py) (.venv) | палитра, мокрое, разводы, потёки, краска вкладыша, блик/глянец, Fuzz → `export/SaunaBucket_v1.1_*` |
 | 4 | [helmet_view.py](helmet_view.py) (Blender) | рендеры на голове-болванке: лист, крупно, ч/б, иконки, сравнение, сет, Normal против Diffuse |
 | 5 | [checks.py](checks.py) (.venv) | размеры/каналы, шов, отступы, нормаль стенки → `renders/checks_v1.md` |
 
@@ -178,6 +181,18 @@ Occlusion 1024 (оригинал 256 — редактор держит, пров
 снизу в обычной игре.
 
 ## Заметки
+
+- 18.11.2026, **v1 в игре** (`screenshots/ingame_v1_*`, день сзади, 3/4, сбоку, снизу, сумерки).
+  - Хорошо: читается деревянной шайкой с любого ракурса; обручи — тёмное старое железо, не хром; лист, гвозди,
+    заклёпки, ушко с верёвкой видны; окно с сеткой и синий вкладыш в нём читаются.
+  - Плохо: латка на макушке — ярко-белая, как бумажная наклейка (видна сверху от третьего лица всё время);
+    вкладыш снизу — синий с белыми пятнами, «цифровой камуфляж»; клёпки одного тона и волокна частым «вельветом»
+    (стенка как пластик под дерево); мокрая макушка почти не видна — в игре светлее, чем в превью.
+  - **v1.1** (`texture_v1.py --ver v1.1`, геометрия и запекание прежние): латка — тусклая жесть с ржавыми краями,
+    блик 0.22; вкладыш — краска на ~85 %, сколы мелкие, голая жесть тёмная и ржавая, всё грязнее; у каждой клёпки
+    свой тон (±11 %, теплее/холоднее), контраст волокон в цвете мягче на треть (рельеф в Normal тот же); макушка и
+    верх стенки мокрее. Первая сборка v1.1 дала «сектора» на днище (тон клёпок лёг и на доски) — тон клёпок только
+    на стенке и торцах утора.
 
 - 18.11.2026, **v1**: оригиналы получены, развёртка разобрана, план согласован (PLAN.md, решения 1–5). Тест
   слотов: Diffuse ужимается до 1024, Occlusion 1024 держится. High-poly 3.2 млн, запекание 4096 (41 мин). По

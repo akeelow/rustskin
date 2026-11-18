@@ -1,6 +1,6 @@
 # Sauna Bucket — публикация в Workshop
 
-> Подготовлено 18.11.2026 для **v1**. **В игре не проверено** — сначала посмотреть в редакторе (список в
+> Подготовлено 18.11.2026 для **v1.1** (v1 снята в игре 18.11, v1.1 — правки цвета). **В игре не проверено** — сначала посмотреть в редакторе (список в
 > [../README.md](../README.md), «Что проверить в игре»), потом публиковать. Публикует пользователь сам из
 > игрового редактора.
 
@@ -34,12 +34,12 @@ Part of the Sauna set.
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `../export/SaunaBucket_v1_diffuse.png`, Color 255/255/255, **Alpha Cutoff 0.00** (альфы нет) |
-| Normal | `../export/SaunaBucket_v1_normal.png`, Normal Scale 1.00 |
-| Specular/Gloss | `../export/SaunaBucket_v1_specgloss.png`, Spec Color 255/255/255, **Glossiness 1.00** (по умолчанию 0.92) |
-| Occlusion | `../export/SaunaBucket_v1_occlusion.png` (1024; если редактор покажет «256» — так и оставить), Occlusion Scale 1.00 |
+| Diffuse | `../export/SaunaBucket_v1.1_diffuse.png`, Color 255/255/255, **Alpha Cutoff 0.00** (альфы нет) |
+| Normal | `../export/SaunaBucket_v1.1_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `../export/SaunaBucket_v1.1_specgloss.png`, Spec Color 255/255/255, **Glossiness 1.00** (по умолчанию 0.92) |
+| Occlusion | `../export/SaunaBucket_v1.1_occlusion.png` (1024; если редактор покажет «256» — так и оставить), Occlusion Scale 1.00 |
 | Emission | не трогать (None, Emission Color 0/0/0 — свечения нет) |
-| Fuzz Mask | `../export/SaunaBucket_v1_fuzzmask.png`, Fuzz 1.00, Fuzz Scatter 0.50 (по умолчанию) |
+| Fuzz Mask | `../export/SaunaBucket_v1.1_fuzzmask.png`, Fuzz 1.00, Fuzz Scatter 0.50 (по умолчанию) |
 | Dirt | по умолчанию (Dirt Amount 0.40) |
 
 Чаще всего забывают Fuzz Mask: без неё по умолчанию белая маска и Fuzz 1.00 — бархатный отблеск по всему
