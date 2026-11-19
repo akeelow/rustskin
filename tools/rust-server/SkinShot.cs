@@ -8,6 +8,7 @@
 //   /skin <id>                   reskin the held item, or the entity you look at
 //   /skin <id> look              reskin only the entity you look at
 //   /t <hour>                    set time of day (e.g. /t 12, /t 22)
+//   /bp                          unlock all blueprints (admins also get them on join)
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -43,6 +44,28 @@ namespace Oxide.Plugins
             if (item == null) { SendReply(p, $"Unknown item: {shortname}"); return; }
             p.GiveItem(item);
             SendReply(p, $"Given {item.info.displayName.english} x{amount}, skin {skin}");
+        }
+
+        // Admins get every blueprint on join (and with /bp)
+        void OnPlayerConnected(BasePlayer p)
+        {
+            if (p.IsAdmin) p.blueprints.UnlockAll();
+        }
+
+        [ChatCommand("bp")]
+        void CmdBp(BasePlayer p, string cmd, string[] args)
+        {
+            if (!Allowed(p)) return;
+            p.blueprints.UnlockAll();
+            SendReply(p, "All blueprints unlocked");
+        }
+
+        // Crafting menu only lists Steam-inventory skins, so crafted Sauna items get their skin here
+        void OnItemCraftFinished(ItemCraftTask task, Item item, ItemCrafter crafter)
+        {
+            if (item == null || item.skin != 0) return;
+            foreach (var kv in Sauna)
+                if (kv.Key == item.info.shortname) { item.skin = kv.Value; item.MarkDirty(); return; }
         }
 
         [ChatCommand("sauna")]
