@@ -9,6 +9,7 @@
 //   /skin <id> look              reskin only the entity you look at
 //   /t <hour>                    set time of day (e.g. /t 12, /t 22)
 //   /bp                          unlock all blueprints (admins also get them on join)
+// The same in the F1 console, without the slash: sauna, skin <id>, bp, giveskin <shortname> [skin] [n]
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -45,6 +46,19 @@ namespace Oxide.Plugins
             p.GiveItem(item);
             SendReply(p, $"Given {item.info.displayName.english} x{amount}, skin {skin}");
         }
+
+        // F1-console versions of the chat commands
+        static string[] A(ConsoleSystem.Arg a)
+        {
+            int n = a.Args == null ? 0 : a.Args.Length;
+            var r = new string[n];
+            for (int i = 0; i < n; i++) r[i] = a.GetString(i);
+            return r;
+        }
+        [ConsoleCommand("sauna")]    void CcSauna(ConsoleSystem.Arg a) { var p = a.Player(); if (p != null) CmdSauna(p, "sauna", A(a)); }
+        [ConsoleCommand("skin")]     void CcSkin(ConsoleSystem.Arg a)  { var p = a.Player(); if (p != null) CmdSkin(p, "skin", A(a)); }
+        [ConsoleCommand("bp")]       void CcBp(ConsoleSystem.Arg a)    { var p = a.Player(); if (p != null) CmdBp(p, "bp", A(a)); }
+        [ConsoleCommand("giveskin")] void CcGive(ConsoleSystem.Arg a)  { var p = a.Player(); if (p != null) CmdGive(p, "give", A(a)); }
 
         // Admins get every blueprint on join (and with /bp)
         void OnPlayerConnected(BasePlayer p)
