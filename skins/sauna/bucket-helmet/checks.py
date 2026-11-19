@@ -38,7 +38,12 @@ def main():
         oi = Image.open(os.path.join(HERE, "originals", o)) if o else None
         rep.append(f"| {k} | {im.size[0]}, {im.mode} | {(str(oi.size[0]) + ', ' + oi.mode) if oi else 'слот пустой (белый)'} |")
     d = img(f"{pre}_diffuse.png")
-    rep += ["", f"Альфа Diffuse: min {d[..., 3].min():.0f}, max {d[..., 3].max():.0f} (должно быть 255 — альфы нет).",
+    ids_ = np.asarray(Image.open(os.path.join(HERE, "uv", "ids.png")).convert("RGB")).astype(np.int32)
+    isl_ = ids_[..., 0] + ids_[..., 1] * 256
+    wire_ = np.isin(isl_, (2, 4, 28) + tuple(range(10, 37)) + tuple(range(38, 46)))
+    other_ = (isl_ > 0) & ~wire_
+    rep += ["", f"Альфа Diffuse: на островах сетки max {d[..., 3][wire_].max():.0f} (v2: 0 — сетка вырезана), "
+            f"на остальных островах min {d[..., 3][other_].min():.0f} (должно быть 255).",
             f"Синий канал Normal: min {img(pre + '_normal.png')[..., 2].min():.0f} (B = 255, как у оригинала)."]
     # острова в 1024
     ids = np.asarray(Image.open(os.path.join(HERE, "uv", "ids.png")).convert("RGB")).astype(np.int32)

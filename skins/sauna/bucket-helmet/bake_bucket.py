@@ -43,7 +43,7 @@ OUT = HERE / "bake"
 D2R = math.pi / 180
 
 IDS = {"wood": 1, "endgrain": 2, "fresh": 3, "iron": 4, "rivet": 5, "nail": 6, "tin": 7, "rope": 8,
-       "leaf": 9, "resin": 10, "wire": 11, "lead": 12, "paint": 13}
+       "leaf": 9, "resin": 10, "wire": 11, "lead": 12, "paint": 13, "towel": 14, "copper": 15, "twig": 16}
 POS_LO = np.array([-0.17, 0.10, -0.17])
 POS_HI = np.array([0.17, 0.42, 0.17])
 
@@ -51,7 +51,8 @@ POS_HI = np.array([0.17, 0.42, 0.17])
 HEX = {"wood": "C2A77E", "wood_late": "9C825C", "wood_end": "A88D66", "end_ring": "7E6546",
        "fresh": "DCC7A0", "knot": "6E4E30", "iron": "3A3632", "iron_edge": "6A6560", "rust": "8C4A26",
        "tin": "8A8C8E", "rope": "B8A27A", "rope_dark": "8A7656", "leaf": "5C6A39", "leaf_vein": "7E8A4E",
-       "leaf_edge": "8A7A3A", "resin": "8A5A22", "lead": "5A5C60", "wire": "8E9290", "zinc": "B9BDB8"}
+       "leaf_edge": "8A7A3A", "resin": "8A5A22", "lead": "5A5C60", "wire": "8E9290", "zinc": "B9BDB8",
+       "towel": "CFC6B4", "stripe": "8E3A30", "copper": "5A3424", "twig": "4A3426"}
 
 
 def lin(h):
@@ -461,7 +462,11 @@ class Layout:
         self.hoop_lo_cut = (lo_l - 3.0, lo_r + 3.0)        # концы нижнего обруча — у окна
         self.knots = [(-122.0, 0.245, 0.0055, True), (138.0, 0.300, 0.0042, False), (72.0, 0.215, 0.0065, False)]
         self.leaf = (52.0, 0.302)      # центр листа (θ, y)
-        self.shot = (-21.0, 0.313)     # гнездо дроби
+        self.shot = (-44.0, 0.284)     # гнездо дроби (v2: верх стенки занят полотенцем)
+        # v2: полотенце вместо верхнего обруча, узел и концы сбоку, веник под полотенцем с другой стороны
+        self.towel = (0.321, 0.378)
+        self.knot_th = 80.0
+        self.venik_th = -78.0
         self.data = {}
 
     def stave_of(self, th):
@@ -575,6 +580,8 @@ def wall_relief(L, F, TH, Y, rng):
     st, sy = L.shot
     shots = [(st + 0.0, sy + 0.000), (st + 5.5, sy + 0.009), (st - 4.0, sy - 0.006), (st + 8.0, sy - 0.004),
              (st - 6.5, sy + 0.010)]
+    hd_s, _ = L.hole.query(np.array([p[0] for p in shots]), np.array([p[1] for p in shots]))
+    shots = [p for p, d in zip(shots, hd_s) if d > 0.008]
     for i, (pt, py) in enumerate(shots):
         dx = (TH - pt) * D2R * r
         dy = Y - py
@@ -693,7 +700,7 @@ def wall_relief(L, F, TH, Y, rng):
         h += -0.0003 * moon
         G = np.maximum(G, 0.4 * moon)
     # источники ржавчины на дереве: под обручами, у гвоздей и заклёпок
-    for (y0, y1) in (L.hoop_up, L.hoop_lo):
+    for (y0, y1) in (L.hoop_lo,):
         B = np.maximum(B, np.exp(-((Y - y0) / 0.0018) ** 2) * 0.5)
         B = np.maximum(B, np.exp(-((Y - y1) / 0.0018) ** 2) * 0.35)
     for (nt, ny, _) in L.data["nails_liner"]:
@@ -814,15 +821,15 @@ def wall_frame(F, th, y):
 
 def hoop_parts(L, F, rng):
     obs = []
-    obs.append(build_hoop(L, F, rng, *L.hoop_up, "hp_hoop_up", joint=(L.joint_th, L.joint_len)))
-    obs.append(build_hoop(L, F, rng, *L.hoop_lo, "hp_hoop_lo", th_cut=L.hoop_lo_cut))
+    # v2: верхнего обруча нет — его место заняло полотенце; нижний обруч медный
+    lo = build_hoop(L, F, rng, *L.hoop_lo, "hp_hoop_lo", th_cut=L.hoop_lo_cut)
+    a = lo.data.color_attributes["idc"]
+    flat = np.ones((len(lo.data.vertices), 4), np.float32)
+    flat[:, 1:3] = 0
+    flat[:, 0] = (IDS["copper"] * 16 + 8) / 255
+    a.data.foreach_set("color", flat.ravel())
+    obs.append(lo)
     rivets = []
-    r_up = float(F.r(L.joint_th, sum(L.hoop_up) / 2))
-    jl = L.joint_len / r_up / D2R
-    ym = sum(L.hoop_up) / 2
-    for th_, tilt in ((L.joint_th + jl * 0.25, None), (L.joint_th + jl * 0.75, None),
-                      (-150.0, None), (-20.0, (0.25, 0.1, 0)), (40.0, None), (110.0, None)):
-        rivets.append((th_, ym, 0.0030 + (0.0014 if L.joint_th < th_ < L.joint_th + jl else 0.0), tilt))
     ylm = sum(L.hoop_lo) / 2
     for th_ in (-140.0, 160.0, 75.0 + 30.0):
         rivets.append((th_, ylm, 0.0030, None))
@@ -845,7 +852,7 @@ def nail_layout(L, rng):
     nails = []
     for th_ in np.linspace(-160, 160, 13):
         th_ = th_ + rng.uniform(-4, 4)
-        if abs(th_) < 55 or 38 < th_ < 72:
+        if abs(th_) < 55 or 38 < th_ < 100 or -100 < th_ < -58:
             continue
         k, s = L.stave_of(np.array([th_]))
         if min(s[0], 1 - s[0]) < 0.22:
@@ -1713,7 +1720,9 @@ LOOKS_WALL = [
     ("hole", (0.05, 0.24, 0.40), (0.0, 0.22, 0.12), 60, (0.7, -0.3, -0.6)),
     ("leaf", (0.30, 0.30, 0.22), (0.11, 0.30, 0.08), 70, (-0.8, -0.2, -0.5)),
     ("joint", (-0.30, 0.34, 0.12), (-0.12, 0.34, 0.04), 70, (0.9, -0.2, -0.2)),
-    ("shot", (-0.08, 0.32, 0.30), (-0.05, 0.31, 0.13), 85, (0.9, 0.1, -0.4)),
+    ("shot", (-0.15, 0.30, 0.28), (-0.09, 0.285, 0.10), 85, (0.9, 0.1, -0.4)),
+    ("knot", (0.34, 0.33, 0.07), (0.13, 0.31, 0.025), 55, (-0.8, -0.3, -0.4)),
+    ("venik", (-0.34, 0.30, 0.09), (-0.13, 0.28, 0.03), 50, (0.8, -0.3, -0.4)),
 ]
 
 
@@ -1750,7 +1759,11 @@ def main():
     if want("wall"):
         hp = [build_wall(L, F, rng)] + hoop_parts(L, F, rng) + nail_parts(L, F, rng) + leaf_part(L, F, rng)
         hp.append(resin_part(L, F))
-        groups.append(("wall", (1,), hp, 0.008))
+        import towel_venik
+        import types
+        towel_part, venik_part = towel_venik.install(types.SimpleNamespace(**globals()))
+        hp += towel_part(L, F, rng) + venik_part(L, F, rng)     # v2
+        groups.append(("wall", (1,), hp, 0.016))
     else:   # раскладка нужна изнанке и др.
         L.data.setdefault("shots", [(L.shot[0], L.shot[1])])
     if want("top"):

@@ -25,7 +25,9 @@ EX = os.path.join(HERE, "export")
 S = 2048          # рабочий размер для цвета (вдвое больше экспорта); нормаль — из 4096
 OUTSZ = {"diffuse": 1024, "normal": 1024, "specgloss": 1024, "occlusion": 1024, "fuzzmask": 1024}
 IDS = {"wood": 1, "endgrain": 2, "fresh": 3, "iron": 4, "rivet": 5, "nail": 6, "tin": 7, "rope": 8,
-       "leaf": 9, "resin": 10, "wire": 11, "lead": 12, "paint": 13}
+       "leaf": 9, "resin": 10, "wire": 11, "lead": 12, "paint": 13, "towel": 14, "copper": 15, "twig": 16}
+# v2: острова сетки вырезаются альфой — окно открытое (решение 19.11)
+WIRE_ISL = (2, 4, 28) + tuple(range(10, 37)) + tuple(range(38, 46))
 POS_LO = np.array([-0.17, 0.10, -0.17])
 POS_HI = np.array([0.17, 0.42, 0.17])
 
@@ -86,7 +88,7 @@ def mix(a, b, t):
 
 
 # палитра (sRGB 0..1)
-WOOD_SET = np.array([148, 132, 108], np.float32) / 255     # сухая осина в тон кресла сета (замер 143/128/106)
+WOOD_SET = np.array([141, 126, 104], np.float32) / 255     # сухая осина в тон кресла сета (замер 143/128/106); v2 чуть темнее
 WOOD_WET = hexc("7A5A3C")
 WOOD_OLD = hexc("45332A")
 FRESH = hexc("D6C29C")
@@ -155,6 +157,9 @@ def main():
     is_tin = (ID == IDS["tin"]) & inside
     is_wire = (ID == IDS["wire"]) & inside
     is_rope = (ID == IDS["rope"]) & inside
+    is_towel = (ID == IDS["towel"]) & inside
+    is_copper = (ID == IDS["copper"]) & inside
+    is_twig = (ID == IDS["twig"]) & inside
     is_leaf = (ID == IDS["leaf"]) & inside
     rng = np.random.default_rng(5)
 
@@ -224,6 +229,11 @@ def main():
     minr = np.clip(0.35 * tide + 0.25 * smooth((fbm(np.stack([P[..., 0] * 30, P[..., 1] * 9, P[..., 2] * 30], -1), 3, 14) - 0.62) / 0.15), 0, 1)
     minr = minr * wood_m * (wall | top)
     c = mix(c, MINERAL, minr * 0.45)
+    # v2: под полотенцем дерево сырое — тёмная полоса 10–20 мм с неровной нижней границей
+    if "towel" in lay:
+        ty0 = lay["towel"][0]
+        damp = smooth((Y - (ty0 - 0.012 - 0.008 * n_big)) / 0.006) * (Y < ty0 + 0.002) * wall
+        c = mix(c, c * (WOOD_WET / WOOD_SET), damp * 0.55 * is_wood)
     # засаленность на висках (где надевают)
     th = np.degrees(np.arctan2(P[..., 0], P[..., 2] - 0.008))
     grease = wall * np.exp(-((np.abs(th) - 90) / 22) ** 2) * smooth((0.24 - Y) / 0.06)
@@ -248,6 +258,24 @@ def main():
     iron_min = smooth((fbm(np.stack([P[..., 0] * 50, P[..., 1] * 120, P[..., 2] * 50], -1), 3, 15) - 0.6) / 0.15)
     ci = mix(ci, MINERAL * 0.7, iron_min * 0.35)
     c = np.where(is_iron[..., None], ci, c)
+    # v2: нижний обруч медный — тёмная окисленная медь, цвет в блике; ярь-медянка в раковинах
+    COP = hexc("3A2219")
+    VERD = hexc("4C7A68")
+    cc = COP * (0.85 + 0.3 * n_big[..., None])
+    cc = mix(cc, hexc("6A3A24"), np.clip(Rm, 0, 1) * 0.6)
+    cc = mix(cc, VERD * (0.8 + 0.3 * n_mid[..., None]), np.clip(Gm * 0.9, 0, 1) * 0.7)
+    c = np.where(is_copper[..., None], cc, c)
+    # прутья веника — кора
+    c = np.where(is_twig[..., None], col * (0.85 + 0.25 * n_mid[..., None]), c)
+    # полотенце: застиранное, у края, прижатого к мокрому дереву, — серее; немного пыли в складках
+    if "towel" in lay:
+        ty0 = lay["towel"][0]
+        tdamp = smooth((ty0 + 0.010 - Y) / 0.008) * 0.25
+    else:
+        tdamp = 0.0
+    ct_ = col * (0.93 + 0.1 * n_mid[..., None]) * (1 - 0.18 * (1 - ao[..., None]))
+    ct_ = mix(ct_, ct_ * np.array([0.82, 0.80, 0.76], np.float32), np.clip(tdamp + 0.15 * n_big, 0, 1))
+    c = np.where(is_towel[..., None], ct_, c)
     # дробь (свинец)
     c = np.where((ID == IDS["lead"])[..., None] & inside[..., None], hexc("55575A") * (0.9 + 0.2 * n_mid[..., None]), c)
     # смола
@@ -310,6 +338,13 @@ def main():
     gloss = np.where(ID == IDS["lead"], 0.4, gloss)
     gloss = np.where(is_rope, 0.12, gloss)
     spec = np.where(is_rope[..., None], 0.03, spec)
+    gloss = np.where(is_towel, 0.10, gloss)
+    spec = np.where(is_towel[..., None], 0.03, spec)
+    gloss = np.where(is_twig, 0.22, gloss)
+    spec = np.where(is_twig[..., None], 0.04, spec)
+    cop_spec = np.array([0.55, 0.33, 0.22], np.float32) * (0.55 + 0.45 * np.clip(Rm, 0, 1))[..., None] * (1 - 0.8 * np.clip(Gm, 0, 1))[..., None]
+    spec = np.where(is_copper[..., None], cop_spec, spec)
+    gloss = np.where(is_copper, 0.32 + 0.18 * Rm - 0.2 * Gm, gloss)
     gloss = np.where(is_leaf, 0.52, gloss)
     spec = np.where(is_leaf[..., None], 0.07, spec)
     gloss = np.where((ID == IDS["resin"]) & inside, 0.8, gloss)
@@ -330,6 +365,7 @@ def main():
     fz = np.where(is_wood, 0.22 * (1 - wet), fz)
     fz = np.where(is_fresh, 0.35, fz)
     fz = np.where(is_rope, 1.0, fz)
+    fz = np.where(is_towel, 0.9, fz)          # махра
     fz = np.where(is_leaf, 0.15, fz)
 
     # ---------------------------------------------------------------- сборка: 4096 → 1024, отступы
@@ -357,7 +393,16 @@ def main():
 
     print("write", flush=True)
     d = fin(c, 1024)
-    save(np.concatenate([d, np.ones_like(d[..., :1])], -1), f"{pre}_diffuse.png", "RGBA")
+    # альфа: 0 на островах сетки (+3 px вокруг, не залезая на соседние острова), остальное 255
+    ids1 = np.asarray(Image.open(os.path.join(HERE, "uv", "ids.png")).convert("RGB")).astype(np.int32)
+    isl1 = ids1[..., 0] + ids1[..., 1] * 256
+    wire = np.isin(isl1, WIRE_ISL)
+    g = wire.copy()
+    for _ in range(3):
+        g = g | np.roll(g, 1, 0) | np.roll(g, -1, 0) | np.roll(g, 1, 1) | np.roll(g, -1, 1)
+    cutm = wire | (g & ~((isl1 > 0) & ~wire))
+    alpha = np.where(cutm, 0.0, 1.0)[..., None] if a.ver.startswith("v2") else np.ones_like(d[..., :1])
+    save(np.concatenate([d, alpha], -1), f"{pre}_diffuse.png", "RGBA")
     nn = fin(n, 1024) * 2 - 1
     nn /= np.linalg.norm(nn, axis=-1, keepdims=True) + 1e-8
     nn = nn * 0.5 + 0.5

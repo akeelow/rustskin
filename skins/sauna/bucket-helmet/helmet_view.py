@@ -248,7 +248,7 @@ def setup(prefix, grey=False):
     scene.render.engine = "BLENDER_EEVEE" if "BLENDER_EEVEE" in engines else "BLENDER_EEVEE_NEXT"
     vt = [v.identifier for v in scene.view_settings.bl_rna.properties["view_transform"].enum_items]
     scene.view_settings.view_transform = "AgX" if "AgX" in vt else "Filmic"
-    mat = skin_material("bucket", maps_of(prefix), grey)
+    mat = skin_material("bucket", maps_of(prefix), grey, cutoff=0.5)   # v2: сетка вырезана альфой
     import_obj(HERE / "originals" / "bucket.helmet.obj", mat)
     head()
     return scene
