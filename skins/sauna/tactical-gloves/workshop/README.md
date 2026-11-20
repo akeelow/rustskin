@@ -46,18 +46,23 @@ Workshop → Create a new item → **Tactical Gloves** → EDIT → вкладк
 
 ## Картинки для страницы (Steam → Add/edit images)
 
-Порядок: **кадры из редактора первыми** (их снимает пользователь, `../screenshots/`), затем рендеры Blender
-(`../gloves_view.py`; это рендеры, не игровые кадры).
+**Всё в одной папке, в порядке загрузки:** `skins/sauna/upload/12 Sauna Mitts/` (там же `textures/` — карты v1.2 для
+редактора). Папка в `.gitignore`, пересобрать: `.venv/Scripts/python skins/sauna/tactical-gloves/workshop_pack.py`.
 
-| # | Файл | Что |
+Кадры из редактора сняты пользователем 20.11.2026 (F12, v1.2, день), исходники — `../screenshots/editor_f12/`; для
+страницы панель редактора снизу обрезана по 16:9, 1920×1080 (`ingame/`). Рендеры Blender (`../gloves_view.py`, v1.2) —
+не игровые кадры, идут после.
+
+| # | Файл в папке upload | Что |
 |---|---|---|
-| 1 | `ingame/fp_day.jpg` (снять) | от первого лица днём, обе руки: войлок, береста на костяшках, манжеты с полосой |
-| 2 | `ingame/inspect.jpg` (снять) | осмотр / ладонь: кожаная заплата, подушечки |
-| 3 | `../renders/v1.2_fp_day.png` → `fp_render.jpg` | рендер от первого лица |
-| 4 | `../renders/v1.2_view_back.png` → `back.jpg` | тыл: береста, подпалины, швы через край |
-| 5 | `../renders/v1.2_view_palm.png` → `palm.jpg` | ладонь: кожа «короной», подушечки, большой палец |
-| 6 | `../renders/v1.2_close_closure.png` → `closure.jpg` | крупно: петля из бечёвки на деревянной пуговице |
-| 7 | `../renders/v1.2_robe_back.png` → `set.jpg` | с рукавом Sauna Robe: та же ткань и полоса |
+| 1 | `01_game_back_day.jpg` (`ingame/back_day.jpg`) | **главный кадр**: тыл днём — береста на костяшках, овалы, подпалины, манжета с полосой |
+| 2 | `02_game_palm_day.jpg` | ладонь: кожа «короной», подушечки, петля из бечёвки на манжете |
+| 3 | `03_game_side_day.jpg` | бок мизинца: швы через край, напёрстки |
+| 4 | `04_game_palm_q34_day.jpg` | ладонь в 3/4, большой палец |
+| 5 | `05_render_back.jpg` (`back.jpg`) | рендер: тыл |
+| 6 | `06_render_palm.jpg` (`palm.jpg`) | рендер: ладонь |
+| 7 | `07_render_set.jpg` (`set.jpg`) | рендер: с рукавом Sauna Robe — та же ткань и полоса |
+| 8 | `08_render_fp_render.jpg` (`fp_render.jpg`) | рендер: обе руки «от первого лица» |
 
 ## Чек-лист публикации
 
