@@ -1,5 +1,8 @@
 # Sauna Mitts — публикация в Workshop
 
+> 🚀 **Опубликован 20.11.2026:** https://steamcommunity.com/sharedfiles/filedetails/?id=3843000799 (v1.2), в коллекции
+> Sauna 11-м. Описание ниже — то, что на странице (исправлено 20.11: «wooden button», ссылка на коллекцию).
+
 > Подготовлено 20.11.2026, обновлено для **v1.2** (файлы `SaunaMitts_v1.2_*`, 1024 — редактор Tactical Gloves держит 1024). Публикует пользователь сам из игрового редактора.
 > **До публикации:** проверить v1 в редакторе (список кадров — в [../README.md](../README.md), «Что проверить в игре»)
 > и снять кадры. Главный кадр страницы — из игры, не рендер (правило проекта).
@@ -19,9 +22,9 @@ felt and sewn with coarse thread in big uneven stitches, leather patched
 over the palm and fingertips, two scraps of birch bark over the knuckles.
 The backs are scorched from the stove door, the fingertips black with
 soot. The cuffs are an old striped towel, tied shut with a twine loop
-over a birch toggle.
+over a wooden button.
 
-Part of the Sauna set.
+Part of the [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3840348906]Sauna set[/url].
 ```
 
 Коротко, без просьб о лайках и без текста на самой текстуре (правила сета и советы Facepunch). Свечения нет.
