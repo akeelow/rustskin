@@ -22,14 +22,17 @@ import noise_np as NN  # noqa: E402
 
 BK = os.path.join(HERE, "source", "bake")
 EX = os.path.join(HERE, "export")
-VER = "v1"
+VER = "v1.1"   # v1 — 20.11.2026; v1.1 — тот же день, по кадрам v1 из редактора (цели палитры ниже, только 1024)
 NAME = "SaunaMitts"
 POS_LO = np.array([0.40, 0.19, -0.01])
 POS_HI = np.array([0.53, 0.43, 0.15])
 IDS = {"felt": 1, "leather": 2, "suede": 3, "bark": 4, "thread": 5, "linen": 6, "stripe": 7, "twine": 8,
        "wood": 9}
 # цель по медиане материала (sRGB) — палитра сета
-TARGET = {"felt": "B3A48A", "leather": "8A6646", "suede": "9A7A58", "bark": "E3DDCF", "thread": "CFC6B4",
+# v1.1: под солнцем Rust войлок v1 (#B3A48A) вышел почти белым (ладонь в тени 201/191/166), кожа — рыжей
+# (136/90/50, насыщенность 0.63): игра высветляет и насыщает. Цели темнее и серее HEX сета, как у халата v2.1.
+# v1: felt B3A48A, leather 8A6646, suede 9A7A58, bark E3DDCF, thread CFC6B4
+TARGET = {"felt": "9A8E77", "leather": "735740", "suede": "866A50", "bark": "CFC7B6", "thread": "C0B7A4",
           "linen": "CFC6B4", "stripe": "8E3A30", "twine": "B9A272", "wood": "D2B98E"}
 # (блик 0–255, глянец 0–255, Fuzz 0–1)
 MAT = {"felt": (10, 25, 1.0), "leather": (35, 90, 0.0), "suede": (15, 30, 0.5), "bark": (25, 70, 0.0),
@@ -205,8 +208,9 @@ def main():
     sg = np.concatenate([spec[..., None] * np.where(lea[..., None], warm, 1.0), glos[..., None]], -1)
 
     # --- в размер слотов, отступ
-    for size, sub in ((2048, ""), (1024, "1024")):
-        pad = 16 if size == 2048 else 10
+    # v1.1: редактор ужимает карты Tactical Gloves до 1024 (тест 20.11: specgloss 2048 подписан «(1024…»)
+    for size, sub in ((1024, ""),):
+        pad = 12
         d, m = down(diffuse, size, cov)
         save(dilate(d, m, pad), "diffuse", sub)
         n_, _ = down(nrm, size, cov)

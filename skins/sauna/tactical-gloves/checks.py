@@ -63,12 +63,16 @@ def main():
     dif = np.asarray(Image.open(os.path.join(EX, f"SaunaMitts_{VER}_diffuse.png")).convert("RGB"), np.float32)
     nrm = np.asarray(Image.open(os.path.join(EX, f"SaunaMitts_{VER}_normal.png")).convert("RGB"), np.float32)
     sg = np.asarray(Image.open(os.path.join(EX, f"SaunaMitts_{VER}_specgloss.png")).convert("RGBA"), np.float32)
+    S = dif.shape[0]                     # размер экспорта (v1 — 2048, v1.1 — 1024): отступы и швы — в нём
+    if S != ids.shape[0]:
+        ids = np.asarray(Image.fromarray(ids).resize((S, S), Image.NEAREST))
+        isl = ids > 0
 
     # 1. отступы: полоса 8 px вокруг островов не должна быть пустой (чёрной) и не должна резко отличаться
     band = dilate(isl, 8) & ~isl
     black = (dif[band].sum(1) < 6).mean() * 100
     flatn = (np.abs(nrm[band] - [128, 128, 255]).sum(1) < 3).mean() * 100
-    pr("## Отступы (2048)")
+    pr(f"## Отступы ({S})")
     pr(f"- полоса 8 px вокруг островов: чёрных пикселей Diffuse {black:.2f} % (норма 0), плоской нормали {flatn:.1f} %")
     # минимальный зазор между островами (расстояние до чужого острова)
     gaps = []
@@ -115,9 +119,9 @@ def main():
             c2 = T[FT[f2]].mean(0)
             p1 = p1 + (c1 - p1) * 0.08
             p2 = p2 + (c2 - p2) * 0.08
-            x1, y1 = int(p1[0] * 2048), int((1 - p1[1]) * 2048)
-            x2, y2 = int(p2[0] * 2048), int((1 - p2[1]) * 2048)
-            if not (0 <= x1 < 2048 and 0 <= y1 < 2048 and 0 <= x2 < 2048 and 0 <= y2 < 2048):
+            x1, y1 = int(p1[0] * S), int((1 - p1[1]) * S)
+            x2, y2 = int(p2[0] * S), int((1 - p2[1]) * S)
+            if not (0 <= x1 < S and 0 <= y1 < S and 0 <= x2 < S and 0 <= y2 < S):
                 continue
             pair = tuple(sorted((fi[f1], fi[f2])))
             diffs[pair].append(np.abs(dif[y1, x1] - dif[y2, x2]).mean())
@@ -165,7 +169,7 @@ def main():
     # 4. Spec/Gloss по материалам
     idb = np.asarray(Image.open(os.path.join(HERE, "source", "bake", "id.png")).convert("RGB"))[..., 0]
     idb = np.round((idb.astype(np.float32) - 8) / 16).astype(int)
-    idb = idb[::2, ::2]
+    idb = np.asarray(Image.fromarray(idb.astype(np.uint8)).resize((S, S), Image.NEAREST)).astype(int)
     pr("## Spec/Gloss по материалам (0–255; ползунки Spec Color 255, Glossiness 1.00)")
     pr("| материал | доля | блик медиана | глянец медиана | глянец 95 % |")
     pr("|---|---:|---:|---:|---:|")
