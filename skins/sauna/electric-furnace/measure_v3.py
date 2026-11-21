@@ -235,7 +235,7 @@ def main():
     print(f"... кусков: {len(PCS)}")
 
 
-if __name__ == "__main__" and not ({"--islands", "--compare"} & set(__import__("sys").argv)):
+if __name__ == "__main__" and not ({"--islands", "--compare", "--numbered"} & set(__import__("sys").argv)):
     main()
 
 
@@ -404,3 +404,41 @@ def main_compare(extra=()):
 if __name__ == "__main__" and "--compare" in __import__("sys").argv:
     import sys as _s
     main_compare(_s.argv[_s.argv.index("--compare") + 1:])
+
+
+def main_numbered(size=2048):
+    """--numbered: атлас 2048 — острова цветом и крупным номером в центре масс (для рендера на модели)."""
+    V, T, N, F = load()
+    UV = T[F[:, :, 1]]
+    uvw = UV - np.floor(UV.min(1, keepdims=True))
+    d1, d2 = uvw[:, 1] - uvw[:, 0], uvw[:, 2] - uvw[:, 0]
+    area2 = np.abs(d1[:, 0] * d2[:, 1] - d1[:, 1] * d2[:, 0]) / 2
+    ISL = sorted(islands(F), key=lambda fs: -area2[fs].sum())
+    img = Image.new("RGB", (size, size), (40, 40, 40))
+    px = img.load()
+    cents = []
+    for i, fs in enumerate(ISL):
+        col = ((i * 97) % 180 + 60, (i * 57) % 180 + 60, (i * 31) % 180 + 60)
+        acc = []
+        for f in fs:
+            for y, x in raster(None, uvw[f], 0, size):
+                px[x, y] = col
+                acc.append((x, y))
+        if acc:  # пиксель острова, ближайший к центру масс (у рамок центр масс лежит в чужом острове)
+            A = np.array(acc, float)
+            cents.append(A[np.argmin(((A - A.mean(0)) ** 2).sum(1))])
+        else:
+            cents.append(None)
+    dr = ImageDraw.Draw(img)
+    for i, c in enumerate(cents):
+        if c is None or area2[ISL[i]].sum() * size * size < 1500:
+            continue
+        fs = 40 if area2[ISL[i]].sum() * size * size > 20000 else 22
+        font = ImageFont.truetype("arialbd.ttf", fs)
+        dr.text((c[0], c[1]), str(i), fill=(255, 255, 255), font=font, anchor="mm", stroke_width=3, stroke_fill=(0, 0, 0))
+    img.save(HERE / "uv" / "islands_v3_num.png")
+    print("ok", len(ISL))
+
+
+if __name__ == "__main__" and "--numbered" in __import__("sys").argv:
+    main_numbered()
