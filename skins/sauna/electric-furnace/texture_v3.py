@@ -152,25 +152,25 @@ def build():
     dark_cav = 1 - np.clip(cav, 0, 1)
     # ---- базальт: графит, сколы светлее, поры темнее, белая корка накипи на верхних гранях
     stn = mat == M["stone"]
-    cs = mix(np.broadcast_to(hexc("#3A3B3E"), sh + (3,)).copy(), hexc("#55565A"), np.clip(tone + 0.3 * (mid - 0.5), 0, 1))
+    cs = mix(np.broadcast_to(hexc("#2C2D30"), sh + (3,)).copy(), hexc("#46474A"), np.clip(tone + 0.3 * (mid - 0.5), 0, 1))
     cs = mix(cs, hexc("#6E6B68"), 0.55 * grain)                       # свежий скол — светлее, с рыжинкой ниже
     cs = cs * (1 - 0.5 * np.clip(cav, 0, 1)[..., None])
-    cs = mix(cs, hexc("#CFC9BC"), np.clip(crust * 1.6, 0, 1) * (0.6 + 0.4 * mid))
+    cs = mix(cs, hexc("#A9A398"), np.clip(crust * 0.9, 0, 0.55) * (0.5 + 0.5 * mid))   # корка — пятнами, не белые камни (в игре v3.0-slice — «серебро»)
     col = np.where(stn[..., None], cs, col)
-    gloss = np.where(stn, 0.14 - 0.08 * crust + 0.06 * grain, gloss)
+    gloss = np.where(stn, 0.08 + 0.04 * grain, gloss)
     # ---- чаша между камнями: угли и жар
     cup = mat == M["cup"]
     col = np.where(cup[..., None], hexc("#16120F") * (0.7 + 0.6 * mid[..., None]), col)
     gloss = np.where(cup, 0.1, gloss)
     # ---- эмаль плиты: кремовая, кракелюр темнее, к выгоревшим зонам — копоть
     pe = mat == M["plate_enamel"]
-    ce2 = mix(np.broadcast_to(hexc("#CDC3AA"), sh + (3,)).copy(), hexc("#BDB196"), mid)
+    ce2 = mix(np.broadcast_to(hexc("#A99F89"), sh + (3,)).copy(), hexc("#968B74"), mid)            # в игре #CDC3AA вышла белой
     ce2 = mix(ce2, hexc("#9A907E"), np.clip(cav * 0.9, 0, 1))
-    soot_t = np.clip(char * 1.3, 0, 1) * (0.6 + 0.4 * big)
+    soot_t = np.clip(char * 1.3 + 0.35 * (big - 0.3), 0, 1) * (0.6 + 0.4 * big)          # копоть и пятнами по всей плите
     ce2 = mix(ce2, hexc("#3B332C"), 0.75 * soot_t)
     ce2 = mix(ce2, hexc("#9A8F78"), 0.25 * dent)
     col = np.where(pe[..., None], ce2, col)
-    gloss = np.where(pe, 0.55 - 0.3 * soot_t - 0.2 * cav, gloss)
+    gloss = np.where(pe, 0.42 - 0.3 * soot_t - 0.2 * cav, gloss)
     # ---- выгоревшее железо: чёрно-бурое, ржавчина в раковинах, кольца старой конфорки чуть светлее
     pi_ = mat == M["plate_iron"]
     ci = mix(np.broadcast_to(hexc("#211D1B"), sh + (3,)).copy(), hexc("#2F2925"), mid)
@@ -181,7 +181,7 @@ def build():
     gloss = np.where(pi_, 0.28 - 0.15 * rust, gloss)
     # ---- накипь: бело-жёлтая бугристая корка
     scl = mat == M["scale"]
-    cn2 = mix(np.broadcast_to(hexc("#D8D0BC"), sh + (3,)).copy(), hexc("#CDB98A"), np.clip(mid * 1.2 - 0.2, 0, 1))
+    cn2 = mix(np.broadcast_to(hexc("#BDB5A2"), sh + (3,)).copy(), hexc("#B3A27A"), np.clip(mid * 1.2 - 0.2, 0, 1))
     cn2 = cn2 * (1 - 0.35 * np.clip(cav, 0, 1)[..., None])
     col = np.where(scl[..., None], cn2, col)
     gloss = np.where(scl, 0.12, gloss)
@@ -196,7 +196,7 @@ def build():
     gloss = np.where(wi, 0.3, gloss)
     # ---- листья: сухие оливково-бурые, жилки светлее, один обожжён по краю
     lf = mat == M["leaf"]
-    cl = mix(np.broadcast_to(hexc("#5A5232"), sh + (3,)).copy(), hexc("#776A40"), np.clip(tone, 0, 1))
+    cl = mix(np.broadcast_to(hexc("#433F2A"), sh + (3,)).copy(), hexc("#5B5436"), np.clip(tone, 0, 1))       # жёлтые пятна в игре -> бурее
     cl = mix(cl, hexc("#A39A6C"), 0.35 * grain)
     cl = mix(cl, hexc("#2A221B"), np.clip(char * 1.2, 0, 1))
     col = np.where(lf[..., None], cl, col)
