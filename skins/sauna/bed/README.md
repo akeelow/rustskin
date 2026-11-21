@@ -14,10 +14,10 @@
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `export/Bed_v2.1_diffuse.png`, **Alpha Cutoff 0.50** (по умолчанию) |
-| Normal | `export/Bed_v2.1_normal.png`, Normal Scale 1.00 |
-| Specular/Gloss | `export/Bed_v2.1_specgloss.png`, Spec Color 255, Glossiness 1.00 |
-| Occlusion | `export/Bed_v2.1_occlusion.png`, Occlusion Scale 1.00 |
+| Diffuse | `export/Bed_v2.2_diffuse.png`, **Alpha Cutoff 0.50** (по умолчанию) |
+| Normal | `export/Bed_v2.2_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `export/Bed_v2.2_specgloss.png`, Spec Color 255, Glossiness 1.00 |
+| Occlusion | `export/Bed_v2.2_occlusion.png`, Occlusion Scale 1.00 |
 | Emission | не трогать (свечения нет — решение 20.11) |
 
 Все карты 2048: у Bed редактор держит 2048 (опубликованный полок и все 11 принятых Bed в кэше Steam — 2048).
@@ -32,7 +32,7 @@
 
 ```bash
 "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/bed/bake_v2.py -- --size 4096 --gpu --blend
-.venv/Scripts/python skins/sauna/bed/texture_v2.py --tag v2.1
+.venv/Scripts/python skins/sauna/bed/texture_v2.py --tag v2.2
 ```
 
 ### Аудит поверхностей v2.0 (куски #1, #2; остальные — v1.2 до своей очереди)
@@ -288,6 +288,10 @@ Normal и Occlusion пока оригинальные (на настиле ещ�
   → **v2.1** (только `texture_v2.py`, запекание то же): дерево на ~14 % темнее, шире разброс тона досок, волокна
   в цвете сильнее, мелкий рельеф нормали ×1.5 (деталь = нормаль − размытая нормаль), потёки 0.26 → 0.12 и реже,
   новая рейка и листья темнее, пропуски подушки — лён. Файлы `export/Bed_v2.1_*` (загрузка как v2.0).
+- 21.11.2026, **v2.1 в редакторе** (`screenshots/v2.1/`, один кадр 3/4 днём): настил (196, 180, 158) при игровом
+  помосте (235, 222, 190) — 0.83 от помоста (v2.0 было 0.91), насыщенность 0.19, разброс тона досок вырос (37 → 50);
+  чёрного клина у валика нет. Всё ещё светлее серебристо-серого референса → **v2.2**: дерево ещё на ~13 % темнее и
+  серее (диффуз настила 121 → 102), остальное как v2.1. Файлы `export/Bed_v2.2_*`.
 
 - 20.10.2026: пользователь — «готово». Рендеры для Workshop (`workshop_renders.py`), `workshop/README.md`.
 - 20.10.2026, v1.2 в игре (`screenshots/v1.2_*`, день, сумерки, изножье): доска от поддона — тихая
