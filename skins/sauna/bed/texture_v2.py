@@ -39,10 +39,10 @@ def hexc(h):
 
 
 # палитра (sRGB)
-WOOD = hexc("#918A7F")          # осина, состаренная паром: светлота v1.2, насыщенность вдвое ниже
-WOOD_GREY = hexc("#8B8882")
-WOOD_WARM = hexc("#968B7A")
-NEW_WOOD = hexc("#A1957F")      # v2.0: была яркой полосой (#AE9C80)      # недавно заменённая рейка
+WOOD = hexc("#7D776D")          # v2.1: в игре v2.0 вышел выбеленным (205, 186, 159) — на ~14 % темнее          # осина, состаренная паром: светлота v1.2, насыщенность вдвое ниже
+WOOD_GREY = hexc("#77746F")
+WOOD_WARM = hexc("#827767")
+NEW_WOOD = hexc("#888070")      # v2.1: в игре всё ещё светлая полоса      # недавно заменённая рейка
 GAP = hexc("#1C1612")
 KNOT = hexc("#4A3828")
 SOOT = hexc("#2A221D")
@@ -55,9 +55,9 @@ MINERAL = hexc("#D6D2C6")
 LINEN = hexc("#CFC6B4")
 BRICK = hexc("#8E3A30")
 THREAD = hexc("#B6AC99")
-LEAF_OLIVE = hexc("#4D5733")
-LEAF_DRY = hexc("#6E6038")
-LEAF_YELLOW = hexc("#8F7838")
+LEAF_OLIVE = hexc("#47502F")    # v2.1: веник в игре — яркий «салат»
+LEAF_DRY = hexc("#5E5232")
+LEAF_YELLOW = hexc("#7A6634")
 TWIG = hexc("#5B3E2E")
 TWINE = hexc("#A99A7C")
 TIN = hexc("#6C6963")
@@ -119,12 +119,12 @@ def build():
     big = fbm(x * 0.02 + 3, y * 0.02 + z * 0.02, 903) - 0.5
     greyness = np.clip(0.25 + 0.6 * ((tone * 7.31) % 1.0) + 0.4 * big, 0, 1)
     base = mix(np.zeros_like(col) + WOOD_WARM, WOOD_GREY, greyness)
-    base = base * (0.9 + 0.16 * tone[..., None])
+    base = base * (0.84 + 0.3 * tone[..., None])
     base = np.where((mat == MAT["new"])[..., None], NEW_WOOD * (0.95 + 0.1 * tone[..., None]), base)
     base = np.where((mat == MAT["pallet"])[..., None], base * np.array([0.86, 0.83, 0.8], np.float32), base)
     base = np.where((mat == MAT["patch"])[..., None], base * np.array([1.06, 1.0, 0.92], np.float32), base)
     gr = np.clip(grain, 0, 1)
-    wc = base * (1.04 - 0.2 * gr[..., None])                       # гребни поздней древесины темнее
+    wc = base * (1.08 - 0.32 * gr[..., None])                      # гребни поздней древесины темнее (v2.1 сильнее)
     fine = fbm(x * 0.6 + z * 0.3, y * 0.08 + z * 0.6, 905, 2) - 0.5
     wc = wc * (1 + 0.06 * fine[..., None])
     # отполированная зона (лежат) — светлее и теплее, засаленная середина
@@ -157,8 +157,8 @@ def build():
     wet = sstep(47, 37.5, z) * apron
     wc = wc * (1 - 0.3 * wet[..., None])
     along = np.where(np.abs(nrm[..., 1]) > np.abs(nrm[..., 0]), x, y)
-    streak = np.clip((fbm(along * 0.22, along * 0 + 1.0, 917, 3) - 0.48) * 2.4, 0, 1) * sstep(54, 41, z) * apron
-    wc = mix(wc, MINERAL, 0.26 * streak)
+    streak = np.clip((fbm(along * 0.22, along * 0 + 1.0, 917, 3) - 0.56) * 2.4, 0, 1) * sstep(52, 41, z) * apron
+    wc = mix(wc, MINERAL, 0.12 * streak)            # v2.1: в игре 0.26 — белые полосы
     # ржавые потёки от гвоздей фартука: вниз по доске
     ap = FV.Apron()
     rust_st = np.zeros((S, S), np.float32)
@@ -200,7 +200,7 @@ def build():
     gloss = np.where(tin, 0.34 - 0.18 * tr_m, gloss)
 
     # ---------------- полотенце (подушка и хвост на настиле)
-    tw = mine & (mat == MAT["towel"])
+    tw = mine & ((mat == MAT["towel"]) | ((pid == B.PILLOW) & (mat == 0)))     # v2.1: угол торца был чёрным
     stripe = np.clip(strap, 0, 1)                       # m3.G у полотенца — полосы
     stitch = np.clip(scr, 0, 1)                         # m3.R — строчка
     fringe = np.clip(nail, 0, 1)                        # m2.R у хвоста — бахрома
@@ -234,7 +234,7 @@ def build():
     gloss = np.where(tn, 0.12, gloss)
 
     # ---------------- AO в цвет (игровой Occlusion только приглушает рассеянный свет)
-    col = col * ((0.5 + 0.5 * ao[..., None]) ** 0.85)
+    col = col * ((0.45 + 0.55 * ao[..., None]) ** 0.9)
     occ = 0.35 + 0.65 * ao
     return dict(col=col, spec=spec, gloss=gloss, occ=occ, nrm=nb, mine=mine, pid=pid)
 
@@ -254,6 +254,20 @@ def extend(maps, own, steps):
             new |= take
         filled |= new
     return filled
+
+
+def fblur(a, r, passes=3):
+    """Размытие float-карты: три прохода скользящего среднего (близко к гауссу), края — повтор."""
+    a = a.astype(np.float32)
+    for _ in range(passes):
+        for ax in (0, 1):
+            pad = [(0, 0), (0, 0)]
+            pad[ax] = (r + 1, r)
+            c = np.cumsum(np.pad(a, pad, mode="edge"), axis=ax, dtype=np.float64)
+            hi = np.take(c, np.arange(2 * r + 1, c.shape[ax]), axis=ax)
+            lo = np.take(c, np.arange(0, c.shape[ax] - 2 * r - 1), axis=ax)
+            a = ((hi - lo) / (2 * r + 1)).astype(np.float32)
+    return a
 
 
 def down(a):
@@ -292,6 +306,10 @@ def main():
     blanket = owner[::2, ::2] == B.BLANKET
     dif[..., 3] = np.where(blanket & ~mine2, 0.0, dif[..., 3])
     n = nrm * 2 - 1
+    # v2.1: в игре днём рельеф слабее, чем в Blender — мелкую деталь x1.5 (промт: «карту нормалей деталей усиливай»);
+    # крупная поправка на сглаженную модель (размытая нормаль) остаётся как есть
+    lowp = np.stack([fblur(n[..., c], 4) for c in range(3)], -1)
+    n = n + 0.5 * (n - lowp) * np.array([1, 1, 0], np.float32)
     n /= np.linalg.norm(n, axis=-1, keepdims=True) + 1e-6
     nrm_o = np.where(use[..., None], n * 0.5 + 0.5, on)
     sg = osg.copy()
