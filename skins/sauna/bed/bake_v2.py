@@ -647,7 +647,7 @@ def pixels(img):
     return px.reshape(size, size, 4)[..., :3]
 
 
-def bake_group(low, keep, hp, size, extr, tag, mat):
+def bake_group(low, keep, hp, size, extr, tag, mat, hide_for_ao=()):
     """Один набор кусков (keep) со своим high-poly: object-space нормаль -> касательная, AO, маски.
     Возвращает {карта: (size, size, 3)} и маску текселей группы."""
     for o in hp:
@@ -657,7 +657,13 @@ def bake_group(low, keep, hp, size, extr, tag, mat):
     res = {}
     set_pass(mat, "view")
     obj_n = bake_pass(flat, hp, "NORMAL", size, f"{tag}_nobj", extr, space="OBJECT", margin=4)
+    # общие развёртки: AO только от своей геометрии — иначе тень соседей (доски спинки у стойки 5) встаёт на
+    # повёрнутую копию снаружи (v2.4 в игре: чёрные пятна на наружной грани стойки 6)
+    for o in hide_for_ao:
+        o.hide_render = True
     res["ao"] = pixels(bake_pass(flat, hp, "AO", size, f"{tag}_ao", extr, samples=64, margin=4))
+    for o in hide_for_ao:
+        o.hide_render = False
     for k in (*ATTRS, "cover"):
         set_pass(mat, k)
         res[k] = pixels(bake_pass(flat, hp, "EMIT", size, f"{tag}_{k}", extr, filt=0.01 if k == "idc" else 1.5, margin=4))
@@ -767,6 +773,7 @@ def build_iron(low):
 # код материала в idc.R = код / 32 (с v2.3: кодов стало больше 16)
 GROUPS = {"mattress": ({MATTRESS}, 4.0), "pillow": ({PILLOW}, 3.0), "headboard": ({3, 4}, 2.0),
           "posts": ({5, 20}, 2.0), "joist": ({11}, 1.5), "iron": ({17, 19, 23, 27}, 1.5)}
+SHARED = {"posts", "joist", "iron"}          # группы с общими развёртками (копии повёрнуты)
 PARTS.update({"headboard": build_headboard, "posts": build_posts, "joist": build_joist, "iron": build_iron})
 PART_GROUPS = {"deck": "mattress", "apron": "mattress", "towel": "pillow", "venik": "mattress",
                "headboard": "headboard", "posts": "posts", "joist": "joist", "iron": "iron"}
@@ -804,7 +811,8 @@ def main():
             ghp = [o for o in hp if o["group"] == g]
             if not ghp:
                 continue
-            res, mask = bake_group(low, keep, ghp, size, extr, g, mat)
+            others = [o for o in hp if o["group"] != g] if g in SHARED else []
+            res, mask = bake_group(low, keep, ghp, size, extr, g, mat, others)
             for k, arr in res.items():
                 if k not in result:
                     result[k] = np.zeros_like(arr) if k != "normal" else np.zeros_like(arr) + (0.5, 0.5, 1.0)
