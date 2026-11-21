@@ -153,7 +153,7 @@ def build():
     dark_cav = 1 - np.clip(cav, 0, 1)
     # ---- базальт: графит, сколы светлее, поры темнее, белая корка накипи на верхних гранях
     stn = mat == M["stone"]
-    cs = mix(np.broadcast_to(hexc("#2C2D30"), sh + (3,)).copy(), hexc("#46474A"), np.clip(tone + 0.3 * (mid - 0.5), 0, 1))
+    cs = mix(np.broadcast_to(hexc("#1D1E20"), sh + (3,)).copy(), hexc("#323336"), np.clip(tone + 0.3 * (mid - 0.5), 0, 1))     # v3.0 в игре сверху — светло-серые
     cs = mix(cs, hexc("#6E6B68"), 0.55 * grain)                       # свежий скол — светлее, с рыжинкой ниже
     cs = cs * (1 - 0.5 * np.clip(cav, 0, 1)[..., None])
     cs = mix(cs, hexc("#A9A398"), np.clip(crust * 0.9, 0, 0.55) * (0.5 + 0.5 * mid))   # корка — пятнами, не белые камни (в игре v3.0-slice — «серебро»)
@@ -165,7 +165,7 @@ def build():
     gloss = np.where(cup, 0.1, gloss)
     # ---- эмаль плиты: кремовая, кракелюр темнее, к выгоревшим зонам — копоть
     pe = mat == M["plate_enamel"]
-    ce2 = mix(np.broadcast_to(hexc("#A99F89"), sh + (3,)).copy(), hexc("#968B74"), mid)            # в игре #CDC3AA вышла белой
+    ce2 = mix(np.broadcast_to(hexc("#857C6A"), sh + (3,)).copy(), hexc("#766C5A"), mid)            # в игре #CDC3AA и #A99F89 — белые (солнце сверху)
     ce2 = mix(ce2, hexc("#9A907E"), np.clip(cav * 0.9, 0, 1))
     soot_t = np.clip(char * 1.3 + 0.35 * (big - 0.3), 0, 1) * (0.6 + 0.4 * big)          # копоть и пятнами по всей плите
     ce2 = mix(ce2, hexc("#3B332C"), 0.75 * soot_t)
@@ -182,7 +182,7 @@ def build():
     gloss = np.where(pi_, 0.28 - 0.15 * rust, gloss)
     # ---- накипь: бело-жёлтая бугристая корка
     scl = mat == M["scale"]
-    cn2 = mix(np.broadcast_to(hexc("#BDB5A2"), sh + (3,)).copy(), hexc("#B3A27A"), np.clip(mid * 1.2 - 0.2, 0, 1))
+    cn2 = mix(np.broadcast_to(hexc("#A59D8B"), sh + (3,)).copy(), hexc("#9C8C68"), np.clip(mid * 1.2 - 0.2, 0, 1))
     cn2 = cn2 * (1 - 0.35 * np.clip(cav, 0, 1)[..., None])
     col = np.where(scl[..., None], cn2, col)
     gloss = np.where(scl, 0.12, gloss)
@@ -286,7 +286,7 @@ def build():
 
     # ---- топка: камни светлее (ловят свет самой печи, HANDOFF), угли — чёрные с серым отливом, голые стенки — копоть
     fb = stn & (sidm == 29)
-    col = np.where(fb[..., None], col * 1.45, col)
+    col = np.where(fb[..., None], col * 0.85, col)            # v3.0: светлые камни под светом печи — сплошной оранжевый
     coal = (mat == M["char"]) & (sidm == 30)
     put(coal, mix(np.broadcast_to(hexc("#1A1816"), sh + (3,)).copy(), hexc("#3A3633"), np.clip(1 - cav, 0, 1) * mid), 0.35)
     bare = mask & (mat == 0)
