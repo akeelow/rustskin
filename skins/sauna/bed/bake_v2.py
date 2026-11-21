@@ -149,7 +149,7 @@ def field_attrs(f):
         "m1": np.stack([g("grain"), g("cavity"), g("dent")], -1),
         "m2": np.stack([g("nail"), g("knot"), g("char")], -1),
         "m3": np.stack([g("scratch"), g("strap"), g("tone")], -1),
-        "idc": np.stack([g("mat") / 16.0, g("slat") / 16.0, z], -1),
+        "idc": np.stack([g("mat") / 32.0, g("slat") / 16.0, z], -1),
     }
 
 
@@ -279,7 +279,7 @@ def build_towel(low):
     z = np.zeros(n)
     set_attrs(me, {"m1": np.stack([z, mk["cavity"], mk["dent"]], -1), "m2": np.stack([z, z, z], -1),
                    "m3": np.stack([mk["stitch"], mk["stripe"], z + 0.5], -1),
-                   "idc": np.stack([z + FV.MAT["towel"] / 16.0, z, z], -1)}, n)
+                   "idc": np.stack([z + FV.MAT["towel"] / 32.0, z, z], -1)}, n)
     log("towel", n)
     # хвост с бахромой на настиле
     xs = np.arange(FV.FLAP_X[0], FV.FLAP_X[1], FV.STEP)
@@ -292,7 +292,7 @@ def build_towel(low):
     flap = grid_mesh("hp_towel_flap", P, {
         "m1": np.stack([z, f["cavity"], f["dent"]], -1), "m2": np.stack([f["fringe"] * 1.0, z, z], -1),
         "m3": np.stack([f["stitch"], f["stripe"], z + 0.5], -1),
-        "idc": np.stack([np.where(f["mask"], FV.MAT["towel"], FV.MAT["gap"]) / 16.0, z, z], -1)})
+        "idc": np.stack([np.where(f["mask"], FV.MAT["towel"], FV.MAT["gap"]) / 32.0, z, z], -1)})
     return [ob, flap]
 
 
@@ -343,7 +343,7 @@ def grid_quads(nu, nv):
 def attrs_const(n, mat, r=0.0, tone=0.5, cav=0.0):
     z = np.zeros(n)
     return {"m1": np.stack([z + r, z + cav, z], -1), "m2": np.stack([z, z, z], -1),
-            "m3": np.stack([z, z, z + tone], -1), "idc": np.stack([z + FV.MAT[mat] / 16.0, z, z], -1)}
+            "m3": np.stack([z, z, z + tone], -1), "idc": np.stack([z + FV.MAT[mat] / 32.0, z, z], -1)}
 
 
 def tube(C, R, seg=10, twist=0.0, ridge=0.0):
@@ -672,7 +672,104 @@ def bake_group(low, keep, hp, size, extr, tag, mat):
 
 
 # группа запекания: имя, куски-цели, вытяжка лучей (см); high-poly помечен ob["group"]
-GROUPS = {"mattress": ({MATTRESS}, 4.0), "pillow": ({PILLOW}, 3.0)}
+# ---------------------------------------------------------------- брусковые куски: скруглённые коробки
+import fields_box as FB  # noqa: E402
+
+FACES = (("x-", 0, -1), ("x+", 0, 1), ("y-", 1, -1), ("y+", 1, 1), ("z-", 2, -1), ("z+", 2, 1))
+FACE_UV = {0: (1, 2), 1: (0, 2), 2: (1, 0)}
+
+
+def rbox(name, lo, hi, r, fn, step=FV.STEP, group="mattress"):
+    """Скруглённая коробка (габариты lo..hi, радиус рёбер r): каждая грань — сетка в своих координатах (u, v),
+    точки переносятся на скруглённую поверхность (смещение внутренней коробки на r), затем сдвиг по нормали h из
+    fn(грань, U, V, P) -> {h, m1, m2, m3, mat}. Рёбра у соседних граней совпадают — без щелей."""
+    lo, hi = np.asarray(lo, float), np.asarray(hi, float)
+    acc = Acc()
+    for face, k, s in FACES:
+        ua, va = FACE_UV[k]
+        us = np.arange(lo[ua], hi[ua] + 1e-6, step)
+        vs = np.arange(lo[va], hi[va] + 1e-6, step)
+        if us[-1] < hi[ua] - 1e-4:
+            us = np.append(us, hi[ua])
+        if vs[-1] < hi[va] - 1e-4:
+            vs = np.append(vs, hi[va])
+        U, V = np.meshgrid(us, vs)
+        P0 = np.zeros(U.shape + (3,))
+        P0[..., k] = hi[k] if s > 0 else lo[k]
+        P0[..., ua] = U
+        P0[..., va] = V
+        c = np.clip(P0, lo + r, hi - r)
+        d = P0 - c
+        L = np.linalg.norm(d, axis=-1, keepdims=True)
+        nrm = d / np.maximum(L, 1e-9)
+        q = c + r * nrm
+        f = fn(face, U, V, q)
+        Pf = q + nrm * f["h"][..., None]
+        flip = (k == 0 and s < 0) or (k in (1, 2) and s > 0)
+        sl = slice(None, None, -1) if flip else slice(None)
+        nv, nu = U.shape
+        z = np.zeros(U.shape)
+        attrs = {"m1": f["m1"][:, sl], "m2": f["m2"][:, sl], "m3": f["m3"][:, sl],
+                 "idc": np.stack([np.asarray(f["mat"], float) / 32.0, z, z], -1)[:, sl]}
+        ii = np.arange(nv * nu).reshape(nv, nu)
+        Q = np.stack([ii[:-1, :-1], ii[:-1, 1:], ii[1:, 1:], ii[1:, :-1]], -1).reshape(-1, 4)
+        acc.add(Pf[:, sl].reshape(-1, 3), Q, {kk: v.reshape(-1, 3) for kk, v in attrs.items()})
+    ob = acc.build(name)
+    ob["group"] = group
+    return ob
+
+
+HB_BOX = {3: ((110.3, -62.8, 63.7), (112.8, 64.5, 82.2)), 4: ((110.3, -62.4, 47.4), (112.8, 64.7, 64.8))}
+POST_BOX = {5: ((112.7, -60.4, -3.8), (117.3, -47.4, 89.1)), 20: ((-117.5, -60.4, -3.8), (-112.8, -47.6, 62.3))}
+JOIST_BOX = ((12.8, -59.5, 35.5), (30.3, 65.0, 37.9))
+IRON_BOX = {17: ((-112.7, -65.9, 24.4), (-109.2, 67.0, 36.7), 0.15), 19: ((117.4, -63.7, 3.7), (118.7, 65.8, 16.4), 0.12),
+            23: ((113.4, -64.7, 26.1), (117.8, -44.0, 35.0), 0.1), 27: ((-113.5, 53.9, 24.6), (112.8, 58.1, 35.4), 0.15)}
+
+
+def build_headboard(low):
+    return [rbox(f"hp_board_{b}", *HB_BOX[b], 0.35, lambda f, U, V, P, b=b: FB.door_face(b, f, U, V, P), group="headboard")
+            for b in (3, 4)]
+
+
+def build_posts(low):
+    return [rbox(f"hp_post_{p}", lo, hi, 0.5, lambda f, U, V, P, p=p, lo=lo, hi=hi: FB.post_face(p, f, U, V, P, lo, hi),
+                 group="posts") for p, (lo, hi) in POST_BOX.items()]
+
+
+def build_joist(low):
+    lo, hi = JOIST_BOX
+    return [rbox("hp_joist", lo, hi, 0.3, lambda f, U, V, P: FB.joist_face(f, U, V, P, lo, hi), group="joist")]
+
+
+def build_iron(low):
+    obs = [rbox(f"hp_iron_{p}", lo, hi, r, lambda f, U, V, P, p=p, lo=lo, hi=hi: FB.iron_face(p, f, U, V, P, lo, hi),
+                group="iron") for p, (lo, hi, r) in IRON_BOX.items()]
+    # проволока на распорке: 4 витка скрученной проволоки вокруг полосы (скрепили трещину)
+    lo, hi, _ = IRON_BOX[19]
+    xc, zc = (lo[0] + hi[0]) / 2, (lo[2] + hi[2]) / 2
+    ax, az = (hi[0] - lo[0]) / 2 + 0.28, (hi[2] - lo[2]) / 2 + 0.28
+    t = np.linspace(0, 4 * 2 * np.pi, 4 * 160)
+    ct, st = np.cos(t), np.sin(t)
+    px = xc + ax * np.sign(ct) * np.abs(ct) ** 0.15
+    pz = zc + az * np.sign(st) * np.abs(st) ** 0.15
+    py = 18.0 + 0.62 * t / (2 * np.pi) + 0.15 * np.sin(t * 2)
+    V, Q, rid = tube(np.column_stack([px, py, pz]), np.full(len(t), 0.25), seg=8, twist=0.6, ridge=0.2)
+    a = attrs_const(len(V), "twine", tone=0.5)
+    a["idc"][:, 0] = FB.MATB["wire"] / 32.0
+    a["m1"][:, 0] = rid
+    acc = Acc()
+    acc.add(V, Q, a)
+    w = acc.build("hp_wire")
+    w["group"] = "iron"
+    return obs + [w]
+
+
+# код материала в idc.R = код / 32 (с v2.3: кодов стало больше 16)
+GROUPS = {"mattress": ({MATTRESS}, 4.0), "pillow": ({PILLOW}, 3.0), "headboard": ({3, 4}, 2.0),
+          "posts": ({5, 20}, 2.0), "joist": ({11}, 1.5), "iron": ({17, 19, 23, 27}, 1.5)}
+PARTS.update({"headboard": build_headboard, "posts": build_posts, "joist": build_joist, "iron": build_iron})
+PART_GROUPS = {"deck": "mattress", "apron": "mattress", "towel": "pillow", "venik": "mattress",
+               "headboard": "headboard", "posts": "posts", "joist": "joist", "iron": "iron"}
 
 
 def main():
@@ -694,6 +791,15 @@ def main():
         OUT.mkdir(parents=True, exist_ok=True)
         mat = hp_material()
         result = {}
+        if "--parts" in argv:     # пекутся только группы этих частей; остальное — из прошлого запекания
+            for k in ("ao", *ATTRS, "cover", "normal", "mask"):
+                path = OUT / f"{k}.png"
+                if path.exists():
+                    im = bpy.data.images.load(str(path))
+                    im.colorspace_settings.name = "Non-Color"
+                    result[k] = pixels(im).copy()
+                    bpy.data.images.remove(im)
+            log("merging into the previous bake:", sorted(result))
         for g, (keep, extr) in GROUPS.items():
             ghp = [o for o in hp if o["group"] == g]
             if not ghp:
@@ -703,7 +809,9 @@ def main():
                 if k not in result:
                     result[k] = np.zeros_like(arr) if k != "normal" else np.zeros_like(arr) + (0.5, 0.5, 1.0)
                 result[k][mask] = arr[mask]
-            result.setdefault("mask", np.zeros((size, size, 3), np.float32))[mask] = 1.0
+            if "mask" not in result:
+                result["mask"] = np.zeros((size, size, 3), np.float32)
+            result["mask"][mask] = 1.0
             log("group", g, "texels", int(mask.sum()))
         holder = new_img("holder", size)
         for k, arr in result.items():
