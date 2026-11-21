@@ -2,6 +2,45 @@
 
 > Подготовлено для публикации в Steam Workshop (обновлено 24.10.2026 по CRITIQUE.md: усилен градиент копоти у изножья, добавлены микротрещины). Публикует пользователь сам из игрового редактора.
 
+## Обновление до v2.5 (21.11.2026)
+
+Опубликованная страница (v1.2): https://steamcommunity.com/sharedfiles/filedetails/?id=3840333377. Обновлять **эту же
+страницу**, не новым предметом. Как это делается из редактора, ещё не проверено.
+
+| Слот | Файл / значение |
+|---|---|
+| Diffuse | `../export/Bed_v2.5_diffuse.png`, **Alpha Cutoff 0.50** |
+| Normal | `../export/Bed_v2.5_normal.png` |
+| Specular/Gloss | `../export/Bed_v2.5_specgloss.png` |
+| Occlusion | `../export/Bed_v2.5_occlusion.png` |
+| Emission | не трогать |
+
+**Новое описание** (вместо старого):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+A roadside bed frame dragged into a scrap-built sauna: the mattress went
+out, a deck of aspen slats from an old pallet went on, two boards from a
+paint-chipped door became the headrest, and scraps of tin covered the
+corners. Polished by years of lying in the steam, charred at the end facing
+the stove, with a birch whisk drying on the slats and a folded linen towel
+waiting under your head.
+
+Part of the Sauna set.
+```
+
+**Кадры из редактора v2** (обрезаны `../../ingame_import.py place`, исходники — `../screenshots/editor_16x9/`):
+
+| Файл | Что |
+|---|---|
+| `ingame/three_quarter_day_v2.jpg` | 3/4 днём со стороны изножья — главный кадр |
+| `ingame/corner_foot_v2.jpg` | угол изножья низко: стойка, пластина, распорка, обугленный фартук |
+| `ingame/headboard_back_v2.jpg` | спинка сзади: дверные доски, следы планок, эмаль на балке |
+
+Ещё нужны (снимает пользователь, v2.5): полотенце крупно, изножье настила крупно (веник, гвозди, кольцо от шайки),
+сумерки 3/4. Старые кадры `ingame/*_day.jpg` и рендеры `*.jpg` — v1.2, на странице заменить.
+
 ## Название и описание (англ.)
 
 **Title:** `Sauna Bench`
