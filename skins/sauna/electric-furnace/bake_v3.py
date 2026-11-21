@@ -55,8 +55,9 @@ def load_low():
     return low
 
 
-def subset(low, keep, name, flat=False):
-    """Копия low-poly только с гранями островов keep. flat: нормали граней + разрез острых рёбер (для лучей)."""
+def subset(low, keep, name, flat=False, pieces=None):
+    """Копия low-poly только с гранями островов keep (и кусков pieces — для общих развёрток: печётся одна копия).
+    flat: нормали граней + разрез острых рёбер (для лучей)."""
     me = low.data.copy()
     ob = bpy.data.objects.new(name, me)
     ob.matrix_world = low.matrix_world
@@ -65,7 +66,9 @@ def subset(low, keep, name, flat=False):
     bm = bmesh.new()
     bm.from_mesh(me)
     bm.faces.ensure_lookup_table()
-    bmesh.ops.delete(bm, geom=[f for f in bm.faces if isl[f.index] not in keep], context="FACES")
+    pc = G.piece_of_face() if pieces is not None else None
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if isl[f.index] not in keep
+                               or (pc is not None and pc[f.index] not in pieces)], context="FACES")
     if flat:
         sharp = [e for e in bm.edges if len(e.link_faces) == 2
                  and e.link_faces[0].normal.angle(e.link_faces[1].normal, 0) > 0.7]
@@ -133,13 +136,19 @@ def grid_object(name, P, r, low, group, outward):
     """P (ny, nx, 3) — точки в см (OBJ); outward — вектор наружу: обход квадов разворачивается под него."""
     ny, nx, _ = P.shape
     Q = grid_quads(ny, nx)
-    a, b, c = P[0, 0], P[0, 1], P[1, 0]
+    flatP = P.reshape(-1, 3)
+    ok = np.isfinite(flatP).all(1)
+    Q = Q[ok[Q].all(1)]                                   # NaN — вне островов: квады выбрасываются
+    q0 = Q[len(Q) // 2]
+    a, b, c = flatP[q0[0]], flatP[q0[1]], flatP[q0[3]]
     nrm = np.cross(b - a, c - a)
     if np.dot(nrm, outward) < 0:
         Q = Q[:, ::-1]
-    at = {k: v.reshape(-1, 3) for k, v in field_attrs(r).items()}
-    at["pos"] = np.clip((P.reshape(-1, 3) - POS_LO) / POS_SPAN, 0, 1)
-    return mesh_np(name, P.reshape(-1, 3), Q, at, low, group)
+    flatP = np.where(ok[:, None], flatP, 0.0)
+    rr = {k: (np.nan_to_num(v) if hasattr(v, "shape") else v) for k, v in r.items()}
+    at = {k: v.reshape(-1, 3) for k, v in field_attrs(rr).items()}
+    at["pos"] = np.clip((flatP - POS_LO) / POS_SPAN, 0, 1)
+    return mesh_np(name, flatP, Q, at, low, group)
 
 
 # ---------------------------------------------------------------- части
@@ -482,6 +491,117 @@ def build_door(low):
     return obs
 
 
+import fields_facades_v3 as FF  # noqa: E402
+
+
+def build_facades(group):
+    def f(low):
+        obs = []
+        for spec in FF.FACADES:
+            if spec[1] != group:
+                continue
+            t = time.time()
+            P, r = FF.facade_field(spec)
+            out = np.zeros(3)
+            out[spec[3]] = spec[4]
+            obs.append(grid_object(f"hp_{spec[0]}", P, r, low, group, out))
+            log("facade", spec[0], P.shape[:2], f"{time.time() - t:.0f} s")
+        return obs
+    return f
+
+
+FACADE_GROUPS = {"right": 0.03, "rails85": 0.01, "rails86": 0.01, "post89": 0.01, "back": 0.03, "front2": 0.03,
+                 "band": 0.015, "plinth": 0.03, "pallet": 0.02}
+
+
+import fields_3d_v3 as F3  # noqa: E402
+
+
+def displaced(low, name, group, islands, pieces, fn, edge=0.2):
+    """Подразделённая копия граней модели (рёбра до edge см), смещённая fn(P, N) вдоль нормалей вершин; рядом — та же
+    копия без смещения (plain_of = группа) для вычитания гранёности."""
+    src = subset(low, islands, f"tmp_{name}", pieces=pieces)
+    bm = bmesh.new()
+    bm.from_mesh(src.data)
+    for _ in range(8):
+        long = [e for e in bm.edges if e.calc_length() > edge * CM]
+        if not long:
+            break
+        bmesh.ops.subdivide_edges(bm, edges=long, cuts=1, use_grid_fill=True)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bm.normal_update()
+    V = np.array([v.co for v in bm.verts]) / CM
+    Nv = np.array([v.normal for v in bm.verts])
+    Fi = np.array([[v.index for v in f.verts] for f in bm.faces])
+    bm.free()
+    bpy.data.objects.remove(src, do_unlink=True)
+    r = fn(V, Nv)
+    at = {"m1": np.stack([np.clip(r["grain"], 0, 1), np.clip(r["cav"], 0, 1), np.clip(r["dent"], 0, 1)], -1),
+          "m2": np.stack([np.clip(r["nail"], 0, 1), np.clip(r["knot"], 0, 1), np.clip(r["char"], 0, 1)], -1),
+          "m3": np.stack([np.clip(r["rust"], 0, 1), np.clip(r["crust"], 0, 1), np.clip(r["tone"], 0, 1)], -1),
+          "idc": np.stack([r["mat"] / 32.0, (r["sid"] + 1) / 32.0, np.clip(r["bark"], 0, 1)], -1),
+          "pos": pos_attr(V)}
+    ob = mesh_np(name, V + Nv * r["h"][:, None], Fi, at, low, group)
+    pl = mesh_np(name + "_plain", V, Fi, at, low, group + "_plain")
+    pl["plain_of"] = group
+    pl.hide_render = True
+    log("displaced", name, len(V))
+    return [ob]
+
+
+def _fin_fn(p):
+    if p in (15, 22):
+        return F3.rebar3d(900 + p)
+    if p == 20:
+        return F3.charstick3d(900 + p)
+    return F3.iron3d(900 + p, amp=0.06)
+
+
+def build_fins(low):
+    obs = []
+    for p in range(13, 29):                                   # 16 пластин жалюзи (уникальные развёртки)
+        isl = set(G.island_of_face()[G.piece_of_face() == p].tolist())
+        obs += displaced(low, f"hp_fin_{p}", "fins", isl, {p}, _fin_fn(p))
+    return obs
+
+
+def _piece_islands(p):
+    return set(G.island_of_face()[G.piece_of_face() == p].tolist())
+
+
+def _center(p):
+    V, T, N, F = G.load()
+    pts = V[F[G.piece_of_face() == p][:, :, 0]].reshape(-1, 3)
+    return ((pts[:, 0].min() + pts[:, 0].max()) / 2, (pts[:, 1].min() + pts[:, 1].max()) / 2)
+
+
+def one(p, fn, group, edge=0.15):
+    return lambda low: displaced(low, f"hp_{group}", group, _piece_islands(p), {p}, fn, edge)
+
+
+def build_firebox(low):
+    """Топка: куча колотого базальта на дне духовки (y 47.6), к задней стенке выше (до ~35 см), спереди — угли с
+    трещинами-кубиками; печётся на стенки и дно лучами изнутри (PLAN §3.9)."""
+    rng = np.random.default_rng(91)
+    acc = Acc()
+    heap = ST.heap((0.0, 3.0), 21.0, 47.6, rng, 34, (7.0, 11.0), 30, (3.5, 6.0), sub=4, crust=False, cell=0.4, lean=0.45)
+    for V, F, m in heap:
+        n = len(V)
+        acc.add(V, F, {"m1": m["m1"], "m2": m["m2"], "m3": m["m3"],
+                       "idc": np.stack([np.full(n, FV.MAT["stone"] / 32.0), np.full(n, 30 / 32.0), np.zeros(n)], -1)})
+    for k in range(26):                                        # угли спереди, в нижней части кучи
+        V, F, m = ST.charcoal(rng.uniform(3.5, 6.5), rng)
+        R = ST.rot(rng)
+        V = V @ R.T
+        px, pz = rng.uniform(-19, 19), rng.uniform(8, 27)
+        V = V + np.array([px, 47.6 - V[:, 1].min() + rng.uniform(0.0, 2.5), pz])
+        n = len(V)
+        acc.add(V, F, {"m1": m["m1"], "m2": m["m2"], "m3": m["m3"],
+                       "idc": np.stack([np.full(n, FV.MAT["char"] / 32.0), np.full(n, 31 / 32.0), np.zeros(n)], -1)})
+    log("firebox heap", acc.n)
+    return [acc.build("hp_firebox", low, "firebox")]
+
+
 PARTS = {"left": build_left, "top": build_top, "coil": build_coil, "caps": build_caps, "door": build_door}
 # группа: (острова-цели, вытяжка лучей м, общие развёртки — AO только от своей геометрии)
 GROUPS = {"left": ({2, 16}, 0.03, False),
@@ -490,6 +610,49 @@ GROUPS = {"left": ({2, 16}, 0.03, False),
           "caps": (FT.CAP_ISLANDS, 0.06, True),
           "door": (FD.DOOR_ISLANDS | FD.BAR_ISLANDS | FD.HANDLE_ISLANDS | FD.FRONT_ISLANDS | FD.STRIP_ISLANDS, 0.045, False)}
 PART_GROUPS = {"left": "left", "top": "top", "coil": "coil", "caps": "caps", "door": "door"}
+# сложные детали: смещённые копии (группа: кусок, рельеф, вытяжка, общая ли развёртка)
+DISPLACED = {
+    "knob": (38, lambda: F3.knob3d(_center(38), 951), 0.008, True),
+    "rosette": (44, lambda: F3.rosette3d(_center(44), 953), 0.008, True),
+    "hinge": (65, lambda: F3.iron3d(955, amp=0.06), 0.008, True),
+    "bolt": (32, lambda: F3.iron3d(957, amp=0.03), 0.008, True),
+    "rack": (6, lambda: F3.iron3d(959, amp=0.04, soot=True, heavy=True), 0.008, True),
+    "rackbar": (69, lambda: F3.iron3d(961, amp=0.03, soot=True, heavy=True), 0.006, True),
+    "elem": (5, lambda: F3.iron3d(963, amp=0.04, soot=True, heavy=True), 0.008, True),
+    "fanblade": (58, lambda: F3.iron3d(965, amp=0.03, soot=True), 0.006, True),
+    "fan": (80, lambda: F3.iron3d(967, amp=0.03, soot=True), 0.006, True),
+    "rbox": (61, lambda: F3.iron3d(969, amp=0.03, soot=True), 0.006, False),
+}
+for _g, (_p, _fn, _e, _sh) in DISPLACED.items():
+    PARTS[_g] = (lambda p, fn, g: (lambda low: displaced(low, f"hp_{g}", g, _piece_islands(p), {p}, fn(), 0.15)))(_p, _fn, _g)
+    PART_GROUPS[_g] = _g
+    GROUPS[_g] = (_piece_islands(_p), _e, _sh, {_p})
+# остальные видимые мелочи (аудит 22.11): откосы проёма, стенки лючка, кромки, боковины планок и стоек
+DISPLACED2 = {
+    "rest_soot": ({86, 87, 167, 168, 130, 133, 39}, None, lambda: F3.soot3d(971), 0.008, False),
+    "rest_wood": ({118, 120, 76}, None, lambda: F3.wood3d(973), 0.008, False),
+    "post_sides": ({81, 85}, {89}, lambda: F3.iron3d(975, amp=0.04), 0.006, True),
+    "rail_sides": ({119, 121}, {85}, lambda: F3.iron3d(977, amp=0.04), 0.006, True),
+    "rail86_sides": ({174, 175}, {86}, lambda: F3.iron3d(979, amp=0.04), 0.006, True),
+    "rackbar2": ({78}, {68}, lambda: F3.iron3d(981, amp=0.03, soot=True, heavy=True), 0.006, True),
+}
+for _g, (_isl, _pcs, _fn, _e, _sh) in DISPLACED2.items():
+    PARTS[_g] = (lambda isl, pcs, fn, g: (lambda low: displaced(low, f"hp_{g}", g, isl, pcs, fn(), 0.15)))(_isl, _pcs, _fn, _g)
+    PART_GROUPS[_g] = _g
+    GROUPS[_g] = (_isl, _e, _sh) + ((_pcs,) if _pcs else ())
+PARTS["fins"] = build_fins
+PARTS["firebox"] = build_firebox
+PART_GROUPS["firebox"] = "firebox"
+GROUPS["firebox"] = ({0, 1, 11, 23}, 0.35, False)
+PART_GROUPS["fins"] = "fins"
+GROUPS["fins"] = (set().union(*[_piece_islands(p) for p in range(13, 29)]), 0.01, False)
+for _g, _e in FACADE_GROUPS.items():
+    _specs = [sp for sp in FF.FACADES if sp[1] == _g]
+    _isl = set().union(*[sp[2] for sp in _specs])
+    _pcs = [sp[5] for sp in _specs if sp[5] is not None]
+    PARTS[_g] = build_facades(_g)
+    PART_GROUPS[_g] = _g
+    GROUPS[_g] = (_isl, _e, bool(_pcs)) + ((set().union(*_pcs),) if _pcs else ())
 
 
 # ---------------------------------------------------------------- запекание
@@ -651,14 +814,36 @@ def pixels(img):
     return px.reshape(size, size, 4)[..., :3]
 
 
-def bake_group(low, keep, hp, size, extr, tag, mat, hide_for_ao=()):
+def bake_group(low, keep, hp, size, extr, tag, mat, hide_for_ao=(), pieces=None):
     for o in hp:
         o.data.materials.clear()
         o.data.materials.append(mat[0])
-    flat = make_target(subset(low, keep, f"ray_{tag}", flat=True))
+    flat = make_target(subset(low, keep, f"ray_{tag}", flat=True, pieces=pieces))
     res = {}
     set_pass(mat, "view")
     obj_n = bake_pass(flat, hp, "NORMAL", size, f"{tag}_nobj", extr, space="OBJECT")
+    plain = [o for o in bpy.data.objects if o.get("plain_of") == tag]
+    if plain:
+        # вычитание: n = норм(n_гладкой + (n_смещённой − n_копии без смещения)) — гранёность модели уходит целиком
+        for o in plain:
+            o.data.materials.clear()
+            o.data.materials.append(mat[0])
+            o.hide_render = False
+        for o in hp:
+            o.hide_render = True
+        n0 = pixels(bake_pass(flat, plain, "NORMAL", size, f"{tag}_n0", extr, space="OBJECT")) * 2 - 1
+        for o in plain:
+            o.hide_render = True
+        for o in hp:
+            o.hide_render = False
+        nd = pixels(obj_n) * 2 - 1
+        sm0 = make_target(subset(low, keep, f"sm0_{tag}", pieces=pieces))
+        ns = pixels(bake_pass(sm0, None, "NORMAL", size, f"{tag}_ns", extr, space="OBJECT")) * 2 - 1
+        n = ns + (nd - n0)
+        n /= np.linalg.norm(n, axis=-1, keepdims=True) + 1e-6
+        buf = np.ones((size, size, 4), np.float32)
+        buf[..., :3] = n * 0.5 + 0.5
+        obj_n.pixels.foreach_set(buf.ravel())
     for o in hide_for_ao:
         o.hide_render = True
     res["ao"] = pixels(bake_pass(flat, hp, "AO", size, f"{tag}_ao", extr, samples=64))
@@ -668,7 +853,7 @@ def bake_group(low, keep, hp, size, extr, tag, mat, hide_for_ao=()):
         set_pass(mat, k)
         res[k] = pixels(bake_pass(flat, hp, "EMIT", size, f"{tag}_{k}", extr, filt=0.01 if k == "idc" else 1.5))
     set_pass(mat, "view")
-    smooth = make_target(subset(low, keep, f"smooth_{tag}"), use_map=obj_n)
+    smooth = make_target(subset(low, keep, f"smooth_{tag}", pieces=pieces), use_map=obj_n)
     res["normal"] = pixels(bake_pass(smooth, None, "NORMAL", size, f"{tag}_ntan", extr))
     mask = pixels(white_mask(smooth["ob"], size, tag))[..., 0] > 0.5
     for im in list(bpy.data.images):
@@ -710,10 +895,10 @@ def main():
             low.hide_render = True
         groups = {PART_GROUPS[p] for p in parts}
         for g in groups:
-            keep, extr, shared = GROUPS[g]
+            keep, extr, shared, *pcs = GROUPS[g]
             ghp = [o for o in hp if o["group"] == g]
             others = [o for o in hp if o["group"] != g] if shared else []
-            res, mask = bake_group(low, keep, ghp, size, extr, g, mat, others)
+            res, mask = bake_group(low, keep, ghp, size, extr, g, mat, others, pieces=pcs[0] if pcs else None)
             for k, arr in res.items():
                 if k not in result:
                     result[k] = np.zeros_like(arr) if k != "normal" else np.zeros_like(arr) + (0.5, 0.5, 1.0)

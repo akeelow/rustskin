@@ -79,6 +79,7 @@ def build():
     nail, knot, char = m2[..., 0], m2[..., 1], m2[..., 2]
     rust, crust, tone = m3[..., 0], m3[..., 1], m3[..., 2]
     mat = np.round(idc[..., 0] * 32).astype(np.int32)
+    sidm = np.round(idc[..., 1] * 32).astype(np.int32) - 1          # номер детали (камни топки = 6, угли = 7)
     bark = idc[..., 2]
     P = POS_LO + pos * POS_SPAN            # см, координаты OBJ
     X, Y, Z = P[..., 0], P[..., 1], P[..., 2]
@@ -230,10 +231,73 @@ def build():
     col = np.where(rp[..., None], crp, col)
     gloss = np.where(rp, 0.12, gloss)
 
+    # ================= остальные поверхности (PLAN_v3 §3.6–3.12)
+    def put(m, c, g=None, mt=None):
+        nonlocal col, gloss, metal
+        col = np.where(m[..., None], c, col)
+        if g is not None:
+            gloss = np.where(m, g, gloss)
+        if mt is not None:
+            metal = np.where(m, mt, metal)
+    # краска забора на досках сзади: выцветшая зелёная, кракелюр
+    fe = mat == M.get("fence", 24)
+    cf = mix(np.broadcast_to(hexc("#4F6A4C"), sh + (3,)).copy(), hexc("#6F8467"), np.clip(mid + 0.3 * (big - 0.5), 0, 1))
+    cf = cf * (1 - 0.35 * np.clip(cav * 1.5, 0, 1)[..., None])
+    put(fe, cf, 0.22)
+    # зад: доски темнее от пара
+    back = (Z < -28.5) & wood
+    col[back] *= 0.82
+    # поддон: мокрые тёмные доски
+    pa = mat == M.get("pallet", 30)
+    cp = mix(np.broadcast_to(hexc("#4A3C30"), sh + (3,)).copy(), hexc("#665241"), np.clip(tone * 0.8 + 0.3 * (mid - 0.5), 0, 1))
+    cp = cp * (0.9 + 0.1 * grain[..., None]) * (1 - 0.5 * np.clip(cav, 0, 1)[..., None])
+    put(pa, cp, 0.26)
+    # кирпич: приглушённый красно-бурый, у каждого свой тон; сколы светлее, соли снизу, копоть сверху
+    bri = mat == M.get("brick", 25)
+    cbr = mix(np.broadcast_to(hexc("#5E3F33"), sh + (3,)).copy(), hexc("#7D5141"), np.clip(tone + 0.25 * (mid - 0.5), 0, 1))
+    cbr = mix(cbr, hexc("#94644F"), 0.55 * knot)                     # свежий скол
+    cbr = mix(cbr, hexc("#3A2A24"), np.clip(cav * 0.8, 0, 1))
+    cbr = mix(cbr, hexc("#2A2320"), np.clip((Y - 15.0) / 8.0, 0, 1)[..., None] * 0.45)   # копоть к поясу
+    salt = np.clip((9.0 - Y) / 6.0, 0, 1) * np.clip(mid * 1.6 - 0.4, 0, 1)
+    cbr = mix(cbr, hexc("#B9B2A4"), 0.5 * salt)
+    put(bri, cbr, 0.12)
+    mo = mat == M.get("mortar", 26)
+    cmo = mix(np.broadcast_to(hexc("#8A8378"), sh + (3,)).copy(), hexc("#6C665D"), np.clip(grain + 0.3 * (mid - 0.5), 0, 1))
+    cmo = mix(cmo, hexc("#3B3631"), np.clip((Y - 16.0) / 7.0, 0, 1)[..., None] * 0.4)
+    put(mo, cmo, 0.08)
+    # пояс: выцветшая оливковая краска, под ней железо
+    ol = mat == M.get("olive", 27)
+    col_ol = mix(np.broadcast_to(hexc("#4D5440"), sh + (3,)).copy(), hexc("#626A4F"), np.clip(mid, 0, 1))
+    put(ol, col_ol, 0.3, 0.0)
+    band_bare = (mat == M["iron"]) & (Y > 21.5) & (Y < 31.8) & (np.abs(X) < 32.5) & (np.abs(Z) < 32.5) & mask
+    put(band_bare, mix(np.broadcast_to(hexc("#4A3528"), sh + (3,)).copy(), hexc("#6A4028"), np.clip(rust + 0.3 * mid, 0, 1)), 0.2, 0.15)
+    # жесть латки
+    tn = mat == M.get("tin", 28)
+    ctn = mix(np.broadcast_to(hexc("#67635D"), sh + (3,)).copy(), hexc("#6A3B22"), np.clip(rust, 0, 1))
+    put(tn, ctn * (1 - 0.15 * dent[..., None]), 0.35, 0.55)
+    metal = np.where(tn, 0.55 * (1 - rust), metal)
+    # зола
+    ah = mat == M.get("ash", 29)
+    put(ah, mix(np.broadcast_to(hexc("#7E7A73"), sh + (3,)).copy(), hexc("#A19C93"), mid), 0.05, 0.0)
+    # копоть внутри проёмов (дерево)
+    sw = mat == M.get("soot_wood", 31)
+    put(sw, hexc("#1E1915") * (0.8 + 0.4 * mid[..., None]), 0.12, 0.0)
+    so2 = mat == M["soot_iron"]
+
+    # ---- топка: камни светлее (ловят свет самой печи, HANDOFF), угли — чёрные с серым отливом, голые стенки — копоть
+    fb = stn & (sidm == 29)
+    col = np.where(fb[..., None], col * 1.45, col)
+    coal = (mat == M["char"]) & (sidm == 30)
+    put(coal, mix(np.broadcast_to(hexc("#1A1816"), sh + (3,)).copy(), hexc("#3A3633"), np.clip(1 - cav, 0, 1) * mid), 0.35)
+    bare = mask & (mat == 0)
+    put(bare, hexc("#15110F") * (0.8 + 0.4 * mid[..., None]), 0.1, 0.0)
+
     # ================= свечение: только глубоко между камнями и в трещинах (жар снизу), карта 2048
     deep = np.clip((0.42 - ao) / 0.32, 0, 1)
     heat = np.where(cup, deep ** 1.2, 0) + np.where(stn, np.clip(char, 0, 1) * deep ** 0.8, 0)
+    heat = heat + np.where(coal, np.clip(char, 0, 1) * (0.5 + 0.5 * deep), 0)          # трещины углей
     heat = heat * (0.75 + 0.5 * big)
+    heat = heat + np.where(so2, np.clip(char, 0, 1) * 0.6, 0)          # тление на дне отсека справа
     hot_c = mix(np.broadcast_to(hexc("#B8300C"), sh + (3,)).copy(), hexc("#FF6A1F"), np.clip(heat * 1.4, 0, 1))
     emit = hot_c * np.clip(heat * 0.75, 0, 0.7)[..., None]       # уровень v2.9 (тот же множитель в редакторе)
 

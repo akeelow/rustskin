@@ -151,6 +151,23 @@ def stone(size, rng, sub=4, cracks=True):
     return V, F, masks
 
 
+def charcoal(size, rng, sub=4):
+    """Кусок древесного угля: брусок с 4–6 плоскостями, сетка трещин-«кубиков» (ячейка 0.7–1 см), торцевые кольца.
+    Маски как у камня; m2.z (жар) — в трещинах, m1.y (полость) — трещины."""
+    V, F, m = stone(size, rng, sub=sub, cracks=False)
+    V = V * np.array([1.0, 0.8, 0.7])
+    cell = rng.uniform(0.7, 1.0)
+    fx = np.abs(np.sin(V[:, 0] * np.pi / cell))
+    fz = np.abs(np.sin((V[:, 2] + 0.3 * V[:, 1]) * np.pi / (cell * 1.3)))
+    crack = np.clip(1 - np.minimum(fx, fz) / 0.18, 0, 1)
+    vn = vertex_normals(V, F)
+    V = V - vn * (0.12 * crack)[:, None]
+    m["m1"][:, 1] = np.maximum(m["m1"][:, 1], crack)
+    m["m2"][:, 2] = np.maximum(m["m2"][:, 2] * 0.5, crack)
+    m["vn"] = vertex_normals(V, F)
+    return V, F, m
+
+
 def rot(rng):
     """Случайный поворот: вокруг вертикали — любой, наклон — до 25°."""
     a = rng.uniform(0, 2 * np.pi)
@@ -194,7 +211,7 @@ def heap(center, r, base_y, rng, n_big, big, n_small, small, sub=4, crust=True, 
             iz, ix = idx(V[:, 0] + px, V[:, 2] + pz)
             y_off = (hm[iz, ix] - V[:, 1]).max() - 0.12 * s * 0.6
             y_off = max(y_off, base_y - V[:, 1].min() + lean * max(0.0, -(pz - cz)))
-            score = y_off + V[:, 1].max() + 0.15 * rr * (k < n_big)
+            score = y_off + V[:, 1].max() + 0.15 * rr * (k < n_big) - 2.2 * lean * max(0.0, -(pz - cz))   # склон к −z
             if best is None or score < best[0]:
                 best = (score, px, pz, y_off)
         _, px, pz, y_off = best

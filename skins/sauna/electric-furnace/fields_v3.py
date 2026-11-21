@@ -188,9 +188,9 @@ class LeftSide:
                 lo=lo, hi=hi,
                 b0=36.3 + rng.uniform(-0.3, 2.6),            # нижний конец (разной длины)
                 b1=107.0,                                     # верх уходит под рамку
-                top=rng.uniform(-0.08, 0.06),
-                cup=rng.uniform(0.09, 0.16),                  # коробление желобом, см
-                twist=rng.uniform(-0.12, 0.12),
+                top=rng.uniform(-0.16, 0.1),
+                cup=rng.uniform(0.22, 0.34),                  # коробление желобом, см
+                twist=rng.uniform(-0.28, 0.28),
                 seed=int(rng.integers(1000)),
                 quarter=rng.random() < 0.35,
                 gc=(lo + hi) / 2 + rng.uniform(-3, 3),

@@ -124,13 +124,15 @@ def copy_transform(piece_a, piece_b):
     return R, cb - R @ ca
 
 
-def raster_height(T3, U, Vg, ax_u, ax_v, ax_w, sign=1.0, fill=np.nan):
+def raster_height(T3, U, Vg, ax_u, ax_v, ax_w, sign=1.0, fill=np.nan, ids=None):
     """Поле «высоты» по сетке U, Vg (2D, регулярная): для каждой точки — координата ax_w (×sign) треугольников T3,
-    взятая по максимуму (наружная поверхность). Точки вне треугольников — fill."""
+    взятая по максимуму (наружная поверхность). Точки вне треугольников — fill. ids (n,) — метки треугольников:
+    тогда возвращает (H, ID) — метка треугольника, давшего максимум (−1 вне)."""
     us, vs = U[0, :], Vg[:, 0]
     du, dv = us[1] - us[0], vs[1] - vs[0]
     H = np.full(U.shape, -np.inf)
-    for t in T3:
+    ID = np.full(U.shape, -1, np.int32)
+    for ti, t in enumerate(T3):
         pu, pv, pw = t[:, ax_u], t[:, ax_v], t[:, ax_w] * sign
         i0 = max(int(np.floor((pu.min() - us[0]) / du)), 0)
         i1 = min(int(np.ceil((pu.max() - us[0]) / du)), len(us) - 1)
@@ -149,6 +151,21 @@ def raster_height(T3, U, Vg, ax_u, ax_v, ax_w, sign=1.0, fill=np.nan):
         ins = (l0 >= e) & (l1 >= e) & (l2 >= e)
         w = l0 * pw[0] + l1 * pw[1] + l2 * pw[2]
         sub = H[j0:j1 + 1, i0:i1 + 1]
-        H[j0:j1 + 1, i0:i1 + 1] = np.where(ins, np.maximum(sub, w), sub)
+        win = ins & (w > sub)
+        H[j0:j1 + 1, i0:i1 + 1] = np.where(win, w, sub)
+        if ids is not None:
+            sid = ID[j0:j1 + 1, i0:i1 + 1]
+            ID[j0:j1 + 1, i0:i1 + 1] = np.where(win, ids[ti], sid)
     H[~np.isfinite(H)] = fill
-    return H
+    return (H, ID) if ids is not None else H
+
+
+def tris_ids(islands=None, pieces=None):
+    """Треугольники (n, 3, 3) и номера их островов."""
+    V, T, N, F = load()
+    m = np.ones(len(F), bool)
+    if islands is not None:
+        m &= np.isin(island_of_face(), list(islands))
+    if pieces is not None:
+        m &= np.isin(piece_of_face(), list(pieces))
+    return V[F[m][:, :, 0]], island_of_face()[m]
