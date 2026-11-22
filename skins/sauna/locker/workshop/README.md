@@ -6,7 +6,69 @@
 > **v5.3 (12.11.2026, по [CRITIQUE_ART.md](../../CRITIQUE_ART.md)):** дерево ещё бледнее и менее насыщенное (как у полока и кресла), в открытых нишах на колышке висит полотенце сета с кирпичными полосами. Файлы `Locker_v5.4_*`. **В игре не проверено** — посмотреть в редакторе перед публикацией; если не понравится, прежняя версия v5.2 лежит рядом (`Locker_v5.2_*`).
 > **v5.4 (15.11.2026):** v5.3 в игре ночью — ниши почти не светились: 24.10 свечение ослабили в ~2,6 раза (против засветки днём) и после этого в игре не смотрели. Вся карта свечения ×2 (между прежней и ослабленной); вентиляционные прорези под полотенцем убраны — светились точками из-под его края. Дерево и полотенце как в v5.3. Файлы `Locker_v5.4_*`.
 
-## Название и описание (англ.)
+## Обновление до v6.2 (22.11.2026)
+
+Опубликованная страница (v5.4): https://steamcommunity.com/sharedfiles/filedetails/?id=3840340102. Обновлять **эту же
+страницу**: в редакторе выбрать опубликованный Sauna Changing Locker из Workshop → загрузить карты → Publish (как
+обновлялись полок и каменка, гайд §9.7). Редактор заново попросит описание и картинки и добавит 4 своих автокадра.
+
+| Слот | Файл / значение |
+|---|---|
+| Diffuse | `../export/Locker_v6.2_diffuse.png`, **Alpha Cutoff 0.50** (по умолчанию 0.00 — тогда ниши закрыты дверцами) |
+| Normal | `../export/Locker_v6.2_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `../export/Locker_v6.2_specgloss.png`, Spec Color 255, Glossiness 1.00 |
+| Occlusion | `../export/Locker_v6.2_occlusion.png` (2048, **новый** — раньше оставался оригинальный), Occlusion Scale 0.75 |
+| Emission | `../export/Locker_v6.2_emission.png` (2048), **Emission Color 255/255/255** (по умолчанию 0 — ничего не светится) |
+
+**Новое описание** (вместо старого: карты с крестиком на дверце больше нет):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+The changing room of a scrap-built sauna: an old three-door steel locker,
+its side doors torn off for stove sheet metal and the shell clad in pale
+linden boards. The two open niches have turned pegs with a striped linen
+towel and a dried birch whisk, a lamp behind a wooden grille, slatted
+shelves lit from beneath and a duckboard on the floor. The middle door stays
+shut for your lock: a fogged window with a heart drawn by a finger, a
+thermometer and a hygrometer, days counted in notches, and a scratched steel
+plate next to a muddy boot print and a split board where someone tried to
+kick it in.
+
+Part of the Sauna set.
+```
+
+**Change notes** (англ.):
+
+```
+v6: remodelled from scratch. Every board, nail, knot, crack, rivet, louvre,
+hinge stub, fold and leaf is now real modelled relief. Steel shell with
+chipped enamel, a linen towel and a birch whisk in both niches, a wooden
+lamp grille, duckboard floor and slatted shelves, a lock case and a bolt
+inside the middle door, warmer niche light at night. All maps 2048.
+```
+
+**Картинки — папка `upload_v6/`** (кадры v6.2 из редактора в режиме предпросмотра, исходники — `../screenshots/v6.2/`;
+обрезка — `../workshop_upload_v6.py`). Кнопки предпросмотра стоят прямо над шкафом, поэтому кадр режется по полосе
+между ними и нижней панелью (y 292–984, 16:9) и увеличивается до 1920×1080: верх шкафа близко к краю, ножки чуть срезаны.
+Добавлять **все по номерам**, первая — обложка:
+
+| # | Файл | Что |
+|---|---|---|
+| 01 | `upload_v6/01_three_quarter_day.jpg` | 3/4 спереди-слева днём: стальная рама, бок из вагонки, ниши, дверца — обложка |
+| 02 | `upload_v6/02_front_day.jpg` | анфас днём: обе ниши с полотенцем и веником, дверца с приборами, окном и следами |
+| 03 | `upload_v6/03_three_quarter_night.jpg` | ночью без фонаря: тёплые ниши, плафон, сердечко на стекле |
+| 04 | `upload_v6/04_drawer_and_shelves.jpg` | низ крупно: ящик с филёнкой, полки, решётка-трап, жалюзи цоколя |
+| 05 | `upload_v6/05_back_day.jpg` | сзади: стальная спина с рёбрами и жалюзи, бок из вагонки |
+
+Кадр `../screenshots/v6.2/01_*` не вошёл — почти повтор 03.
+
+**После Publish:** удалить все старые картинки v5.4 (рендеры `studio`, `hero`, `night`, `front`, `door`, `set`, кадры
+`ingame/*` и автокадры редактора v5.4) на `https://steamcommunity.com/sharedfiles/managepreviews/?id=3840340102`
+(крестик при наведении, удаляется сразу). Порядок — перетаскиванием на той же странице («Сохранить и продолжить»).
+Описание и change notes — на странице предмета (редактировать описание; заметки — «Добавить заметку об изменениях»).
+
+## Название и описание (англ.) — v5.4, прежнее
 
 **Title:** `Sauna Changing Locker` (правило сета: без скобок и оригинальных имён, `../../README.md`, «Workshop: оформление»).
 
