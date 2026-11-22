@@ -259,8 +259,8 @@ def build(tag):
     gloss[slat] = (22 + 30 * sstep(14, 2, y) - 10 * blk)[slat]
 
     lad = is_("ladle")
-    c = mix(hexc("6E5238") * (0.85 + 0.25 * knot[:, None]), hexc("3A2A1C"), cav * 0.8 + 0.2 * sstep(0.5, 0.9, blot))
-    c = mix(c, hexc("A07E58"), wear * 0.6)
+    c = mix(hexc("4E3A28") * (0.85 + 0.25 * knot[:, None]), hexc("2A1E14"), cav * 0.8 + 0.2 * sstep(0.5, 0.9, blot))
+    c = mix(c, hexc("7A5C40"), wear * 0.6)
     col[lad] = c[lad]
     spec[lad], gloss[lad] = 40, (45 + 20 * wear)[lad]
     plg = is_("plug")
@@ -296,18 +296,18 @@ def build(tag):
     em = np.zeros(n, np.float32)                                     # свечение 0..1 (цвет — шкала ниже)
     brk = is_("brick")
     lowy = sstep(80, 58, y)
-    c = hexc("8A6648") * (0.75 + 0.5 * tone[:, None])
-    c = mix(c, hexc("A07A52"), wear * 0.4)
-    c = mix(c, SOOT * 1.5, np.clip(0.55 + 0.4 * sstep(60, 90, y) - 0.3 * lowy, 0, 0.9) * (0.8 + 0.3 * blot))
+    c = hexc("6E4E38") * (0.75 + 0.5 * tone[:, None])
+    c = mix(c, hexc("8A6446"), wear * 0.3)
+    c = mix(c, SOOT * 1.8, np.clip(0.7 + 0.25 * sstep(60, 90, y) - 0.25 * lowy, 0, 0.92) * (0.75 + 0.4 * blot))
     c = mix(c, hexc("6A2A14"), HT * lowy * 0.6)                             # отсвет углей внизу стенок
-    c = mix(c, hexc("120E0C"), cav * 0.7)
+    c = mix(c, hexc("1E1916"), cav * 0.5)
     col[brk] = c[brk]
     spec[brk], gloss[brk] = 30, 12
     mor = is_("mortar")
-    col[mor] = (hexc("2A2420") * (0.8 + 0.4 * fine[:, None]))[mor]
+    col[mor] = (hexc("2C2724") * (0.8 + 0.4 * fine[:, None]))[mor]
     spec[mor], gloss[mor] = 25, 8
     ash_ = is_("ash")
-    c = mix(hexc("4A4642") * np.ones((n, 1), np.float32), hexc("9A948A"), sstep(0.35, 0.75, fine) * 0.7) * (0.85 + 0.25 * tone[:, None])
+    c = mix(hexc("2E2B29") * np.ones((n, 1), np.float32), hexc("6A655E"), sstep(0.4, 0.8, fine) * 0.6) * (0.85 + 0.25 * tone[:, None])
     c = mix(c, hexc("3A1A0E"), HT * 0.7)
     col[ash_] = c[ash_]
     spec[ash_], gloss[ash_] = 25, 6
