@@ -42,6 +42,11 @@ https://steamcommunity.com/sharedfiles/filedetails/?id=3840348906
 | Occlusion | `textures/Door_v1.2_occlusion.png` | Occlusion Scale 0.70 |
 | Emission | `textures/Door_v1.2_emission.png` | **Emission Color 255/255/255** |
 
+**Пробный вариант с прозрачными потёками (v1.3):** в слот Diffuse вместо `Door_v1.2_diffuse.png` загрузить
+`textures/Door_v1.3_diffuse_cutout.png` и поставить **Alpha Cutoff 0.50**; остальные слоты те же. Сквозь три
+потёка на стекле видно, что за дверью. В игре не проверено; картинки страницы сняты с v1.2 — если публиковать
+v1.3, ночные кадры нужно переснять.
+
 Иконку генерирует сам редактор при Publish, Facepunch просит её не заменять.
 
 ### 2. На странице Steam (Add/edit images) — в этом порядке

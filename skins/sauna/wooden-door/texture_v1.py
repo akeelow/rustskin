@@ -32,6 +32,7 @@ import analyze_uv as A  # noqa: E402
 BAKE, ORIG, OUT = HERE / "bake", HERE / "originals", HERE / "export"
 N, OUT_N = 4096, 1024          # the editor shrinks this door's maps to 1024 (seen on the v1 and v1.1 panels)
 VERSION = "v1.2"
+CUT_VERSION = "v1.3"           # trial: the same maps, the glass seen through along a few water runs (alpha cutout)
 SEED = 21
 IDS = {"steel": 1, "board_f": 2, "board_b": 3, "rail": 4, "brace": 5, "nail": 6, "frame": 7, "sill": 8,
        "glass": 9, "towel": 10, "stripe": 11, "hook": 12, "leaf": 13, "hinge": 14, "wire": 15}
@@ -378,12 +379,34 @@ def build():
     drop_h = hash1((np.floor(du).astype(np.int64) * 7919 + np.floor(dv).astype(np.int64) * 104729) & 0x7FFFFFFF, 93)
     drops = (np.hypot(du % 1 - 0.5, dv % 1 - 0.5) < 0.2) * (drop_h > 0.80)
     clear = np.clip(track * 0.75 + drops * 0.5, 0, 1)
+    # v1.3 trial: a few runs where the water cleared the fog are cut through (Alpha Cutoff is all or nothing
+    # in Rust, so "half transparent" glass is drawn as fog with clear runs). The same x, y on both sides of the
+    # door: the runs line up through the pane. Widths >= 3 texels of the 1024 map (13 mm), or the mips eat them.
+    cut = np.zeros(len(x), np.float32)
+    crng = np.random.default_rng(SEED + 11)
+    pw = px1 - px0
+    # (v1.3 draft: four even runs from the top read as claw marks -> three runs of different length,
+    #  uneven spacing and a stronger meander)
+    for tx, top, bot, wa in ((0.24, 0.93, 0.07, 0.040), (0.33, 0.58, 0.31, 0.030), (0.71, 0.80, 0.14, 0.045)):
+        w0 = crng.uniform(0.0075, 0.0095) / pw                                    # half-width at the bottom, in u
+        wob = wa * (vnoise(v * 5.0, v * 0 + tx * 31, 97) - 0.5) + 0.4 * wa * (vnoise(v * 13.0, v * 0 + tx * 17, 98) - 0.5)
+        along = np.clip((top - v) / (top - bot), 0, 1)                           # 0 where it starts .. 1 at the drop
+        half = w0 * (0.55 + 0.45 * along)                                        # thin where it started
+        body = smooth(1.15, 0.85, np.abs(u - tx - wob) / half) * (v <= top) * (v >= bot)
+        bx = tx + wa * (vnoise(bot * 5.0 + 0 * v, v * 0 + tx * 31, 97) - 0.5) + 0.4 * wa * (vnoise(bot * 13.0 + 0 * v, v * 0 + tx * 17, 98) - 0.5)
+        drop = smooth(1.2, 0.8, np.hypot((u - bx) / (w0 * 1.5), (v - bot) / (w0 * 1.5 * pw / (py1 - py0))))
+        cut = np.maximum(cut, np.maximum(body, drop))
+    # (round cleared drops tried and dropped: through the glass they read as bullet holes)
+    cut *= smooth(0.012, 0.03, np.minimum(np.minimum(u, 1 - u) * pw, np.minimum(v, 1 - v) * (py1 - py0)))  # off the bead
+    rim = np.clip(smooth(0.0, 0.5, cut) - smooth(0.5, 1.0, cut), 0, 1)          # the wet edge of each run
     border = np.minimum(np.minimum(u, 1 - u) * (px1 - px0), np.minimum(v, 1 - v) * (py1 - py0))
     edge_dirt = smooth(0.03, 0.0, border)
     g_day = mix(hexc("#8F7458"), hexc("#BC966C"), heat) * fog[:, None]            # fog lit from behind
     g_day = mix(g_day, hexc("#7A4A2A"), clear * 0.4)                               # runs show the dark room and the glow
     g_day = mix(g_day, hexc("#5A4636"), edge_dirt * 0.6)
     col[gl] = g_day[gl]
+    col_cut = col.copy()
+    col_cut[gl] = mix(g_day, hexc("#5E4430"), rim * 0.7)[gl]
     gloss[gl] = (0.42 + 0.35 * clear - 0.15 * edge_dirt)[gl]
     spec[gl] = 0.16
     emis = np.zeros((len(x), 3), np.float32)
@@ -411,6 +434,7 @@ def build():
     emis[handle] = 0
 
     col = np.clip(col, 0.02, 0.92)
+    col_cut = np.where(gl[:, None], np.clip(col_cut, 0.02, 0.92), col)
 
     # ================= assemble images
     def to_img(vals, ch):
@@ -467,6 +491,19 @@ def build():
     save(sg, "specgloss", OUT_N, "RGBA")
     save(np.repeat(occ[..., None], 3, -1), "occlusion", OUT_N, "RGB")
     save(emission, "emission", OUT_N, "RGB")
+
+    # v1.3 trial: the v1.2 maps + the cutout diffuse (Alpha Cutoff 0.5)
+    alpha = np.ones((N, N, 1), np.float32)
+    am = np.ones(len(x), np.float32)
+    am[gl] = 1 - cut[gl]
+    alpha[M] = am[:, None]
+    dc = dilate(to_img(col_cut, 3), M, 36)
+    v0 = globals()["VERSION"]
+    globals()["VERSION"] = CUT_VERSION
+    save(np.concatenate([dc, alpha], -1), "diffuse_cutout", OUT_N, "RGBA")
+    globals()["VERSION"] = v0
+    cut_m = cut[gl] > 0.5
+    print("cutout: %.1f%% of the glass is see-through" % (100 * cut_m.mean()))
 
     # numbers for the README
     def med(m):
