@@ -123,7 +123,7 @@ def field_attrs(r, V):
             "pos": np.clip((V - POS_LO) / POS_SPAN, 0, 1)}
 
 
-def displaced(low, name, group, islands, edge):
+def displaced(low, name, group, islands, edge, field):
     """Подразделённая копия граней модели (рёбра до edge см), смещённая полем fields_v4 вдоль нормалей вершин; рядом —
     та же копия без смещения (plain_of = группа) для вычитания гранёности."""
     src = subset(low, islands, f"tmp_{name}")
@@ -170,7 +170,7 @@ def displaced(low, name, group, islands, edge):
     Fi = Fi.reshape(-1, 3)
     bpy.data.meshes.remove(me)
     log("  high-poly", nv, "verts", nt, "tris")
-    r = FV.body(V, Nv, log=lambda *a: log(*a))
+    r = field(V, Nv, log=lambda *a: log(*a))
     at = field_attrs(r, V)
     ob = mesh_np(name, V + Nv * r["h"][:, None], Fi, at, low, group)
     pl = mesh_np(name + "_plain", V, Fi, at, low, group + "_plain")
@@ -180,7 +180,9 @@ def displaced(low, name, group, islands, edge):
     return [ob]
 
 
-GROUPS = {"body": ({G.TANK, G.BASE_R, G.BASE_L}, 0.04)}
+# группа: (острова, вытяжка лучей м, поле, шаг подразделения см)
+GROUPS = {"body": ({G.TANK, G.BASE_R, G.BASE_L}, 0.04, FV.body, 0.18),
+          "fire": ({G.VAULT, G.FLOOR, G.WALL}, 0.12, FV.fire, 0.25)}
 
 
 # ---------------------------------------------------------------- запекание
@@ -386,12 +388,11 @@ def bake_group(low, keep, hp, size, extr, tag, mat):
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     size = int(argv[argv.index("--size") + 1]) if "--size" in argv else 4096
-    edge = float(argv[argv.index("--edge") + 1]) if "--edge" in argv else 0.18
+    groups = argv[argv.index("--groups") + 1].split(",") if "--groups" in argv else list(GROUPS)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     setup_cycles("--gpu" in argv)
     low = load_low()
     low.hide_render = True
-    hp = displaced(low, "hp_body", "body", GROUPS["body"][0], edge)
     OUT.mkdir(parents=True, exist_ok=True)
     holder = new_img("holder", size)
     low.hide_render = False
@@ -399,9 +400,21 @@ def main():
     low.hide_render = True
     mat = hp_material()
     result = {}
-    for g, (keep, extr) in GROUPS.items():
-        ghp = [o for o in hp if o["group"] == g]
+    if set(groups) != set(GROUPS):                # пекутся только эти группы; остальное — из прошлого запекания
+        for k in ("ao", *ATTRS, "cover", "normal", "mask"):
+            path = OUT / f"{k}.png"
+            if path.exists():
+                im = bpy.data.images.load(str(path))
+                im.colorspace_settings.name = "Non-Color"
+                if im.size[0] == size:
+                    result[k] = pixels(im).copy()
+                bpy.data.images.remove(im)
+    for g in groups:
+        keep, extr, field, edge = GROUPS[g]
+        ghp = displaced(low, f"hp_{g}", g, keep, edge, field)
         res, mask = bake_group(low, keep, ghp, size, extr, g, mat)
+        for o in [o for o in bpy.data.objects if o.get("group") in (g, g + "_plain")]:
+            bpy.data.objects.remove(o, do_unlink=True)
         for k, arr in res.items():
             result.setdefault(k, np.zeros_like(arr) + ((0.5, 0.5, 1.0) if k == "normal" else 0))[mask] = arr[mask]
         result.setdefault("mask", np.zeros((size, size, 3), np.float32))[mask] = 1.0

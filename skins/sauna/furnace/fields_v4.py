@@ -16,7 +16,8 @@ import geom_v4 as G
 
 MAT = {"sheet": 1, "hoop": 2, "rivet": 3, "frame": 4, "checker": 5, "hinge": 6, "bolt": 7, "ladle": 8, "plug": 9,
        "rag": 10, "twine": 11, "hook": 12, "slat": 13, "nail": 14, "wire": 15, "char": 16, "behind": 17,
-       "reveal": 18, "sill": 19, "lid": 20}
+       "reveal": 18, "sill": 19, "lid": 20, "stone": 21, "brick": 22, "mortar": 23, "ash": 24, "bark": 25,
+       "logwood": 26, "ember": 27}
 KEYS = ("h", "wear", "cav", "dent", "rivet", "knot", "char", "rust", "crust", "tone", "mat", "sid", "heat")
 
 
@@ -978,6 +979,57 @@ class Body:
                 ar = np.radians(a) + 1.3 / rad
                 self._lid_rivet(Pl, m, G.CX + np.sin(ar) * rad, G.CZ + np.cos(ar) * rad)
 
+    def lid_stones(self):
+        """Колотый базальт на крышке вокруг отверстия: камни 3–8 см — грани раскола (минимум из 5 плоскостей),
+        усечённый верх, сколы рёбер, щели между камнями; поверх — второй ярус мелочи. Видно сверху."""
+        o = self.o
+        m = np.where(self.lid)[0]
+        u = self.P[m, 0] - G.CX
+        v = self.P[m, 2] - G.CZ
+        rr = np.hypot(u, v)
+        zone = (rr > 9.0) & (rr < 21.8)
+        base = o["h"][m].copy()
+        # горка выше в середине кольца; всё ниже 3.6 см — вытяжка лучей запекания группы 4 см
+        prof = 0.4 + 1.0 * np.sin(np.pi * np.clip((rr - 9.0) / 12.8, 0, 1))
+
+        def tier(cell, seed, hmin, hmax, keep):
+            f1, f2, cx, cy, h1, h2 = voronoi_c(u, v, cell, seed)
+            du, dv = u - cx, v - cy
+            planes = []
+            for k in range(5):
+                a = 2 * np.pi * (k / 5 + h1 + 0.07 * np.sin(k * 3.1 + h2 * 9))
+                s = 0.55 + 0.7 * ((h2 * 7.3 + k * 0.37) % 1.0)
+                planes.append(-s * (du * np.cos(a) + dv * np.sin(a)))
+            planes = np.stack(planes, 0)
+            ps = np.sort(planes, 0)
+            T = hmin + (hmax - hmin) * h2
+            hs = np.minimum(T + ps[0], T - 0.35 * cell * 0.1)                  # усечённый верх
+            ridge = sstep(0.35, 0.0, ps[1] - ps[0]) + sstep(0.4, 0.0, (T - 0.035 * cell) - (T + ps[0]))
+            chip = (n2(u * 1.4 + seed, v * 1.4, seed + 1) > 0.66) * ridge * 0.45
+            hs = hs - chip + 0.05 * (n2(u * 2.2, v * 2.2, seed + 2) - 0.5)
+            gap = f2 - f1
+            ok = keep(h1) & (gap > 0.22)
+            hs = np.where(ok, hs * sstep(0.22, 0.6, gap) ** 0.3, -9)
+            return hs, ridge * ok, h1, ok
+
+        h_big, r_big, id_big, ok_big = tier(5.2, 301, 1.4, 2.6, lambda h: h < 0.92)
+        h_sm, r_sm, id_sm, ok_sm = tier(2.6, 303, 0.8, 1.5, lambda h: h < 0.45)
+        h_sm = np.where(ok_sm, h_sm + prof * 0.8, -9)
+        h_big = np.where(ok_big, h_big + prof * 0.6, -9)
+        hs = np.minimum(np.maximum(h_big, h_sm), 3.6)
+        on = zone & (hs > base)
+        sel = m[on]
+        o["h"][sel] = hs[on]
+        o["mat"][sel] = MAT["stone"]
+        o["wear"][sel] = np.where(h_big[on] >= h_sm[on], r_big[on], r_sm[on])
+        o["cav"][sel] = 0
+        o["rivet"][sel] = 0
+        o["tone"][sel] = np.where(h_big[on] >= h_sm[on], id_big[on], id_sm[on])
+        o["sid"][sel] = 51
+        # между камнями — щели до крышки (тень), их цвет — сажа
+        gapz = zone & ~on
+        o["cav"][m[gapz]] = np.maximum(o["cav"][m[gapz]], 0.45)
+
     def _lid_rivet(self, Pl, m, x, z, R=0.95):
         d = np.hypot(Pl[:, 0] - x, Pl[:, 2] - z)
         near = d < R + 0.3
@@ -1048,7 +1100,7 @@ class Body:
             v = yy[inrow] - y0                               # поперёк доски, снизу
             sel = np.where(inrow)[0]
             # толщина внахлёст: внизу 0.9, вверху 0.25 (нижняя кромка верхнего ряда ложится на верх нижнего)
-            SLOT = 0.5 if row > 0 else 0.0
+            SLOT = 0.75 if row > 0 else 0.0
             vv = v - SLOT
             hb = 0.3 + 0.9 * np.clip(1 - vv / (Hh - SLOT), 0, 1)
             # коробление: кромки чуть выше середины
@@ -1099,7 +1151,7 @@ class Body:
                 tone[sel[mb]] = 0.5 + 0.8 * (rb.random() - 0.5)
                 sid[sel[mb]] = board_id + b
             # глубже вытерто у низа (вода), под проёмом — обуглено
-            hb += np.where(slot, 0, (0.08 + 0.03 * (row == 0)) * (gr - 0.35) + 0.1 * (fbm2(xa * 0.08, v * 0.35, 75 + row, 3) - 0.5))
+            hb += np.where(slot, 0, (0.14 + 0.04 * (row == 0)) * (gr - 0.35) + 0.12 * (fbm2(xa * 0.08, v * 0.35, 75 + row, 3) - 0.5))
             hb -= 0.35 * np.clip(cr, 0, 1) * (cr <= 1.0) + 0.45 * (cr > 1.0)
             hb += 0.05 * kn - 0.02 * kn * (n2(xa * 3, v * 3, 77) - 0.5)
             H[sel] = hb
@@ -1263,7 +1315,8 @@ class Body:
         import time
         t = time.time()
         steps = [("sheets", self.sheets), ("dents", self.dents), ("pillows", self.pillows), ("rust", self.rust),
-                 ("lid", self.lid_top), ("reveal", self.reveal_face), ("boards", self.boards),
+                 ("lid", self.lid_top), ("stones", self.lid_stones), ("reveal", self.reveal_face),
+                 ("boards", self.boards),
                  ("hoops", self.hoops), ("frame", self.frame), ("hinges", self.hinges), ("patch", self.patch),
                  ("sill", self.sill), ("plug", self.plug), ("ladle", self.ladle), ("nails", self.nails_and_wire),
                  ("drips", self.drips)]
@@ -1275,3 +1328,151 @@ class Body:
 
 def body(P, N, log=print):
     return Body(np.asarray(P, float), np.asarray(N, float)).run(log)
+
+
+# ====================================================================== нутро топки (острова 3, 5, 6)
+FX, FZ, FY0 = 4.5, 2.5, 56.0          # центр топки и уровень пола, см
+LOGS = (  # (x, z центра, угол оси град. в плоскости xz, длина, радиус, приподнят над золой, колотое?)
+    (-4.0, 6.0, 25.0, 34.0, 4.3, 0.0, False),
+    (7.0, 9.0, -38.0, 30.0, 4.6, 4.5, False),
+    (2.0, -9.0, 82.0, 28.0, 4.0, 0.0, True),
+    (-11.0, -4.0, -70.0, 22.0, 3.2, 0.0, False),
+)
+
+
+class Fire:
+    """Нутро топки: свод и стенки — кладка шамотного кирпича; пол — зола, берёзовые поленья, угли (свечение — в маске
+    heat). Видно только через проём; огонь игра рисует сама."""
+
+    def __init__(self, P, N, seed=9):
+        self.P, self.N = P, N
+        n = len(P)
+        self.o = {k: np.zeros(n) for k in KEYS}
+        self.o["tone"][:] = 0.5
+        self.o["sid"][:] = -1
+        self.floor = (N[:, 1] > 0.6) & (P[:, 1] < 61)
+        self.wall = ~self.floor
+
+    def bricks(self):
+        o = self.o
+        m = np.where(self.wall)[0]
+        P = self.P[m]
+        dx, dz = P[:, 0] - FX, P[:, 2] - FZ
+        r = np.hypot(dx, dz)
+        az = np.arctan2(dx, dz)
+        el = np.arctan2(P[:, 1] - FY0, np.maximum(r, 1.0))
+        R = 34.0
+        u = az * np.maximum(r, 12.0)                       # вдоль ряда
+        v = el * R                                         # по меридиану
+        BH, BL, J = 10.5, 21.0, 1.0                        # кирпич 21 × 10.5, шов 1 см
+        row = np.floor(v / BH)
+        fv = v - row * BH
+        uo = u + (row % 2) * BL * 0.5 + 3.1 * row
+        col = np.floor(uo / BL)
+        fu = uo - col * BL
+        du = np.minimum(fu, BL - fu)
+        dv = np.minimum(fv, BH - fv)
+        d = np.minimum(du, dv)
+        hid = (col * 7919 + row * 104729) % 1000 / 1000.0
+        joint = sstep(J * 0.5 + 0.15, J * 0.5 - 0.1, d)
+        face = 0.06 * np.clip(d / 2.5, 0, 1) ** 0.5            # лицо кирпича чуть выпуклое
+        chip = (n2(u * 0.9, v * 0.9, 201) > 0.68) * sstep(2.2, 0.6, d) * 0.18   # сколы углов и кромок
+        crack_line = np.abs(fu - BL * (0.3 + 0.4 * hid) - 1.2 * np.sin(fv * 0.6 + hid * 9))
+        crack = (hid > 0.75) * sstep(0.22, 0.05, crack_line) * (d > 0.6)
+        missing = (hid > 0.965)                             # выпавший кирпич: видно железо
+        h = face - 0.35 * joint - chip - 0.25 * crack + 0.03 * (n2(u * 1.5, v * 1.5, 202) - 0.5)
+        h = np.where(missing, -0.6 + 0.04 * n2(u * 2, v * 2, 203), h)
+        o["h"][m] = h
+        o["cav"][m] = np.clip(joint + crack + missing * 0.5, 0, 1)
+        o["wear"][m] = sstep(1.5, 0.6, d) * (1 - joint) * 0.6
+        o["mat"][m] = np.where(missing, MAT["behind"], np.where(joint > 0.5, MAT["mortar"], MAT["brick"]))
+        o["tone"][m] = 0.5 + 0.5 * (hid - 0.5)
+        o["sid"][m] = 0
+        o["heat"][m] = sstep(78, 58, P[:, 1]) * 0.25           # низ стенок у углей — слабый отсвет (в цвете)
+
+    def floor_heap(self):
+        o = self.o
+        m = np.where(self.floor)[0]
+        P = self.P[m]
+        x, z = P[:, 0], P[:, 2]
+        rr = np.hypot(x - FX, z - FZ)
+        # зола: бугры и мелкая крупка; к стенкам выше (сгребли)
+        ash = 0.9 * (fbm2(x * 0.12, z * 0.12, 211, 3) - 0.5) + 0.12 * (n2(x * 1.6, z * 1.6, 212) - 0.5) + 0.04 * rr
+        H = ash.copy()
+        mat = np.full(len(m), float(MAT["ash"]))
+        cav = np.zeros(len(m))
+        wear = np.zeros(len(m))
+        knot = np.zeros(len(m))
+        char = np.zeros(len(m))
+        heat = np.zeros(len(m))
+        sid = np.zeros(len(m))
+        # угли: куски 1.5–3 см с трещинами, гнездом в центре и под поленьями
+        f1, f2, cx, cy, h1, h2 = voronoi_c(x, z, 2.4, 213)
+        nest = sstep(16, 4, rr) * (n2(x * 0.15, z * 0.15, 214) * 0.6 + 0.6)
+        is_c = (h1 < nest) & (f2 - f1 > 0.25)
+        lump = (0.6 + 0.9 * h2) * np.clip(1 - (f1 / 1.4) ** 2, 0, 1) ** 0.6
+        g1, g2, _, _, _, _ = voronoi_c(x * 1.3, z * 1.3, 0.9, 215)
+        ccr = sstep(0.12, 0.02, g2 - g1)
+        hc = ash + 0.3 + lump - 0.25 * ccr
+        on = is_c & (hc > H)
+        H = np.where(on, hc, H)
+        mat = np.where(on, MAT["ember"], mat)
+        cav = np.where(on, ccr, cav)
+        heat = np.where(on, np.clip(nest * (0.35 + 0.65 * ccr) + 0.2 * (h2 > 0.6), 0, 1), heat)
+        heat = np.maximum(heat, sstep(14, 3, rr) * 0.25 * (n2(x * 0.5, z * 0.5, 216) > 0.55))   # тлеющая зола в центре
+        # поленья: цилиндры, частично в золе; береста с чечевичками-валиками, колотое — грань с волокном
+        for k, (lx, lz, ang, L, R, lift, split) in enumerate(LOGS):
+            a = np.radians(ang)
+            ax, az_ = np.sin(a), np.cos(a)
+            px, pz = x - lx, z - lz
+            t = px * ax + pz * az_                          # вдоль оси
+            d = -px * az_ + pz * ax                          # поперёк
+            inside = (np.abs(t) < L / 2) & (np.abs(d) < R)
+            yc = ash.mean() * 0 + R * 0.55 + lift              # ось над полом
+            top = yc + np.sqrt(np.clip(R * R - d * d, 0, None))
+            if split:
+                top = np.minimum(top, yc + R * 0.35)           # колотая грань сверху
+            end = sstep(L / 2 - 1.2, L / 2, np.abs(t))
+            top = top - 1.5 * end
+            on = inside & (top > H)
+            phi = np.arcsin(np.clip(d / R, -1, 1))
+            circ = phi * R
+            # чечевички: поперечные чёрточки 2–3 см, валик 0.6 мм
+            lent = (np.abs(((t + 3 * k) % 3.2) - 1.6) < 0.22) * (np.abs(((circ + 0.8 * np.floor((t + 3 * k) / 3.2)) % 4.0) - 2.0) < 1.2)
+            bark = 0.05 * lent + 0.03 * (n2(t * 0.5, circ * 2.0, 220 + k) - 0.5)
+            flat = split & (top >= yc + R * 0.35 - 1e-6)
+            grain = 0.5 + 0.5 * np.sin(d * 5.0 + 1.5 * n2(t * 0.15, d, 230 + k))
+            hl = top + np.where(flat, 0.04 * grain, bark)
+            H = np.where(on, hl, H)
+            mat = np.where(on, np.where(flat | (end > 0.5), MAT["logwood"], MAT["bark"]), mat)
+            knot = np.where(on, np.where(flat, grain, lent * 1.0), knot)
+            # низ поленьев у углей обуглен, трещины светятся
+            low = on & (top < yc + R * 0.55) & (rr < 18)
+            ch, ck = alligator(t, circ, 1.6, 240 + k)
+            H = np.where(low, H + 0.6 * ch, H)
+            char = np.where(low, 1.0, char)
+            cav = np.where(on, np.where(low, ck, 0.0), cav)
+            heat = np.where(low, np.clip(ck * 0.8 * sstep(18, 6, rr), 0, 1), np.where(on, 0, heat))
+            sid = np.where(on, k + 1, sid)
+        o["h"][m] = H
+        o["mat"][m] = mat
+        o["cav"][m] = cav
+        o["wear"][m] = wear
+        o["knot"][m] = knot
+        o["char"][m] = char
+        o["heat"][m] = heat
+        o["sid"][m] = sid
+        o["tone"][m] = 0.5 + 0.3 * (n2(x * 0.2, z * 0.2, 250) - 0.5)
+
+    def run(self, log=print):
+        import time
+        t = time.time()
+        self.bricks()
+        log(f"  fire bricks: {time.time() - t:.1f} s")
+        self.floor_heap()
+        log(f"  fire floor: {time.time() - t:.1f} s")
+        return self.o
+
+
+def fire(P, N, log=print):
+    return Fire(np.asarray(P, float), np.asarray(N, float)).run(log)

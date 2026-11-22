@@ -54,11 +54,20 @@ def main():
     t = time.time()
     P, N = texel_points(size)
     ok = np.isfinite(P[..., 0])
-    print("texels", ok.sum(), f"{time.time() - t:.0f} s")
+    Pf, Nf = texel_points(size, islands=(3, 5, 6))
+    okf = np.isfinite(Pf[..., 0]) & ~ok
+    print("texels", ok.sum(), okf.sum(), f"{time.time() - t:.0f} s")
     r = FV.body(P[ok], N[ok])
+    rf = FV.fire(Pf[okf], Nf[okf])
     print(f"field {time.time() - t:.0f} s")
     H = np.zeros((size, size))
     H[ok] = r["h"]
+    H[okf] = rf["h"]
+    r = {k: np.concatenate([r[k], rf[k]]) for k in r}
+    ok_all = ok | okf
+    order = np.concatenate([np.flatnonzero(ok), np.flatnonzero(okf)])
+    ok = ok_all
+    r = {k: v[np.argsort(order)] for k, v in r.items()}
     # теневой рельеф: градиент h по текселям (см на тексель), свет сверху-слева
     px_cm = 1.0 / (3.9 * size / 1024)
     gy, gx = np.gradient(H)

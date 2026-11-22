@@ -284,6 +284,55 @@ def build(tag):
     col[wire] = c[wire]
     spec[wire], gloss[wire] = 70, 45
 
+    # ---------------- камни на крышке: базальт, сбитые рёбра светлее, белая корка на верхах (плещут водой)
+    stn = is_("stone")
+    c = hexc("54565A") * (0.75 + 0.5 * tone[:, None]) * (0.9 + 0.2 * fine[:, None])
+    c = mix(c, hexc("6E6C6A"), wear * 0.5)
+    c = mix(c, hexc("B8B2A4"), sstep(0.62, 0.85, fine) * sstep(0.4, 0.8, tone) * 0.35)
+    col[stn] = c[stn]
+    spec[stn], gloss[stn] = 45, (40 + 30 * wear)[stn]
+
+    # ---------------- нутро топки: шамот в саже, раствор, зола, береста, колотое дерево, угли
+    em = np.zeros(n, np.float32)                                     # свечение 0..1 (цвет — шкала ниже)
+    brk = is_("brick")
+    lowy = sstep(80, 58, y)
+    c = hexc("8A6648") * (0.75 + 0.5 * tone[:, None])
+    c = mix(c, hexc("A07A52"), wear * 0.4)
+    c = mix(c, SOOT * 1.5, np.clip(0.55 + 0.4 * sstep(60, 90, y) - 0.3 * lowy, 0, 0.9) * (0.8 + 0.3 * blot))
+    c = mix(c, hexc("6A2A14"), HT * lowy * 0.6)                             # отсвет углей внизу стенок
+    c = mix(c, hexc("120E0C"), cav * 0.7)
+    col[brk] = c[brk]
+    spec[brk], gloss[brk] = 30, 12
+    mor = is_("mortar")
+    col[mor] = (hexc("2A2420") * (0.8 + 0.4 * fine[:, None]))[mor]
+    spec[mor], gloss[mor] = 25, 8
+    ash_ = is_("ash")
+    c = mix(hexc("4A4642") * np.ones((n, 1), np.float32), hexc("9A948A"), sstep(0.35, 0.75, fine) * 0.7) * (0.85 + 0.25 * tone[:, None])
+    c = mix(c, hexc("3A1A0E"), HT * 0.7)
+    col[ash_] = c[ash_]
+    spec[ash_], gloss[ash_] = 25, 6
+    em[ash_] = (HT * 0.6)[ash_]
+    emb = is_("ember")
+    c = mix(hexc("1A1412") * (0.8 + 0.5 * tone[:, None]), hexc("5A2410"), np.clip(HT, 0, 1) * 0.8)
+    c = mix(c, hexc("6A6460"), sstep(0.6, 0.9, fine) * (1 - HT) * 0.4)       # серая зола на остывших
+    col[emb] = c[emb]
+    spec[emb], gloss[emb] = 35, 20
+    em[emb] = HT[emb]
+    brk_ = is_("bark")
+    c = hexc("DDD6C6") * (0.8 + 0.2 * fine[:, None])
+    c = mix(c, hexc("2A2420"), knot * 0.85)                                  # чечевички
+    c = mix(c, hexc("8A7A62"), sstep(0.55, 0.85, blot) * 0.35)
+    c = mix(c, hexc("120E0C"), char * 0.9)
+    col[brk_] = c[brk_]
+    spec[brk_], gloss[brk_] = 38, 30
+    em[brk_] = (HT * char)[brk_]
+    lw = is_("logwood")
+    c = mix(hexc("C9A878") * np.ones((n, 1), np.float32), hexc("9A7A50"), knot * 0.6) * (0.85 + 0.25 * fine[:, None])
+    c = mix(c, hexc("120E0C"), char * 0.9)
+    col[lw] = c[lw]
+    spec[lw], gloss[lw] = 35, 20
+    em[lw] = (HT * char)[lw]
+
     # ---------------- копоть и вода поверх всего
     st = np.where(metal | slat, soot, 0) * (1 - 0.6 * a_cr)
     col = mix(col, SOOT, np.clip(st * 0.85, 0, 0.8))
@@ -300,15 +349,24 @@ def build(tag):
     D[sel] = np.clip(col, 0, 1)
     S = np.zeros((WORK, WORK, 2), np.float32)
     S[sel] = np.stack([np.clip(spec, 0, 255), np.clip(gloss, 0, 255)], -1) / 255
+    # свечение: чёрный -> тёмно-красный -> #FF6A1F -> #FFB347 (выше не поднимается, как v3)
+    ramp = np.stack([np.zeros(3, np.float32), hexc("6A1604"), hexc("FF6A1F"), hexc("FFB347")])
+    e3 = np.clip(em, 0, 1) * 3
+    i0 = np.clip(np.floor(e3).astype(int), 0, 2)
+    fr = (e3 - i0)[:, None]
+    ecol = ramp[i0] * (1 - fr) + ramp[i0 + 1] * fr
+    E = np.zeros((WORK, WORK, 3), np.float32)
+    E[sel] = ecol
     D = dilate(D, mask, 8)
     S = dilate(S, mask, 8)
-    D1, S1 = lanczos(D, OUT), lanczos(S, OUT)
+    E = dilate(E, mask, 8)
+    D1, S1, E1 = lanczos(D, OUT), lanczos(S, OUT), lanczos(E, OUT)
     body1 = down(mask4, 4096 // OUT) > 0.5
 
     # нормаль: усиление мелкого рельефа по материалу, 4096 -> 1024
     nrm = load("normal") * 2 - 1
     matf = np.rint(idc_full[..., 0] * 32)
-    kboost = np.where(np.isin(matf, [M["slat"], M["char"], M["ladle"], M["plug"]]), 0.5, 0.3)
+    kboost = np.where(np.isin(matf, [M["slat"], M["char"], M["ladle"], M["plug"], M["bark"], M["logwood"]]), 0.5, 0.3)
     det = nrm - np.stack([fblur(nrm[..., c], 3) for c in range(3)], -1)
     nb = nrm + kboost[..., None] * det * (mask4[..., None] > 0.5)
     nb /= np.linalg.norm(nb, axis=-1, keepdims=True) + 1e-6
@@ -319,7 +377,7 @@ def build(tag):
     A1 = lanczos(load("ao", "L"), OUT)
     print(f"normal {time.time() - t0:.0f} s", flush=True)
 
-    # ---------------- остальное (нутро топки, угли, дно) — из v3
+    # ---------------- остальное (кубики углей — острова 8–10, вне запекания) — из v3
     def prev(slot, mode="RGB"):
         im = Image.open(EXP / f"Furnace_{PREV}_{slot}.png").convert(mode)
         if im.size[0] != OUT:
@@ -334,7 +392,21 @@ def build(tag):
     Nf = np.where(keep_prev[..., None], pn, N1)
     SGf = np.where(keep_prev[..., None], np.stack([psg[..., 0], psg[..., 3]], -1), S1)
     Af = np.where(keep_prev, pao, A1)
-    Ef = np.where(keep_prev[..., None], pem, 0.0)
+    Ef = np.where(keep_prev[..., None], pem, E1)
+    # кубики углей (острова 8–10, своя геометрия модели, ~10 кубиков на пятно): тлеющий / чёрный уголь / серый
+    import measure_v4 as MS
+    V_, T_, N_, F_ = G.load()
+    isl_ = G.island_of_face()
+    UV_ = T_[F_[:, :, 1]]
+    for ci, (dc, ec) in zip((8, 9, 10), ((hexc("2A0E06"), hexc("6A1604") * 1.4), (hexc("161210"), hexc("6A1604") * 0.35),
+                                         (hexc("3A3634"), np.zeros(3, np.float32)))):
+        msk = np.zeros((OUT, OUT), bool)
+        for f in np.flatnonzero(isl_ == ci):
+            for yx in MS.raster(None, UV_[f], 0, OUT):
+                msk[yx] = True
+        msk = fblur(msk.astype(np.float32), 1) > 0.05
+        Df[msk] = dc
+        Ef[msk] = ec
     Df = dilate(Df, used1 | ~keep_prev, 6)
 
     EXP.mkdir(exist_ok=True)
