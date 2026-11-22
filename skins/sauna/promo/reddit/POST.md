@@ -25,19 +25,14 @@ Every Rust life starts naked. Might as well warm up properly - I made a scrap-bu
 
 ## Body
 
+Абзацы без переносов внутри (редактор Reddit превращает каждый перенос в отдельную строку):
+
 ```
-A survivor's sauna built from junk: an old enamel cooker clad in aspen slats
-with rocks and glowing charcoal in the firebox, a bed frame turned into a
-slatted bench, a changing-room armchair, a crate of hot stones, a steel
-locker clad in linden boards with a towel and a birch whisk in the niches,
-and a towel wrap and waffle robe for the dash into the snow.
+A survivor's sauna built from junk: an old enamel cooker clad in aspen slats with rocks and glowing charcoal in the firebox, a bed frame turned into a slatted bench, a changing-room armchair, a crate of hot stones, a steel locker clad in linden boards with a towel and a birch whisk in the niches, and a towel wrap and waffle robe for the dash into the snow.
 
-Seven skins: Electric Furnace, Bed, Chair, Wood Storage Box, Locker,
-Burlap Headwrap and Snow Jacket. All pictures are in-game editor shots;
-every detail was modelled in Blender and baked onto the original item UVs.
+Seven skins: Electric Furnace, Bed, Chair, Wood Storage Box, Locker, Burlap Headwrap and Snow Jacket. All pictures are in-game editor shots; every detail was modelled in Blender and baked onto the original item UVs.
 
-It's my first set, so I'd love feedback - what reads well, what doesn't,
-and what else a Rust sauna needs.
+It's my first set, so I'd love feedback - what reads well, what doesn't, and what else a Rust sauna needs.
 
 Workshop collection: https://steamcommunity.com/sharedfiles/filedetails/?id=3840348906
 ```
