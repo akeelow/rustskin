@@ -671,8 +671,9 @@ def drawer_front(X, Y, Z0=None):
     bevel = (d >= 4.0) & (d < 5.5)
     field = d >= 5.5
     horiz = np.minimum(Y - y0, y1 - Y) < np.minimum(X - x0, x1 - X)
-    g = grain_relief(np.where(horiz | field, X, Y), np.where(horiz | field, Y, X), 1.6, 0.012, 32.0, 0.95, 431)
-    fl.h += 0.06 * (g - 0.35)
+    g = grain_relief(np.where(horiz | field, X, Y), np.where(horiz | field, Y, X), 2.6, 0.03, 30.0, 1.35, 431,
+                     knots=((8.0, 36.0, 0.8),))
+    fl.h += 0.035 * (g - 0.35)                       # v6.2: в игре — ровная «гофра»
     fl.grain = g
     fl.h -= round_drop(np.clip(d, 0, None), 0.45)
     fl.h = np.where(rail, fl.h + 0.0, fl.h)
@@ -1066,10 +1067,12 @@ def frame_front(X, Y):
     steel_surface(fl, X, Y, np.clip(de, 0, None), 401, chip=0.35, r_edge=0.7)
     fl.h -= round_drop(np.clip(de, 0, None), 0.9) * 0.6
     # продух-прорези в цоколе: по 2 штампованные щели 1 × 9 см с отогнутой кромкой
-    for sx in (-66.0, -54.0):
-        q = np.hypot((X - sx) / 4.5, (Y - 10.7) / 0.55)
-        fl.h -= 0.9 * sstep(1.0, 0.9, q) - 0.12 * np.exp(-((q - 1.15) / 0.12) ** 2)
-        fl.cav = np.maximum(fl.cav, sstep(1.0, 0.9, q))
+    for k in range(3):                       # v6.2: жалюзи цоколя (овалы с кромкой в игре читались «губами»)
+        yc = 8.4 + k * 2.3
+        dx, dy = np.abs(X + 60.0) - 7.0, np.abs(Y - yc) - 0.32
+        q = np.hypot(np.maximum(dx, 0), np.maximum(dy, 0)) + np.minimum(np.maximum(dx, dy), 0)
+        fl.h -= 0.7 * sstep(0.05, -0.1, q)
+        fl.cav = np.maximum(fl.cav, sstep(0.05, -0.1, q))
     # заклёпки по карнизу и на стойках у углов
     for (rx, ry) in ((-87.2, 220.6), (-32.7, 220.6), (-87.2, 3.6), (-32.7, 3.6), (-60.0, 220.6)):
         dd = np.hypot(X - rx, Y - ry)

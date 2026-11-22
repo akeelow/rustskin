@@ -165,7 +165,8 @@ def build():
         c = c * (0.95 + 0.09 * grain[m, None])
         col[m] = c
     drawer = M("frame") & (board >= 15)
-    col = np.where(drawer[..., None], col * np.array([1.06, 0.98, 0.9], np.float32) * 0.95, col)
+    # v6.2: ящик в игре — светлая оранжевая «новая сосна»; по референсу теплее дверцы, но приглушённый
+    col = np.where(drawer[..., None], rgb(114, 97, 81) * (0.96 + 0.08 * grain[..., None]), col)
     wood = M("board") | M("ledge") | M("frame") | M("side") | M("niche") | M("shelf") | M("grate") | M("peg") | M("lamp")
     col = np.where(wood[..., None], mix(col, KNOT, knot * 0.8), col)
     col = np.where(wood[..., None], col * (1 - 0.55 * cav[..., None]), col)

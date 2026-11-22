@@ -1,0 +1,72 @@
+00:01.171  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+[14:20:48] GPU OPTIX
+[14:20:48] build frame
+[14:20:48]   hp_frame_0: 49×1498
+[14:20:49]   hp_frame_1: 51×1498
+[14:20:49]   hp_frame_2: 313×44
+[14:20:49]   hp_frame_3: 313×104
+[14:20:49] build side
+[14:20:53]   hp_side: 1498×405
+[14:20:54] build drawer
+[14:20:54]   hp_drawer: 315×221
+[14:20:54] high-poly: {'hp_frame_0': 73402, 'hp_frame_1': 76398, 'hp_frame_2': 13772, 'hp_frame_3': 32552, 'hp_side': 606690, 'hp_drawer': 69615}
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:363: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+[14:20:56] merging into the previous bake: ['ao', 'cover', 'idc', 'm1', 'm2', 'm3', 'mask', 'normal', 'pos']
+[14:20:56] group frame faces 10 hp ['hp_frame_0', 'hp_frame_1', 'hp_frame_2', 'hp_frame_3']
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:465: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+[14:20:56] bake frame_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[14:21:08] bake frame_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[14:21:21] bake frame_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:21:34] bake frame_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:21:47] bake frame_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:21:59] bake frame_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:22:12] bake frame_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:22:25] bake frame_cover EMIT
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:484: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+Info: Baking map saved to internal image, save it externally or pack it
+[14:22:38] bake frame_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:22:41] group frame texels 394213
+[14:22:41] group drawer faces 1 hp ['hp_drawer']
+[14:22:41] bake drawer_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[14:22:45] bake drawer_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[14:22:49] bake drawer_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:22:53] bake drawer_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:22:57] bake drawer_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:23:01] bake drawer_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:23:05] bake drawer_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:23:10] bake drawer_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:23:14] bake drawer_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:23:18] group drawer texels 182628
+[14:23:19]   -> ao.png
+[14:23:19]   -> m1.png
+[14:23:20]   -> m2.png
+[14:23:20]   -> m3.png
+[14:23:21]   -> idc.png
+[14:23:21]   -> pos.png
+[14:23:22]   -> cover.png
+[14:23:23]   -> normal.png
+[14:23:23]   -> mask.png
+[14:23:23] done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+
+Blender quit
