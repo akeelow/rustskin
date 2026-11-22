@@ -1,0 +1,67 @@
+00:01.047  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+[13:59:59] GPU OPTIX
+[13:59:59] build top
+[13:59:59]   hp_top: 405×405
+[13:59:59] build back3
+[14:00:02]   hp_back3: 405×1498
+[14:00:02] high-poly: {'hp_top': 164025, 'hp_back3': 606690}
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:363: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+[14:00:04] merging into the previous bake: ['ao', 'cover', 'idc', 'm1', 'm2', 'm3', 'mask', 'normal', 'pos']
+[14:00:04] group top faces 1 hp ['hp_top']
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:465: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+[14:00:04] bake top_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:08] bake top_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:12] bake top_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:16] bake top_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:20] bake top_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:24] bake top_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:28] bake top_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:32] bake top_cover EMIT
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:484: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:36] bake top_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:39] group top texels 379456
+[14:00:39] group back3 faces 13 hp ['hp_back3']
+[14:00:39] bake back3_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:43] bake back3_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:48] bake back3_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:53] bake back3_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:00:57] bake back3_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:01:02] bake back3_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:01:07] bake back3_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:01:12] bake back3_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:01:16] bake back3_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[14:01:20] group back3 texels 1385197
+[14:01:21]   -> ao.png
+[14:01:21]   -> m1.png
+[14:01:22]   -> m2.png
+[14:01:22]   -> m3.png
+[14:01:23]   -> idc.png
+[14:01:23]   -> pos.png
+[14:01:23]   -> cover.png
+[14:01:24]   -> normal.png
+[14:01:24]   -> mask.png
+[14:01:24] done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+
+Blender quit

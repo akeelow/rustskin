@@ -225,10 +225,11 @@ def edge_wear(fl, d, r, k=1.0):
     fl.edge = np.maximum(fl.edge, k * sstep(r * 1.4, 0.0, d))
 
 
-def steel_surface(fl, U, V, de, seed, chip=0.25, r_edge=0.6):
+def steel_surface(fl, U, V, de, seed, chip=0.25, r_edge=0.6, interior=0.0):
     """Старая эмаль на стали: слой 0.03, сколы у кромок (de — расстояние до кромки), раковины в голом металле."""
     # эмаль почти цела; сколы мелкие (2–6 см), гуще у кромок — крупные пятна в игре читаются «камуфляжем» (§9.6)
     en_n = fbm2(U * 0.24, V * 0.24, seed, 4) + 0.12 * (n2(U * 1.1, V * 1.1, seed + 1) - 0.5) - chip * sstep(1.3, 0.0, de)
+    en_n = en_n + interior * sstep(1.5, 6.0, de)          # большие листы (спина, верх): в глубине эмаль цела — иначе «леопард»
     en = sstep(0.28, 0.287, en_n)
     fl.coat = en
     fl.edge = np.maximum(fl.edge, sstep(0.25, 0.28, en_n) * (1 - en))
@@ -245,8 +246,8 @@ def steel_surface(fl, U, V, de, seed, chip=0.25, r_edge=0.6):
 
 
 # ------------------------------------------------------------------ основа поля по граням low-poly
-def faces_base(A, B, polys, k):
-    """Высота поверхности low-poly вдоль оси k (наружу — max) в точках (A, B) других двух осей.
+def faces_base(A, B, polys, k, outward=1):
+    """Высота поверхности low-poly вдоль оси k (наружу — max, при outward = −1 — min) в точках (A, B) других осей.
     polys: список (n, 3) вершин граней. NaN там, где граней нет."""
     ia, ib = [i for i in range(3) if i != k]
     out = np.full(A.shape, -1e9)
@@ -271,10 +272,10 @@ def faces_base(A, B, polys, k):
             l2 = ((yc - ya) * (Am - xc) + (xa - xc) * (Bm - yc)) / det
             l3 = 1 - l1 - l2
             inside |= (l1 >= -1e-4) & (l2 >= -1e-4) & (l3 >= -1e-4)
-        val = P[0, k] - (n[ia] * (Am - P[0, ia]) + n[ib] * (Bm - P[0, ib])) / n[k]
+        val = (P[0, k] - (n[ia] * (Am - P[0, ia]) + n[ib] * (Bm - P[0, ib])) / n[k]) * outward
         cur = out[m]
         out[m] = np.where(inside, np.maximum(cur, val), cur)
-    return np.where(out < -1e8, np.nan, out)
+    return np.where(out < -1e8, np.nan, out * outward)
 
 
 # ================================================================== СРЕДНЯЯ ДВЕРЦА, ПЕРЕД (#67)
@@ -502,15 +503,14 @@ def door_front(X, Y, Z0):
         waist = (np.abs(u - 0.6) < 3.0 - 0.25 * np.abs(v + 1.5)) & (v > -6.0) & (v < 0.0)
         sole = (fore | waist) & ~((v > -5.6) & (v < -4.4))                  # подъём: каблук отдельно
         sole = sole | heel
-        # грунтозацепы: «ёлочка» на подошве, поперечные бруски на каблуке, канавка по оси
-        row = np.floor((v + 20.0) / 1.7)
-        blk = ((((u + 0.85 * (row % 2) + 20.0) % 1.7) < 1.05) & (((v + 20.0) % 1.7) < 1.05))
-        rim = (np.abs(u) > 3.2) & (((v + 20.0) % 1.2) < 0.7)              # кант подошвы
-        bars = ((v + 8.9) % 1.9) < 1.05
-        lug = np.where(v < -4.4, bars, blk | rim)
-        part = sstep(0.38, 0.62, fbm2(X * 0.22, Y * 0.22, int(bx * 7 + 3), 3) + 0.3 * (full - 0.6))
-        mud = sole & lug & (part > 0.5) & ~plate & ~ledge
-        film = sole & (part > 0.35) & ~plate & ~ledge                      # тонкая плёнка грязи между зацепами
+        # грунтозацепы: поперечные бруски, сплошной кант; грязь легла не везде
+        bars = ((v + 20.0) % 1.55) < 0.9                                  # поперечные бруски грунтозацепов
+        rim = (np.abs(u) > 3.6) & ~((v > -5.6) & (v < -4.4))               # кант по краю подошвы — сплошной
+        lug = bars | rim
+        part = fbm2(X * 0.22, Y * 0.22, int(bx * 7 + 3), 3)
+        part = part - (np.median(part[sole]) if sole.any() else 0.5) + 0.3 * (full - 0.6)   # пороги — от медианы по подошве
+        mud = sole & lug & (part > -0.1) & ~plate & ~ledge
+        film = sole & (part > 0.12) & ~plate & ~ledge                      # тонкая плёнка грязи местами
         fl.h = np.where(mud, fl.h + 0.05, np.where(film, fl.h + 0.012, fl.h))
         fl.h -= 0.05 * (heel & ~ledge & ~plate)                            # каблук смял дерево
         fl.put(mud | film, mat="mud")
@@ -566,6 +566,188 @@ def door_front(X, Y, Z0):
         r = min(0.6 + rng.pareto(2.0) * 0.6, 2.2)
         dent(fl, x, y, X, Y, r, 0.04 + 0.03 * r)
     return fl
+
+
+# ================================================================== ИЗНАНКА ДВЕРЦЫ (#66), ЯЩИК (#43), ВЕРХ (#23), СПИНА (#3)
+LOCK_CASE = (5.2, 6.4, 1.6)                     # корпус врезного замка изнутри: полуширина, полувысота, толщина
+
+
+def door_back(X, Y, Zb=None):
+    """Изнанка средней дверцы (наружу −z): обратная сторона тех же досок, загнутые концы гвоздей поперечин,
+    корпус старого врезного замка с шурупами, щель пролома насквозь, петли-полосы у петель."""
+    fl = Field(X.shape, "board")
+    rng = np.random.default_rng(66)
+    bi = np.digitize(X, [DOOR_BOARDS[0][1], DOOR_BOARDS[1][1]])
+    for i, (x0, x1) in enumerate(DOOR_BOARDS):
+        m = bi == i
+        sd = 660 + i * 17
+        g = grain_relief(Y[m], X[m], 2.0 + i, 0.012, (x0 + x1) / 2 + 1.5, 1.1, sd)
+        fl.h[m] += 0.06 * (g - 0.35)
+        fl.grain[m] = g
+        fl.tone[m] = (0.35, 0.6, 0.5)[i]
+        fl.board[m] = i + 1
+        dj = np.minimum(X[m] - x0 if i > 0 else 99, x1 - X[m] if i < 2 else 99)
+        fl.h[m] -= 0.25 * np.clip(1 - dj / 0.35, 0, 1) ** 1.4
+        fl.cav[m] = np.maximum(fl.cav[m], np.clip(1 - dj / 0.22, 0, 1))
+        top = DOOR_TOP[i]
+        fl.h[m] -= round_drop(np.maximum(top - Y[m], 0), 0.5) + round_drop(np.maximum(Y[m] - DOOR_Y[0], 0), 0.5)
+    # загнутые концы гвоздей поперечин: гвоздь пробит насквозь и загнут вдоль волокна
+    for j, (y0, y1) in enumerate(LEDGES):
+        yc = (y0 + y1) / 2
+        for kx in (-20.5, -1.0, 19.5 if j != 1 else 21.2):
+            x, y = kx + rng.uniform(-0.6, 0.6), yc + rng.uniform(-0.5, 0.5)
+            dirn = rng.choice((-1, 1))
+            L = rng.uniform(2.2, 3.0)
+            t = np.clip((Y - y) * dirn / L, 0, 1)
+            shank = (np.abs(X - x - 0.15 * t) < 0.2) & ((Y - y) * dirn > -0.2) & ((Y - y) * dirn < L)
+            prof = np.sqrt(np.clip(1 - ((X - x - 0.15 * t) / 0.2) ** 2, 0, 1))
+            fl.h = np.where(shank, np.maximum(fl.h, 0.05 + 0.16 * prof), fl.h)
+            fl.put(shank, mat="nail")
+            fl.nail = np.maximum(fl.nail, shank * 1.0)
+            fl.dent = np.maximum(fl.dent, np.clip(1 - np.hypot(X - x, Y - y) / 1.0, 0, 1) * 0.6)
+    # корпус врезного замка (сталь, эмаль облезла) напротив площадки снаружи
+    lx, ly = LOCK
+    hw, hh, th = LOCK_CASE
+    dc = np.minimum(hw - np.abs(X - lx), hh - np.abs(Y - ly))
+    case = dc > 0
+    sc = Field(X.shape, "plate")
+    steel_surface(sc, X - lx, Y - ly, np.clip(dc, 0, None), 6601, chip=0.35, r_edge=0.4)
+    fl.h = np.where(case, th - round_drop(np.clip(dc, 0, None), 0.5) + sc.h, fl.h)
+    fl.put(case, mat="plate", board=11, grain=0.0, knot=0.0, cav=0.0)
+    for k in ("coat", "edge"):
+        setattr(fl, k, np.where(case, getattr(sc, k), getattr(fl, k)))
+    fl.grain = np.where(case, sc.grain, fl.grain)
+    for (bx, by) in ((-hw + 0.9, -hh + 0.9), (hw - 0.9, -hh + 0.9), (-hw + 0.9, hh - 0.9), (hw - 0.9, hh - 0.9)):
+        dd = np.hypot(X - lx - bx, Y - ly - by)
+        fl.h = np.where(dd < 0.5, np.maximum(fl.h, th + 0.12), fl.h)
+        fl.h -= 0.08 * (dd < 0.5) * (np.abs(X - lx - bx) < 0.08)
+        fl.nail = np.maximum(fl.nail, sstep(0.52, 0.42, dd))
+    key = (np.hypot(X - lx, Y - ly - 0.9) < 0.7) | ((np.abs(X - lx) < 0.3) & (Y > ly - 1.5) & (Y < ly + 0.9))
+    fl.h = np.where(key & case, th - 0.8, fl.h)
+    fl.cav = np.where(case, key * 1.0, fl.cav)
+    # засов-задвижка рядом с замком: брусок в скобах
+    sy = ly + 13.0
+    bolt = (np.abs(Y - sy) < 0.9) & (X > lx - 12) & (X < lx + 2)
+    fl.h = np.where(bolt, np.maximum(fl.h, 1.0 - round_drop(np.clip(0.9 - np.abs(Y - sy), 0, None), 0.35)), fl.h)
+    fl.put(bolt, mat="plate", board=11, coat=0.0)
+    for sx in (lx - 10.5, lx - 3.5):
+        st = (np.abs(X - sx) < 0.9) & (np.abs(Y - sy) < 1.6)
+        fl.h = np.where(st, np.maximum(fl.h, 1.25 - round_drop(np.clip(0.9 - np.abs(X - sx), 0, None), 0.3)), fl.h)
+        fl.put(st, mat="plate", board=11, coat=0.4)
+    # петли-полосы у петель (x ≈ 25.6): полоса 2.4 × 14, три шурупа
+    for (y0, y1) in ((87.2, 101.2), (167.7, 181.7)):
+        dxs = np.minimum(X - 22.6, 25.6 - X)
+        dys = np.minimum(Y - y0, y1 - Y)
+        m = (dxs > 0) & (dys > 0)
+        fl.h = np.where(m, 0.22 - round_drop(np.clip(np.minimum(dxs, dys), 0, None), 0.12), fl.h)
+        fl.put(m, mat="plate", board=11, coat=0.2)
+        for yy in (y0 + 2.0, (y0 + y1) / 2, y1 - 2.0):
+            dd = np.hypot(X - 24.0, Y - yy)
+            fl.h = np.where(dd < 0.5, np.maximum(fl.h, 0.36), fl.h)
+            fl.h -= 0.08 * (dd < 0.5) * (np.abs(Y - yy) < 0.08)
+            fl.nail = np.maximum(fl.nail, sstep(0.52, 0.42, dd))
+    # щель пролома насквозь (те же координаты, что снаружи)
+    sx, sy0, sy1 = SPLIT
+    t = np.clip((Y - sy0) / (sy1 - sy0), 0, 1)
+    open_w = 0.18 + 0.42 * np.sin(np.pi * t) ** 0.7
+    cxs = sx + 0.6 * np.sin(t * 5.0) + 0.25 * (n2(Y * 0.5, 3.0, 81) - 0.5)
+    inside = (np.abs(X - cxs) < open_w) & (Y > sy0) & (Y < sy1)
+    fl.h = np.where(inside, -1.2, fl.h)
+    fl.put(inside, mat="split")
+    for _ in range(12):
+        dent(fl, rng.uniform(-25, 24), rng.uniform(50, 215), X, Y, rng.uniform(0.6, 1.4), 0.05)
+    return fl
+
+
+DRAWER = (-23.4, 23.0, 16.0, 48.3)
+
+
+def drawer_front(X, Y, Z0=None):
+    """Лицо ящика: рамка 4 см и филёнка со скосом 1.5 см (крупная форма), волокна, по гвоздю в углах рамки."""
+    fl = Field(X.shape, "frame")
+    x0, x1, y0, y1 = DRAWER
+    d = np.minimum(np.minimum(X - x0, x1 - X), np.minimum(Y - y0, y1 - Y))
+    rail = d < 4.0
+    bevel = (d >= 4.0) & (d < 5.5)
+    field = d >= 5.5
+    horiz = np.minimum(Y - y0, y1 - Y) < np.minimum(X - x0, x1 - X)
+    g = grain_relief(np.where(horiz | field, X, Y), np.where(horiz | field, Y, X), 1.6, 0.012, 32.0, 0.95, 431)
+    fl.h += 0.06 * (g - 0.35)
+    fl.grain = g
+    fl.h -= round_drop(np.clip(d, 0, None), 0.45)
+    fl.h = np.where(rail, fl.h + 0.0, fl.h)
+    fl.h = np.where(bevel, fl.h - 0.5 + 0.45 * (d - 4.0) / 1.5, fl.h)
+    fl.h = np.where(field, fl.h - 0.05, fl.h)
+    fl.h -= 0.25 * np.clip(1 - np.abs(d - 4.0) / 0.15, 0, 1)              # паз между рамкой и филёнкой
+    fl.cav = np.maximum(fl.cav, np.clip(1 - np.abs(d - 4.0) / 0.2, 0, 1))
+    diag = np.abs(np.abs(X - (x0 + x1) / 2) - (x1 - x0) / 2 - (np.abs(Y - (y0 + y1) / 2) - (y1 - y0) / 2))
+    fl.h -= 0.12 * np.clip(1 - diag / 0.1, 0, 1) * rail
+    fl.edge = np.maximum(sstep(0.8, 0.0, d), np.clip(1 - np.abs(d - 5.5) / 0.4, 0, 1) * 0.6)
+    fl.tone += 0.7
+    fl.board += 15
+    for (cx, cy) in ((x0 + 2, y0 + 2), (x1 - 2, y0 + 2), (x0 + 2, y1 - 2), (x1 - 2, y1 - 2)):
+        nail_round(fl, cx, cy, X, Y, r=0.5, lift=0.07)
+    rng = np.random.default_rng(432)
+    for _ in range(6):
+        dent(fl, rng.uniform(x0 + 1, x1 - 1), rng.uniform(y0 + 1, y1 - 1), X, Y, rng.uniform(0.6, 1.2), 0.05)
+    return fl
+
+
+TOP_X, TOP_Z = (-89.94, -29.98), (-34.13, 25.83)
+
+
+def top_steel(X, Zc):
+    """Верх блока (сталь): эмаль, выштамповка-рёбрышко по периметру, заклёпки в углах, скругление к краям блока."""
+    fl = Field(X.shape, "steel")
+    de = np.minimum(np.minimum(X - TOP_X[0], TOP_X[1] - X), np.minimum(Zc - TOP_Z[0], TOP_Z[1] - Zc))
+    steel_surface(fl, X, Zc, np.clip(de, 0, None), 2301, chip=0.25, r_edge=0.8, interior=0.14)
+    rib = np.exp(-((de - 3.0) / 0.6) ** 2)
+    fl.h += 0.3 * rib
+    for (cx, cz) in ((TOP_X[0] + 1.5, TOP_Z[0] + 1.5), (TOP_X[1] - 1.5, TOP_Z[0] + 1.5), (TOP_X[0] + 1.5, TOP_Z[1] - 1.5),
+                     (TOP_X[1] - 1.5, TOP_Z[1] - 1.5)):
+        dd = np.hypot(X - cx, Zc - cz)
+        fl.h = np.where(dd < 0.6, np.maximum(fl.h, 0.12 + 0.22 * np.sqrt(np.clip(1 - (dd / 0.6) ** 2, 0, 1))), fl.h)
+        fl.nail = np.maximum(fl.nail, sstep(0.62, 0.5, dd))
+    rng = np.random.default_rng(2302)
+    for _ in range(5):
+        dent(fl, rng.uniform(-85, -35), rng.uniform(-30, 22), X, Zc, rng.uniform(1.5, 3.0), 0.08)
+    fl.misc = sstep(0.45, 0.7, fbm2(X * 0.05, Zc * 0.05, 2303, 3))            # пыль (цвет)
+    fl.board += 13
+    return fl
+
+
+def back_steel(X, Y):
+    """Спина блока (сталь, к стене): лист с выштампованной рамкой и двумя рёбрами жёсткости, продухи вверху и внизу,
+    заклёпки по краю; к низу — ржавчина (по высоте: копии блоков не перевёрнуты)."""
+    fl = Field(X.shape, "steel")
+    de = np.minimum(np.minimum(X - TOP_X[0], TOP_X[1] - X), np.minimum(Y - 0.0, 223.85 - Y))
+    steel_surface(fl, X, Y, np.clip(de, 0, None), 301, chip=0.3, r_edge=0.8, interior=0.14)
+    fl.h += 0.35 * np.exp(-((de - 4.0) / 0.7) ** 2)
+    for yr in (78.0, 152.0):
+        fl.h += 0.4 * np.exp(-((Y - yr) / 1.1) ** 2) * (de > 5.0)
+    for y0 in (198.0, 16.0):                                # жалюзи-продухи: 5 горизонтальных щелей (не «буквы», v6.1)
+        for k in range(5):
+            yc = y0 + k * 2.2
+            q = np.hypot((X + 60.0) / 7.0, (Y - yc) / 0.5)
+            fl.h -= 0.9 * sstep(1.0, 0.9, q) - 0.15 * np.exp(-((q - 1.15) / 0.12) ** 2)
+            fl.cav = np.maximum(fl.cav, sstep(1.0, 0.9, q))
+    for yy in np.arange(10.0, 220.0, 20.0):
+        for xx in (TOP_X[0] + 1.6, TOP_X[1] - 1.6):
+            dd = np.hypot(X - xx, Y - yy)
+            fl.h = np.where(dd < 0.55, np.maximum(fl.h, 0.1 + 0.2 * np.sqrt(np.clip(1 - (dd / 0.55) ** 2, 0, 1))), fl.h)
+            fl.nail = np.maximum(fl.nail, sstep(0.57, 0.46, dd))
+    fl.board += 13
+    return fl
+
+
+def hinge_tube(y0, y1):
+    """Петля средней дверцы: ось с пятью кулачками (стыки — бороздки), шляпка штыря сверху."""
+    ys = np.linspace(y0 - 0.2, y1 + 0.2, 220)
+    ph = (ys - y0) / (y1 - y0) * 5
+    groove = np.exp(-(((ph % 1.0) - 0.0) / 0.035) ** 2) + np.exp(-(((ph % 1.0) - 1.0) / 0.035) ** 2)
+    R = 0.98 - 0.12 * groove * (ys > y0 + 0.5) * (ys < y1 - 0.5)
+    C = np.column_stack([np.full(len(ys), 26.4), ys, np.full(len(ys), 26.85)])
+    return C, R
 
 
 # ================================================================== НИША (общие тексели трёх ниш)

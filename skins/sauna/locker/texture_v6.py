@@ -63,8 +63,8 @@ RED = rgb(168, 44, 34)
 BLUE = rgb(48, 92, 156)
 FOG = rgb(124, 130, 134)
 SEE = rgb(48, 52, 56)            # сквозь протёртое стекло — тёмное нутро
-MUD = rgb(92, 79, 64)
-MUD_LIGHT = rgb(112, 98, 80)
+MUD = rgb(66, 54, 43)
+MUD_LIGHT = rgb(92, 78, 62)        # v6.1: тёмная грязь на светлом дереве — отпечаток, не «мешковина»
 LEAF_Y = rgb(184, 146, 62)       # жёлтый лист на дверце
 LINEN = rgb(192, 184, 166)
 BRICK = hexc("#8E3A30")
@@ -164,6 +164,8 @@ def build():
         c = base * (1 + var * (tone[m, None] - 0.5) * 2)
         c = c * (0.95 + 0.09 * grain[m, None])
         col[m] = c
+    drawer = M("frame") & (board >= 15)
+    col = np.where(drawer[..., None], col * np.array([1.06, 0.98, 0.9], np.float32) * 0.95, col)
     wood = M("board") | M("ledge") | M("frame") | M("side") | M("niche") | M("shelf") | M("grate") | M("peg") | M("lamp")
     col = np.where(wood[..., None], mix(col, KNOT, knot * 0.8), col)
     col = np.where(wood[..., None], col * (1 - 0.55 * cav[..., None]), col)
@@ -178,7 +180,8 @@ def build():
     col = np.where(st[..., None], sc, col)
     # площадка замка: старая чёрная краска пятнами на ржавой стали, царапины ключа — светлый металл
     pl = M("plate")
-    pc = mix(mix(STEEL[None, None] * np.ones_like(col), RUST, 0.55 + 0.3 * nz(x, y, 0.4)), rgb(38, 36, 34), coat * 0.9)
+    paint = coat * 0.9 * (np.abs(x - FV.LOCK[0]) < 7.0)        # чёрная краска — только площадка и корпус замка
+    pc = mix(mix(STEEL[None, None] * np.ones_like(col), RUST, 0.55 + 0.3 * nz(x, y, 0.4)), rgb(38, 36, 34), paint)
     pc = mix(pc, STEEL_BRIGHT, misc)
     col = np.where(pl[..., None], pc, col)
     col = np.where(M("stub")[..., None], mix(STEEL * np.ones_like(col), RUST_DK, 0.55 + 0.3 * nz(x, y, 0.5)), col)
@@ -195,7 +198,7 @@ def build():
     gc = mix(FOG * np.ones_like(col), SEE, np.clip(misc * 1.1, 0, 1))
     col = np.where(gl[..., None], gc, col)
     # грязь сапога, лист, пролом
-    col = np.where(M("mud")[..., None], mix(col, mix(MUD * np.ones_like(col), MUD_LIGHT, 1 - misc), 0.55 + 0.3 * misc), col)
+    col = np.where(M("mud")[..., None], mix(col, mix(MUD * np.ones_like(col), MUD_LIGHT, 1 - misc), 0.45 + 0.45 * misc), col)
     col = np.where((M("leaf") & (z > 20))[..., None], LEAF_Y * (0.9 + 0.15 * grain[..., None]), col)
     col = np.where(M("split")[..., None], SPLIT, col)
     col = np.where(M("gap")[..., None], GAP * (1 + 0.3 * (1 - cav[..., None])), col)
@@ -219,6 +222,7 @@ def build():
     lx, ly = FV.LOCK
     run = sstep(4.5, 1.0, np.abs(x - lx + 2.2 + 0.6 * np.sin(y * 0.4))) * sstep(ly - 7.4, ly - 9.0, y) * sstep(ly - 34.0, ly - 9.0, y)
     run = run * (0.5 + 0.3 * (FV.n2(x * 0.8, y * 0.08, 91) > 0.45))
+    run = run * (z > 26.3)                                    # только снаружи (v6.1: потёк вышел и на изнанку)
     col = np.where((wood_light & ~M("plate"))[..., None], mix(col, RUST, run * 0.55), col)
     # ореолы ржавчины вокруг гвоздей на дереве
     halo = np.clip(blur(M("nail").astype(np.float32), 6) * 3.0, 0, 1)
@@ -262,19 +266,22 @@ def build():
 
     print("emission")
     em = np.zeros((S, S, 3), np.float32)
-    em += (M("glow") * 0.9)[..., None] * WARM
+    em += (M("glow") * 1.0)[..., None] * WARM
     em += (gl * (0.06 + 0.26 * np.clip(misc, 0, 1)))[..., None] * WARM
-    em += (M("split") * 0.3)[..., None] * WARM
+    em += (M("split") * (z > 20) * 0.1)[..., None] * WARM          # v6.1: днём «светящаяся палочка»
     # отсвет пазов под полками и потолком на спинке ниши (спинка одинакова во всех нишах — можно по высоте)
     wash = np.zeros_like(y)
     for ys in (FV.SHELF_Y["A"][0], FV.SHELF_Y["B"][0], 217.45):
         wash = np.maximum(wash, np.exp(-np.clip(ys - y, 0, None) / 16.0) * (y < ys))
     back_obj = (M("niche") | tw | M("leaf") | M("twig") | M("twine") | M("peg")) & (z < -15) & (x < -30)
-    em += (back_obj * wash * 0.26)[..., None] * col * WARM * 1.6
+    em += (back_obj * wash * 0.6)[..., None] * col * WARM * 1.6
+    # v6.1: ночью ниши почти чёрные (кадр 06) — тёплый свет по всему нутру ниши (стенки, пол, полки — без «верха»)
+    niche_in = (M("niche") | M("grate") | M("shelf") | tw | M("leaf") | M("twig") | M("twine") | M("peg") | M("lamp")) & ~(z > 20)
+    em += (niche_in * 0.22)[..., None] * col * WARM * 1.6
     # плафон: свет на дерево вокруг
     llx, lly = FV.LAMP[0], FV.LAMP[1]
     halo_l = np.exp(-np.hypot(x - llx, (y - lly) * 1.3) / 9.0) * (M("niche") | M("lamp"))
-    em += (halo_l * 0.3)[..., None] * col * WARM * 1.6
+    em += (halo_l * 0.6)[..., None] * col * WARM * 1.6
 
     print("normal: detail x1.5")
     n = nb * 2 - 1

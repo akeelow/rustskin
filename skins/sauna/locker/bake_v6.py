@@ -295,6 +295,44 @@ def build_shelf_c():
     return [top, edge]
 
 
+def build_doorback():
+    polys = [V[F[f][0]] for f in pick(66, lambda c, n: n[2] < -0.5)]
+
+    def base(X, Y):
+        b = FV.faces_base(X, Y, polys, 2, outward=-1)
+        return np.where(np.isnan(b), 25.5, b)
+    return [plane("hp_doorback", "doorback", 2, -1, 0.0, FV.DOOR_X, FV.DOOR_Y, FV.door_back, base=base)]
+
+
+def build_drawer():
+    polys = [V[F[f][0]] for f in pick(43, lambda c, n: n[2] > 0.5)]
+
+    def base(X, Y):
+        b = FV.faces_base(X, Y, polys, 2)
+        return np.where(np.isnan(b), 24.3, b)
+    x0, x1, y0, y1 = FV.DRAWER
+    return [plane("hp_drawer", "drawer", 2, 1, 0.0, (x0, x1), (y0, y1), FV.drawer_front, base=base)]
+
+
+def build_top():
+    return [plane("hp_top", "top", 1, 1, 223.85, FV.TOP_X, FV.TOP_Z, FV.top_steel)]
+
+
+def build_back3():
+    return [plane("hp_back3", "back3", 2, -1, -34.13, FV.TOP_X, (0.0, 223.85), FV.back_steel)]
+
+
+def build_hinges():
+    acc = Acc()
+    for (y0, y1) in ((87.2, 101.2), (167.7, 181.7)):
+        C, R = FV.hinge_tube(y0, y1)
+        Vt, Qt, _ = tube(C, R, seg=24)
+        a = const_attrs(len(Vt), "stub", P=Vt)
+        a["m3"][:, 0] = (R[:, None].repeat(24, 1).ravel() < 0.92) * 1.0      # стыки кулачков — кромки
+        acc.add(Vt, Qt, a)
+    return [acc.build("hp_hinges", "hinges")]
+
+
 # группа: (части, грани-цели, вытяжка лучей см, какие ещё группы видны для AO)
 LEFT = lambda c, n: c[0] < -29.95
 GROUPS = {
@@ -309,6 +347,11 @@ GROUPS = {
                ("back", "wall", "occ")),
     "shelfC": (build_shelf_c, lambda: [f for f in pick((30, 32)) if REC[f]["piece"] == 4 and REC[f]["n"][1] > -0.5], 1.5,
                ("back", "wall", "occ")),
+    "doorback": (build_doorback, lambda: pick(66, lambda c, n: n[2] < -0.5), 2.5, ()),
+    "drawer": (build_drawer, lambda: pick(43, lambda c, n: n[2] > 0.5), 1.5, ()),
+    "top": (build_top, lambda: pick(23, LEFT), 1.5, ()),
+    "back3": (build_back3, lambda: pick(3, lambda c, n: c[0] < -29.95 and n[2] < -0.5), 1.5, ()),
+    "hinges": (build_hinges, lambda: pick((64, 65)), 1.2, ()),
     "shelfB": (lambda: build_shelf("B"), lambda: [f for f in pick((36, 38)) if REC[f]["piece"] == 10 and REC[f]["n"][1] > -0.5], 1.5,
                ("back", "wall", "occ")),
 }
