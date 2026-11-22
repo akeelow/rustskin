@@ -304,6 +304,14 @@ def main():
             sf.append(f"| {a0:.0f} | {island_of[f]} | ({c[0]:.0f}, {c[1]:.0f}, {c[2]:.0f}) | {vec(n)} | "
                       f"{vec(sol[0] / np.linalg.norm(sol[0]))} | {vec(sol[1] / np.linalg.norm(sol[1]))} |")
     (OUT / "shared_faces.md").write_text("\n".join(sf) + "\n", encoding="utf8")
+    # служебная таблица для bake_v6.py (в Blender нет PIL): грань -> остров, кусок, центр, нормаль
+    import json
+    rec = []
+    for f, (vi, ti, _) in enumerate(F):
+        _, n = poly_area_normal(V[vi])
+        rec.append(dict(island=int(island_of[f]), piece=int(piece_of[f]), c=np.round(V[vi].mean(0), 3).tolist(),
+                        n=np.round(n, 4).tolist()))
+    (OUT / "faces.json").write_text(json.dumps(rec), encoding="utf8")
     print("\n".join(md[:8 + nis]))
     print("\n".join(cp))
 

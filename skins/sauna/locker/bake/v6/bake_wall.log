@@ -1,0 +1,48 @@
+00:01.109  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+[09:57:00] GPU OPTIX
+[09:57:00] build wall
+[09:57:01]   hp_wall: 1352×314
+[09:57:01]   hp_wall_lip: 1350×33
+[09:57:01]   hp_wall_step: 1350×22
+[09:57:01]   hp_wall_flange: 43×1350
+[09:57:01] high-poly: {'hp_wall': 424528, 'hp_wall_lip': 44550, 'hp_wall_step': 29700, 'hp_wall_flange': 58050}
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:321: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+[09:57:03] merging into the previous bake: ['ao', 'cover', 'idc', 'm1', 'm2', 'm3', 'mask', 'normal', 'pos']
+[09:57:03] group wall faces 5 hp ['hp_wall', 'hp_wall_lip', 'hp_wall_step', 'hp_wall_flange']
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:423: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+[09:57:03] bake wall_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[09:57:15] bake wall_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[09:57:29] bake wall_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[09:57:43] bake wall_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[09:57:57] bake wall_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[09:58:12] bake wall_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[09:58:26] bake wall_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[09:58:40] bake wall_cover EMIT
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:442: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+Info: Baking map saved to internal image, save it externally or pack it
+[09:58:54] bake wall_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[09:58:58] group wall texels 1384764
+[09:58:59]   -> ao.png
+[09:58:59]   -> m1.png
+[09:59:00]   -> m2.png
+[09:59:00]   -> m3.png
+[09:59:01]   -> idc.png
+[09:59:01]   -> pos.png
+[09:59:02]   -> cover.png
+[09:59:02]   -> normal.png
+[09:59:02]   -> mask.png
+[09:59:02] done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+
+Blender quit

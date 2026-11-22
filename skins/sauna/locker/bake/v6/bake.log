@@ -1,0 +1,251 @@
+00:01.641  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+[12:54:02] GPU OPTIX
+[12:54:02] build door
+[12:54:08]   hp_door: 354×1149
+[12:54:08] build frame
+[12:54:09]   hp_frame_0: 49×1498
+[12:54:09]   hp_frame_1: 51×1498
+[12:54:10]   hp_frame_2: 313×44
+[12:54:10]   hp_frame_3: 313×104
+[12:54:10] build side
+[12:54:18]   hp_side: 1498×405
+[12:54:18] build back
+[12:54:19]   hp_back: 317×1352
+[12:54:20] build wall
+[12:54:20]   hp_wall: 1352×314
+[12:54:21]   hp_wall_lip: 1350×33
+[12:54:21]   hp_wall_step: 1350×22
+[12:54:21]   hp_wall_flange: 43×1350
+[12:54:21] build floor
+[12:54:22]   hp_floor: 392×360
+[12:54:22] build ceiling
+[12:54:22]   hp_ceiling: 392×360
+[12:54:22] build shelfA
+[12:54:23]   hp_shelfA: 402×328
+[12:54:23]   hp_shelfA_edge: 399×18
+[12:54:23] build shelfC
+[12:54:23]   hp_shelfC: 402×328
+[12:54:23]   hp_shelfC_edge: 399×40
+[12:54:23] build shelfB
+[12:54:24]   hp_shelfB: 402×328
+[12:54:24]   hp_shelfB_edge: 399×18
+[12:54:24] high-poly: {'hp_door': 406746, 'hp_frame_0': 73402, 'hp_frame_1': 76398, 'hp_frame_2': 13772, 'hp_frame_3': 32552, 'hp_side': 606690, 'hp_back': 428584, 'hp_towel': 38646, 'hp_venik': 62520, 'hp_wall': 424528, 'hp_wall_lip': 44550, 'hp_wall_step': 29700, 'hp_wall_flange': 58050, 'hp_floor': 141120, 'hp_ceiling': 141120, 'hp_shelfA': 131856, 'hp_shelfA_edge': 7182, 'hp_shelfC': 131856, 'hp_shelfC_edge': 15960, 'hp_shelfB': 131856, 'hp_shelfB_edge': 7182, 'occ_wall_left': 424528}
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:320: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+[12:54:24] group door faces 42 hp ['hp_door']
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:422: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+[12:54:24] bake door_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[12:54:32] bake door_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[12:54:42] bake door_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:54:49] bake door_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:54:55] bake door_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:55:02] bake door_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:55:09] bake door_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:55:16] bake door_cover EMIT
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\locker\bake_v6.py:441: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+Info: Baking map saved to internal image, save it externally or pack it
+[12:55:23] bake door_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:55:30] group door texels 979162
+[12:55:30] group frame faces 10 hp ['hp_frame_0', 'hp_frame_1', 'hp_frame_2', 'hp_frame_3']
+[12:55:30] bake frame_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[12:55:50] bake frame_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[12:56:17] bake frame_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:56:43] bake frame_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:57:09] bake frame_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:57:34] bake frame_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:57:58] bake frame_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:58:24] bake frame_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:58:48] bake frame_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:58:54] group frame texels 394213
+[12:58:54] group side faces 12 hp ['hp_side']
+[12:58:55] bake side_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[12:59:01] bake side_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[12:59:16] bake side_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:59:24] bake side_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:59:33] bake side_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:59:41] bake side_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:59:50] bake side_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[12:59:58] bake side_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:00:07] bake side_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:00:13] group side texels 1379805
+[13:00:13] group back faces 1 hp ['hp_back', 'hp_towel', 'hp_venik']
+[13:00:13] bake back_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[13:00:29] bake back_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[13:00:49] bake back_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:01:13] bake back_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:01:38] bake back_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:02:03] bake back_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:02:29] bake back_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:02:54] bake back_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:03:18] bake back_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:03:24] group back texels 900176
+[13:03:24] group wall faces 5 hp ['hp_wall', 'hp_wall_lip', 'hp_wall_step', 'hp_wall_flange']
+[13:03:24] bake wall_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[13:03:42] bake wall_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[13:04:05] bake wall_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:04:39] bake wall_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:05:14] bake wall_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:05:49] bake wall_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:06:25] bake wall_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:06:59] bake wall_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:07:33] bake wall_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:07:39] group wall texels 1384764
+[13:07:39] group floor faces 5 hp ['hp_floor']
+[13:07:39] bake floor_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[13:07:45] bake floor_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[13:07:52] bake floor_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:08:01] bake floor_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:08:11] bake floor_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:08:20] bake floor_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:08:30] bake floor_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:08:40] bake floor_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:08:50] bake floor_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:08:55] group floor texels 320125
+[13:08:55] group ceiling faces 5 hp ['hp_ceiling']
+[13:08:55] bake ceiling_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[13:09:01] bake ceiling_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[13:09:08] bake ceiling_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:09:17] bake ceiling_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:09:28] bake ceiling_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:09:38] bake ceiling_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:09:51] bake ceiling_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:10:02] bake ceiling_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:10:12] bake ceiling_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:10:18] group ceiling texels 356303
+[13:10:18] group shelfA faces 2 hp ['hp_shelfA', 'hp_shelfA_edge']
+[13:10:18] bake shelfA_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[13:10:28] bake shelfA_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[13:10:42] bake shelfA_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:11:01] bake shelfA_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:11:21] bake shelfA_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:11:40] bake shelfA_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:11:59] bake shelfA_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:12:17] bake shelfA_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:12:35] bake shelfA_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:12:41] group shelfA texels 348177
+[13:12:41] group shelfC faces 6 hp ['hp_shelfC', 'hp_shelfC_edge']
+[13:12:41] bake shelfC_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[13:12:50] bake shelfC_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[13:13:01] bake shelfC_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:13:20] bake shelfC_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:13:39] bake shelfC_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:13:59] bake shelfC_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:14:19] bake shelfC_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:14:39] bake shelfC_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:14:58] bake shelfC_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:15:04] group shelfC texels 318331
+[13:15:04] group shelfB faces 2 hp ['hp_shelfB', 'hp_shelfB_edge']
+[13:15:04] bake shelfB_n NORMAL
+Info: Baking map saved to internal image, save it externally or pack it
+[13:15:14] bake shelfB_ao AO
+Info: Baking map saved to internal image, save it externally or pack it
+[13:15:22] bake shelfB_m1 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:15:36] bake shelfB_m2 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:15:52] bake shelfB_m3 EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:16:06] bake shelfB_idc EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:16:21] bake shelfB_pos EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:16:35] bake shelfB_cover EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:16:50] bake shelfB_mask EMIT
+Info: Baking map saved to internal image, save it externally or pack it
+[13:16:55] group shelfB texels 348842
+[13:16:55]   -> normal.png
+[13:16:56]   -> ao.png
+[13:16:56]   -> m1.png
+[13:16:57]   -> m2.png
+[13:16:57]   -> m3.png
+[13:16:58]   -> idc.png
+[13:16:58]   -> pos.png
+[13:16:59]   -> cover.png
+[13:16:59]   -> mask.png
+[13:16:59] done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+
+Blender quit
