@@ -3,6 +3,55 @@
 > Подготовлено 19.10.2026, обновлено для **v2.8** (27.10.2026: неровные пятна накипи вместо концентрических колец и белых точек; файлы `ElectricFurnace_v2.8_*`; v2.7 — `ElectricFurnace_v2_*`). Публикует пользователь сам из игрового редактора.
 > **v2.9 (12.11.2026, по [CRITIQUE_ART.md](../../CRITIQUE_ART.md)):** сухой банный лист на плите у переднего края (сквозной мотив сета); первый кадр `studio.jpg` снят с левого бока, топка ярче. Файлы `ElectricFurnace_v2.9_*`. **В игре не проверено** — посмотреть в редакторе перед публикацией; если не понравится, прежняя версия v2.8 лежит рядом (`ElectricFurnace_v2.8_*`).
 
+## Обновление до v3.1 (22.11.2026)
+
+Опубликованная страница (v2.9): https://steamcommunity.com/sharedfiles/filedetails/?id=3840311723. Обновлять **эту же
+страницу**: в редакторе выбрать опубликованный Sauna Stove из Workshop → загрузить карты → Publish (так обновлялся полок,
+см. гайд §9.7).
+
+| Слот | Файл / значение |
+|---|---|
+| Diffuse | `../export/ElectricFurnace_v3.1_diffuse_cutout.png`, **Alpha Cutoff 1.00** |
+| Normal | `../export/ElectricFurnace_v3.1_normal.png` |
+| Metal/Gloss | `../export/ElectricFurnace_v3.1_metalgloss.png` |
+| Occlusion | `../export/ElectricFurnace_v3.1_occlusion.png` (2048) |
+| Emission | `../export/ElectricFurnace_v3.1_emission.png` (2048), Emission Color 255 |
+
+**Новое описание** (вместо старого):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+An old enamel cooker turned into a sauna stove: hand-split aspen slats nailed
+over the rusty shell with a wooden thermometer on the side, split basalt piled
+on the burners and held by twisted wire, a forged grate with a rope-wrapped
+handle over a firebox of rocks and glowing charcoal, old fence boards and a
+little hatch on the back, all standing on salvaged bricks and a wet pallet.
+
+Part of the Sauna set.
+```
+
+**Change notes** (англ.):
+
+```
+v3: remodelled from scratch. Every slat, nail, knot, crack, char block, rivet,
+brick and stone is now real modelled relief; chipped enamel top with burned
+rings and mineral crust, split basalt heaps, forged door, brick plinth,
+fence-board back with a hatch. All maps 2048.
+```
+
+**Картинки — папка `ingame_v3/`** (кадры из редактора v3.1, обрезаны до 16:9 без панели). Сейчас есть 3:
+
+| # | Файл | Что |
+|---|---|---|
+| 01 | `ingame_v3/top_3q_day.jpg` | 3/4 сверху днём — обложка |
+| 02 | `ingame_v3/front_day.jpg` | анфас днём: дверца, ручки, цоколь |
+| 03 | `ingame_v3/front_night.jpg` | анфас ночью |
+
+Для полной галереи нужно ещё 4 кадра v3.1 в том же режиме предпросмотра (без панели): 3/4 слева днём (термометр,
+обугленная рейка), 3/4 справа днём (жалюзи), сзади 3/4 (забор, лючок), низко у цоколя. После публикации старые
+картинки v2.9 удалить на `https://steamcommunity.com/sharedfiles/managepreviews/?id=3840311723`.
+
 ## Название и описание (англ.)
 
 **Title:** `Sauna Stove`
