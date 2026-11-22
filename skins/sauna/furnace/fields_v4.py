@@ -1048,11 +1048,15 @@ class Body:
             v = yy[inrow] - y0                               # поперёк доски, снизу
             sel = np.where(inrow)[0]
             # толщина внахлёст: внизу 0.9, вверху 0.25 (нижняя кромка верхнего ряда ложится на верх нижнего)
-            hb = 0.25 + 0.65 * np.clip(1 - v / Hh, 0, 1)
+            SLOT = 0.5 if row > 0 else 0.0
+            vv = v - SLOT
+            hb = 0.3 + 0.9 * np.clip(1 - vv / (Hh - SLOT), 0, 1)
             # коробление: кромки чуть выше середины
-            hb += 0.2 * ((2 * v / Hh - 1) ** 2 - 0.3)
-            # скругление нижней кромки (видимый торец нахлёста)
-            hb -= 0.4 * sstep(1.0, 0.0, v) ** 1.5
+            hb += 0.18 * ((2 * vv / (Hh - SLOT) - 1) ** 2 - 0.3)
+            # нижняя кромка доски — чёткая (скругление 2.5 мм), под ней щель-тень до железа
+            hb -= 0.35 * sstep(0.25, 0.0, vv)
+            slot = vv < 0
+            hb = np.where(slot, -0.25 + 0.05 * n2(xa * 0.7, row, 76), hb)
             if row == 0:                                     # нижний ряд: размочаленная кромка
                 fr = 0.6 + 0.5 * n2(xa * 0.8, 0, 73)
                 hb -= 0.35 * sstep(fr, 0.0, v) * (0.6 + 0.4 * n2(xa * 2.5, v * 2, 74))
@@ -1062,7 +1066,7 @@ class Body:
             xe = np.minimum(xa, xb)
             gap = xe < 0.18
             hb = np.where(gap, 0.02, hb - 0.18 * sstep(0.7, 0.18, xe))
-            ccv = gap * 1.0 + 0.4 * sstep(0.5, 0.18, xe)
+            ccv = np.maximum(gap * 1.0 + 0.4 * sstep(0.5, 0.18, xe), slot * 1.0)
             # волокна, сучки, трещины — у каждой доски свои
             gr = np.zeros(len(sel))
             kn = np.zeros(len(sel))
@@ -1076,7 +1080,7 @@ class Body:
                 knots = [(rb.uniform(8, max(L_ - 8, 9)), rb.uniform(2.5, Hh - 2.5), rb.uniform(0.8, 1.7))
                          for _ in range(rb.integers(0, 3))]
                 g = grain_relief(xa[mb], v[mb], rb.uniform(0.5, 4.0), rb.uniform(-0.03, 0.03), rb.uniform(-8, Hh + 8),
-                                 rb.uniform(1.5, 2.3), seed, knots)
+                                 rb.uniform(2.8, 3.8), seed, knots)
                 gr[mb] = g
                 for (ka, kc, kr) in knots:
                     dk = np.hypot((xa[mb] - ka) / 1.25, v[mb] - kc)
@@ -1092,10 +1096,10 @@ class Body:
                         w_ = 0.12 * np.clip(1 - xx / ln, 0, 1) ** 1.2
                         cen = vc + 0.3 * np.sin(xx * 0.3 + vc)
                         cr[mb] = np.maximum(cr[mb], sstep(w_ + 0.12, w_ * 0.4, np.abs(v[mb] - cen)) * (xx < ln))
-                tone[sel[mb]] = 0.5 + 0.5 * (rb.random() - 0.5)
+                tone[sel[mb]] = 0.5 + 0.8 * (rb.random() - 0.5)
                 sid[sel[mb]] = board_id + b
             # глубже вытерто у низа (вода), под проёмом — обуглено
-            hb += (0.13 + 0.04 * (row == 0)) * (gr - 0.35) + 0.12 * (fbm2(xa * 0.08, v * 0.35, 75 + row, 3) - 0.5)
+            hb += np.where(slot, 0, (0.08 + 0.03 * (row == 0)) * (gr - 0.35) + 0.1 * (fbm2(xa * 0.08, v * 0.35, 75 + row, 3) - 0.5))
             hb -= 0.35 * np.clip(cr, 0, 1) * (cr <= 1.0) + 0.45 * (cr > 1.0)
             hb += 0.05 * kn - 0.02 * kn * (n2(xa * 3, v * 3, 77) - 0.5)
             H[sel] = hb

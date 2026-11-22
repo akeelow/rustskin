@@ -239,12 +239,12 @@ def build(tag):
     bt = tone
     # тон доски + продольные полосы вдоль волокна (цвет, без формы): шум растянут по окружности
     along = fbm3(np.stack([np.radians(th) * 47 * 0.04, y * 0.9, bt * 13], -1), 1.0, 9)
-    c = mix(ASPEN * (0.46 + 0.18 * bt[:, None]), GREYWOOD * 0.6, 0.3 + 0.3 * sstep(0.35, 0.75, along))
+    c = mix(ASPEN * (0.4 + 0.3 * bt[:, None]), GREYWOOD * 0.6, 0.3 + 0.3 * sstep(0.35, 0.75, along))
     c = mix(c, STEAMED * 0.9, 0.25 * sstep(0.45, 0.8, blot))
     c = c * (0.86 + 0.24 * along[:, None]) * (0.96 + 0.06 * wear[:, None])
     c = mix(c, STEAMED, sstep(14, 2, y) * 0.75 + 0.25 * sstep(0.5, 0.9, streak) * (y < 30))   # мокрый низ
     c = mix(c, CHARWOOD, knot * 0.6)
-    c = mix(c, hexc("3A2A1E"), cav * 0.65)
+    c = mix(c, hexc("2A1E15"), cav * 0.8)
     c = mix(c, RUST_DK, rust * 0.4)                                        # ореолы от гвоздей и проволоки
     c = mix(c, hexc("D8D2C2"), sstep(0.72, 0.9, streak) * sstep(53.5, 40, y) * (1 - cav) * 0.18)   # минеральные потёки
     # обугливание: чёрные блоки, трещины чернее, на гранях серая зола, по краю зоны — опалённое коричневое
