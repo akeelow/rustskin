@@ -368,7 +368,7 @@ class Body:
             a2, b2 = (g1 / 2.8) ** 2, (g2 / 2.8) ** 2
             hk2 = np.clip(0.06 - np.abs(a2 - b2), 0, None) / 0.06
             sm2 = np.minimum(a2, b2) - 0.06 * hk2 * hk2 / 4
-            peen = (0.1 + 0.09 * p2) * np.clip(sm2 / 0.33, 0, 1.3) * (p1 < 0.85)
+            peen = (0.05 + 0.04 * p2) * np.clip(sm2 / 0.33, 0, 1.3) * (p1 < 0.5)
             hm -= peen * (0.6 + 0.8 * n2(ds * 0.05, yy * 0.05, seed + 8))
             # особые листы (решение 4)
             if kind == "barrel":
@@ -898,7 +898,7 @@ class Body:
         for k, yc in enumerate(hy):
             below = [h for h in hy if h < yc]
             stop = (max(below) + HOOP_HW + 0.4) if below else 55.5
-            ncl = (4, 5, 5, 4, 3)[k]
+            ncl = (3, 4, 4, 3, 2)[k]
             for c in range(ncl):
                 thc = rng.uniform(-180, 180)
                 if abs(thc) < 70 and yc < 120:
@@ -1085,11 +1085,11 @@ class Body:
                         cr[mb] = np.maximum(cr[mb], 2 * sstep(kr * 0.85, kr * 0.6, dk))
                 # торцевые трещины от каждого торца + продольная трещина усушки
                 for end in (0, 1):
-                    for _ in range(rb.integers(0, 3)):
-                        vc = rb.uniform(2, Hh - 2)
-                        ln = rb.uniform(4, 16)
+                    for _ in range(rb.integers(0, 2)):
+                        vc = rb.uniform(3, Hh - 3)
+                        ln = rb.uniform(2.5, 6.5)
                         xx = (xa[mb] if end == 0 else xb[mb])
-                        w_ = 0.16 * np.clip(1 - xx / ln, 0, 1) ** 0.5
+                        w_ = 0.12 * np.clip(1 - xx / ln, 0, 1) ** 1.2
                         cen = vc + 0.3 * np.sin(xx * 0.3 + vc)
                         cr[mb] = np.maximum(cr[mb], sstep(w_ + 0.12, w_ * 0.4, np.abs(v[mb] - cen)) * (xx < ln))
                 tone[sel[mb]] = 0.5 + 0.5 * (rb.random() - 0.5)
@@ -1148,8 +1148,9 @@ class Body:
         cz = m[(np.abs(wrapdeg(th - G.OPEN_TH)) < 50) & (yy > 34)]
         if len(cz):
             sp, dyp = self.loc(cz, G.OPEN_TH, 0)
-            edge = 0.35 + 0.65 * fbm2(sp * 0.12, self.y[cz] * 0.2, 173, 3)
-            amt = sstep(37, 45, self.y[cz] + 6 * (edge - 0.5)) * sstep(np.radians(48) * 47, np.radians(30) * 47, np.abs(sp))
+            edge = fbm2(sp * 0.09, self.y[cz] * 0.15, 173, 3)
+            wid = np.radians(26 + 16 * fbm2(self.y[cz] * 0.2, 3, 174, 2)) * 47
+            amt = sstep(39, 48, self.y[cz] + 12 * (edge - 0.5)) * sstep(wid + 6, wid - 3, np.abs(sp))
             amt = np.clip(amt * (0.7 + 0.6 * n2(sp * 0.15, self.y[cz] * 0.15, 171)), 0, 1)
             dh, crk = alligator(sp, self.y[cz], 2.4, 172)
             o["h"][cz] += dh * amt

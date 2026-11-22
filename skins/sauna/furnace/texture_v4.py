@@ -41,7 +41,7 @@ def hexc(h):
 # палитра: сет (skins/sauna/README.md) + железо по референсу (PLAN_v4 §8 «Тон»): серое, чуть холодное
 IRON, IRON_DK, STEEL = hexc("4A4644"), hexc("2B2827"), hexc("8E8983")
 RUST, RUST_DK, RUST_LT = hexc("8C4A26"), hexc("5A2E1B"), hexc("A85F33")
-SCALE, SCALE_DK = hexc("BEB8A9"), hexc("8A877E")
+SCALE, SCALE_DK = hexc("A8A397"), hexc("7C7870")
 SOOT = hexc("15110F")
 ASPEN, STEAMED, CHARWOOD = hexc("C2A77E"), hexc("7A5A3C"), hexc("45332A")
 GREYWOOD = hexc("9C8B74")
@@ -175,9 +175,9 @@ def build(tag):
     c = mix(c, hexc("4E4038"), barrel * 0.6)                              # лист бочки — коричневее
     c = mix(c, IRON_DK, sstep(0.6, 0.25, AO) * 0.6 + dent * 0.15)
     c = mix(c, STEEL, wear * 0.35)
-    r_ = np.clip(rust * (0.6 + 0.5 * fine), 0, 1) * 0.9
-    c = mix(c, RUST_DK, r_ * 0.75)
-    c = mix(c, RUST, sstep(0.55, 0.95, r_) * sstep(0.5, 0.85, fine) * 0.45)
+    r_ = np.clip(rust * (0.45 + 0.5 * fine), 0, 1) * 0.8
+    c = mix(c, hexc("4A3026"), r_ * 0.7)
+    c = mix(c, RUST, sstep(0.5, 0.9, cav) * sstep(0.4, 0.8, r_) * 0.35)
     c = mix(c, hexc("1C1210"), cav * 0.8)
     col[iron] = c[iron]
     spec[iron] = (56 - 26 * r_ + 22 * wear)[iron]
@@ -227,9 +227,9 @@ def build(tag):
     cr = np.clip(crust, 0, 1)
     sc = mix(np.broadcast_to(SCALE_DK, (n, 3)), SCALE, sstep(0.4, 1.0, cr * (0.75 + 0.4 * fine)))
     metal = iron | hoop | riv | frame | chk
-    a_cr = np.where(metal, np.clip(0.15 + 0.65 * cr, 0, 0.75) * (cr > 0.02), 0)
+    a_cr = np.where(metal, np.clip(0.1 + 0.45 * cr, 0, 0.55) * (cr > 0.02), 0)
     hz = np.where(metal, haze[sel], 0) * (1 - a_cr)                       # дымка минеральных разводов вокруг корки
-    col = mix(col, SCALE_DK, np.clip(hz * 0.5, 0, 0.22))
+    col = mix(col, SCALE_DK, np.clip(hz * 0.35, 0, 0.12))
     col = mix(col, sc, a_cr)
     spec = spec * (1 - a_cr) + 45 * a_cr
     gloss = gloss * (1 - a_cr) + 14 * a_cr
@@ -239,20 +239,21 @@ def build(tag):
     bt = tone
     # тон доски + продольные полосы вдоль волокна (цвет, без формы): шум растянут по окружности
     along = fbm3(np.stack([np.radians(th) * 47 * 0.04, y * 0.9, bt * 13], -1), 1.0, 9)
-    c = mix(ASPEN * (0.56 + 0.22 * bt[:, None]), GREYWOOD * 0.72, 0.35 + 0.3 * sstep(0.35, 0.75, along))
-    c = c * (0.82 + 0.3 * along[:, None]) * (0.92 + 0.12 * wear[:, None])   # гребни волокон чуть светлее
+    c = mix(ASPEN * (0.46 + 0.18 * bt[:, None]), GREYWOOD * 0.6, 0.3 + 0.3 * sstep(0.35, 0.75, along))
+    c = mix(c, STEAMED * 0.9, 0.25 * sstep(0.45, 0.8, blot))
+    c = c * (0.86 + 0.24 * along[:, None]) * (0.96 + 0.06 * wear[:, None])
     c = mix(c, STEAMED, sstep(14, 2, y) * 0.75 + 0.25 * sstep(0.5, 0.9, streak) * (y < 30))   # мокрый низ
-    c = mix(c, CHARWOOD, knot * 0.8)
-    c = mix(c, hexc("201814"), cav * 0.85)
+    c = mix(c, CHARWOOD, knot * 0.6)
+    c = mix(c, hexc("3A2A1E"), cav * 0.65)
     c = mix(c, RUST_DK, rust * 0.4)                                        # ореолы от гвоздей и проволоки
     c = mix(c, hexc("D8D2C2"), sstep(0.72, 0.9, streak) * sstep(53.5, 40, y) * (1 - cav) * 0.18)   # минеральные потёки
     # обугливание: чёрные блоки, трещины чернее, на гранях серая зола, по краю зоны — опалённое коричневое
     scorch = sstep(0.0, 0.35, char)
     c = mix(c, hexc("3A2A1E"), scorch * 0.7)
     blk = sstep(0.3, 0.6, char)
-    c = mix(c, hexc("1B1714") * (0.8 + 0.5 * wear[:, None] * 0), blk)
-    c = mix(c, hexc("55514C"), blk * sstep(0.5, 0.85, fine) * (1 - cav) * 0.45)
-    c = mix(c, hexc("070605"), blk * cav)
+    c = mix(c, hexc("2E2620"), blk)
+    c = mix(c, hexc("5E5952"), blk * sstep(0.45, 0.8, fine) * (1 - cav) * 0.5)
+    c = mix(c, hexc("120E0B"), blk * cav * 0.8)
     col[slat] = c[slat]
     spec[slat] = (36 - 8 * blk)[slat]
     gloss[slat] = (22 + 30 * sstep(14, 2, y) - 10 * blk)[slat]
@@ -278,7 +279,7 @@ def build(tag):
     col[tw] = (hexc("9A8462") * (0.8 + 0.3 * fine[:, None]))[tw]
     spec[tw], gloss[tw] = 30, 12
     wire = is_("wire")
-    c = mix(RUST * 0.95 * np.ones((n, 1), np.float32), RUST_LT, sstep(0.4, 0.75, fine) * 0.7)
+    c = mix(RUST_DK * 1.05 * np.ones((n, 1), np.float32), RUST, sstep(0.45, 0.8, fine) * 0.6)
     c = mix(c, STEEL * 0.8, wear * 0.3)
     col[wire] = c[wire]
     spec[wire], gloss[wire] = 70, 45
