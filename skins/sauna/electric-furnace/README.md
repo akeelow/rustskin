@@ -1,6 +1,6 @@
 # Sauna Stove (Electric Furnace)
 
-> 🟢 **v3.1 (22.11.2026) — вся модель переделана в Blender, проверена в редакторе; файлы `export/ElectricFurnace_v3.1_*`.** План: [PLAN_v3.md](PLAN_v3.md).
+> 🚀 **v3.1 опубликована 22.11.2026** (обновление страницы https://steamcommunity.com/sharedfiles/filedetails/?id=3840311723, старые картинки удалены) — вся модель переделана в Blender, проверена в редакторе; файлы `export/ElectricFurnace_v3.1_*`. План: [PLAN_v3.md](PLAN_v3.md).
 > Вертикальный срез (левый бок, верх, дверца) пользователь одобрил 21.11 («это та степь»). Файлы `export/ElectricFurnace_v3.0_*`.
 >
 > | Слот | Файл | Ползунок |
