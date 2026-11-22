@@ -59,6 +59,8 @@
 |---|---|---|---|---|
 | 8 | `Sauna Door` | Wooden Door | `wooden-door` | [3841006157](https://steamcommunity.com/sharedfiles/filedetails/?id=3841006157) (16.11) |
 | 9 | `Sauna Boiler` | Furnace | `furnace` | [3841360723](https://steamcommunity.com/sharedfiles/filedetails/?id=3841360723) (17.11) |
+| 10 | `Sauna Bucket` | Bucket Helmet | `bucket-helmet` | [3842910954](https://steamcommunity.com/sharedfiles/filedetails/?id=3842910954) (20.11) |
+| 11 | `Sauna Mitts` | Tactical Gloves | `tactical-gloves` | [3843000799](https://steamcommunity.com/sharedfiles/filedetails/?id=3843000799) (20.11) |
 
 ---
 
@@ -279,8 +281,10 @@ Part of the Sauna set.
 | 7 | Sauna Robe | https://steamcommunity.com/sharedfiles/filedetails/?id=3840344106 |
 | 8 | Sauna Door | https://steamcommunity.com/sharedfiles/filedetails/?id=3841006157 |
 | 9 | Sauna Boiler | https://steamcommunity.com/sharedfiles/filedetails/?id=3841360723 |
+| 10 | Sauna Bucket | https://steamcommunity.com/sharedfiles/filedetails/?id=3842910954 |
+| 11 | Sauna Mitts | https://steamcommunity.com/sharedfiles/filedetails/?id=3843000799 |
 
-Предметы 8 и 9 добавлены в коллекцию 16–17.11 (проверено по Steam API 17.11: в коллекции 9 предметов). Новое
+Предметы 8 и 9 добавлены в коллекцию 16–17.11, 10 и 11 — 20.11 (проверено по Steam API 22.11: в коллекции 11 предметов; описание «Eleven skins» и категории Bucket Helmet, Tactical Gloves обновили сессии этих предметов). Новое
 описание и категории коллекции — [ниже](#обновление-коллекции-после-второй-волны).
 
 ### Шаг 1. Создать коллекцию
