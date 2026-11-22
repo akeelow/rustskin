@@ -4,7 +4,78 @@
 
 > Подготовлено 17.11.2026 для **v3** (`Furnace_v3_*`). **Проверено в редакторе** (скриншоты `../screenshots/v3_editor_*.webp`). Публикует пользователь из игрового редактора.
 
-## Название и описание (англ.)
+## Обновление до v4.4 (22.11.2026)
+
+Опубликованная страница (v3): https://steamcommunity.com/sharedfiles/filedetails/?id=3841360723. Обновлять **эту же
+страницу**: в редакторе выбрать опубликованный Sauna Boiler из Workshop → загрузить карты → Publish (как обновлялись
+полок, каменка и шкафчик, гайд §9.7). Редактор заново попросит описание и картинки и добавит 4 своих автокадра.
+v4.4 проверена в редакторе по кадрам v4.0–v4.4 (`../screenshots/editor_16x9/v4.*`, разбор — `../README.md`).
+
+**Все карты для загрузки — в одной папке:** `skins/sauna/upload/9 Sauna Boiler/v4.4/textures/` (копии `../export/Furnace_v4.4_*`,
+в git не попадает).
+
+| Слот | Файл / значение |
+|---|---|
+| Diffuse | `../export/Furnace_v4.4_diffuse.png` · Color 255/255/255 · Alpha Cutoff 0.00 |
+| Normal | `../export/Furnace_v4.4_normal.png` · Normal Scale 1.00 |
+| Specular/Gloss | `../export/Furnace_v4.4_specgloss.png` · Spec Color 255/255/255 · Glossiness 1.00 |
+| Occlusion | `../export/Furnace_v4.4_occlusion.png` (**1024**, у v3 был 512) · Occlusion Scale 0.65 |
+| Emission | `../export/Furnace_v4.4_emission.png` · **Emission Color 255/255/255** (по умолчанию 255/107/36 — сменить) |
+| Detail-слоты | по умолчанию |
+
+Все карты 1024 — предел редактора для Furnace (`../PLAN_v4.md` §0.2).
+
+**Новое описание** (вместо прежнего):
+
+```
+Every Rust life starts naked. Might as well have hot water.
+
+A wood-fired sauna boiler riveted together from scrap: hand-hammered plates
+from an old drum and a roof, cart-wheel tyres for hoops, a checker-plate
+patch over a burnt-through spot and the hinges of a door long gone.
+Limescale runs down from the seams, a wooden plug wrapped in a rag stands in
+for a tap, a carved ladle hangs on a hook. Inside, a firebrick lining, birch
+logs and embers; on the lid, a heap of split basalt. Aspen boards are lapped
+round the base, nailed and tied with twisted wire.
+
+Part of the Sauna set.
+```
+
+**Change notes** (англ.):
+
+```
+v4: remodelled from scratch. Every plate, rivet, dent, seam, nail and board
+is now real modelled relief: hammered plates with chisel-cut laps, hoops
+with riveted and bolted locks, a checker-plate patch, door hinges, a limescale
+crust, lapped aspen boards with shadow gaps, split basalt on the lid, and a
+firebrick lining with birch logs and embers inside. Occlusion map at full
+resolution.
+```
+
+### Картинки для страницы — нужны новые кадры v4.4
+
+Кадры v4.0–v4.4 сняты в режиме предпросмотра: поверх котла справа вверху надпись «SAUNA BOILER / AKEELOW» и кнопки
+✔ ✖ Steam, а котёл высокий — обрезать их, не отрезав котёл, нельзя. Поэтому для страницы — **новые кадры v4.4 в
+режиме EDIT со свёрнутой левой панелью** (кнопка «<»), как снимались кадры v3: тогда `../../ingame_import.py place`
+обрезает только нижнюю панель.
+
+| # | Кадр | Что должно быть видно |
+|---|---|---|
+| 01 | `front_day` — 3/4 спереди днём, обложка | топка, рамка с петлями, затычка, рифлёная заплата, ковш справа, пояс реек |
+| 02 | `back_day` — сзади на солнце | ковка листов, обручи с замками, накипь, пояс реек с проволокой |
+| 03 | `front_night` — ночь, топка горит | огонь, отсвет на рамке |
+| 04 | `firebox_cold` — топка без огня, крупно | кирпичная кладка, поленья, угли |
+| 05 | `top` — сверху (с лестницы или сверху-сбоку) | камни на крышке, кольцо заклёпок |
+
+После съёмки: `ingame_import.py place <файл> furnace v4.4_<кадр>` — чистые кадры лягут в `ingame/v4.4_*.jpg`; их
+скопировать в `skins/sauna/upload/9 Sauna Boiler/v4.4/` с номерами `01_…05_`.
+
+**После Publish:** удалить все старые картинки v3 (кадры `front_night`, `front_day`, `back_day`, `back_night` и 4
+автокадра редактора v3) на `https://steamcommunity.com/sharedfiles/managepreviews/?id=3841360723` (крестик при
+наведении, удаляется сразу), обложку `01_front_day` перетащить первой. Описание — «Редактировать описание», заметки
+— «Добавить заметку об изменениях».
+
+## Название и описание (англ.) — v3, прежнее
 
 **Title:** `Sauna Boiler`
 
