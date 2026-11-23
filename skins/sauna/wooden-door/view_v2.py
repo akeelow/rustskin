@@ -40,6 +40,7 @@ SHOTS = {
     "low": ((-20, -120, 45), (-60, 0, 25), 35, -100, 15),
     "back": ((-120, 300, 150), (-60, 0, 105), 35, 60, 30),
     "window_back": ((-50, 95, 160), (-32, 0, 154), 45, 50, 25),
+    "window_back_oblique": ((-115, 60, 150), (-32, 0, 154), 40, 50, 25),
     "edge": ((60, -60, 120), (0, 0, 110), 45, -30, 25),
 }
 
@@ -120,7 +121,8 @@ def mix_alpha(N, L, shader, out, dif, cutoff):
     sub.operation = "SUBTRACT"
     sub.use_clamp = True
     L.new(gt.outputs[0], sub.inputs[0])
-    L.new(geo.outputs["Backfacing"], sub.inputs[1])
+    if "--twosided" not in args:
+        L.new(geo.outputs["Backfacing"], sub.inputs[1])
     tr = N.new("ShaderNodeBsdfTransparent")
     mx = N.new("ShaderNodeMixShader")
     L.new(sub.outputs[0], mx.inputs[0])

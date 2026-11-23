@@ -143,11 +143,11 @@ class Front:
         self.grain = []
         for i in range(nb):
             a, b = BOARDS[i]
-            quarter = rng.random() < 0.3
+            quarter = rng.random() < 0.45          # v2.1: в игре арки «пламенем» — больше прямослоя
             self.grain.append(dict(
                 quarter=quarter, c=(a + b) / 2 + rng.uniform(-3, 3),
                 d0=rng.uniform(1.0, 6.0) if not quarter else 0.0,
-                tilt=rng.uniform(0.015, 0.035) * rng.choice((-1, 1)),
+                tilt=rng.uniform(0.008, 0.02) * rng.choice((-1, 1)),      # v2.1: арки длиннее и реже
                 s=rng.uniform(2.4, 3.4), seed=int(rng.integers(1000)),
                 tone=rng.random(), cup=rng.uniform(0.1, 0.3) * (1 if rng.random() < 0.8 else -1),
                 top=rng.uniform(-0.06, 0.06)))
@@ -203,7 +203,7 @@ class Front:
             if towel_cover(px, py) or in_rect(px, py, LOCK_ZONE, 1.0) or in_rect(px, py, (SILL[0], SILL[1], SILL[2], WINDOW[3]), 1.5):
                 continue
             ang = rng.choice((0.0, np.pi)) + rng.uniform(-0.45, 0.45)      # поперёк волокон, вбок
-            out.append((px, py, ang, rng.uniform(3.0, 4.0)))
+            out.append((px, py, ang, rng.uniform(2.4, 3.0)))      # v2.1: короче и толще — в игре были «чёрточки»
         self.clinch = out
         # «улыбки» молотка у части шляпок и загнутых концов
         self.smiles = []
@@ -465,13 +465,13 @@ class Front:
             xs, ys = X[box] - x, Y[box] - y
             u, v = xs * ca + ys * sa, -xs * sa + ys * ca
             t = np.clip(u / L, 0, 1)
-            half = 0.38 * (1 - 0.55 * t) + 0.05
+            half = 0.5 * (1 - 0.45 * t) + 0.06
             on = (u > -0.3) & (u < L) & (np.abs(v) < half)
             prof = np.sqrt(np.clip(1 - (v / half) ** 2, 0, 1))
-            hh = 0.22 * (1 - 0.6 * t) * prof + 0.03
+            hh = 0.26 * (1 - 0.5 * t) * prof + 0.04
             groove = np.clip(1 - np.abs(v) / (half + 0.45), 0, 1) * (u > -0.5) * (u < L + 0.4)
             hb = H[box] - 0.05 * groove                                   # дерево промято молотком вдоль стержня
-            bump = np.exp(-(np.hypot(u + 0.1, v) / 0.45) ** 2) * 0.12      # выход стержня
+            bump = np.exp(-(np.hypot(u + 0.1, v) / 0.6) ** 2) * 0.16      # выход стержня
             hn = np.where(on, np.maximum(hb, hh + bump), hb)
             H[box] = hn
             nail_m[box] = np.maximum(nail_m[box], on * sstep(0.0, 0.3, prof) + 0 * bump)

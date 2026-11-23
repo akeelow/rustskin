@@ -80,7 +80,7 @@ def build():
     tn = mix(tn, ASPEN_GREY, 0.45) * 0.90
     blotch = fbm(x * 0.07 + board * 3.1, y * 0.03, 9)
     gr = np.clip(grain, 0, 1)
-    cf = tn * (1.05 - 0.17 * gr)[:, None] * (0.92 + 0.16 * blotch)[:, None]
+    cf = tn * (1.03 - 0.10 * gr)[:, None] * (0.92 + 0.16 * blotch)[:, None]     # v2.1: в игре волокна «нарисованы» — тише
     cf = cf * (1 + 0.05 * (fbm(x * 0.9 + board * 7, y * 0.05, 3) - 0.5))[:, None]       # тонкие полосы ранней/поздней
     # мокрый низ (пар и вода с пола): рваный верхний край на каждой доске (как v1.2)
     rnd = ((board * 0.618) % 1.0).astype(np.float32)
@@ -285,12 +285,14 @@ def main():
     dif[..., :3] = np.where(use[..., None], d["col"], od[..., :3])
     dif[..., 3] = np.where(use, np.clip(d["alpha"][..., 0], 0, 1), 1.0)
     # стекло сзади (v1.2): та же маска потёков по x, y — альфа и потёки в цвете
-    pos1 = r["pos"][2::4, 2::4] * 100.0
-    isl1 = isl[2::4, 2::4]
-    xb, yb = pos1[..., 0], pos1[..., 1]
+    # v2.1: маска сзади считается в 4096 и уменьшается так же, как перед (в v2.0 — сразу в 1024, края ступенькой)
+    P4 = r["pos"] * 100.0
     xi0, xi1, yi0, yi1 = FD.PANE
-    back_glass = (isl1 == 4) & (xb > xi0 + 1.3) & (xb < xi1 - 1.3) & (yb > yi0 + 1.3) & (yb < yi1 - 1.3)
-    cb = FD.drip_cut(xb, yb) * back_glass
+    bg4 = (isl == 4) & (P4[..., 0] > xi0 + 1.3) & (P4[..., 0] < xi1 - 1.3) & (P4[..., 1] > yi0 + 1.3) & (P4[..., 1] < yi1 - 1.3)
+    c4 = np.zeros((S, S), np.float32)
+    c4[bg4] = FD.drip_cut(P4[..., 0][bg4], P4[..., 1][bg4])
+    back_glass = down(bg4.astype(np.float32)) > 0.5
+    cb = np.clip(down(c4), 0, 1) * back_glass
     dif[..., 3] = np.where(back_glass, 1 - cb, dif[..., 3])
     dif[..., :3] = np.where(back_glass[..., None], mix(dif[..., :3].reshape(-1, 3), hexc("#5E4430"), (cb * 0.75).reshape(-1)).reshape(dif[..., :3].shape), dif[..., :3])
     print("back glass texels (1024)", int(back_glass.sum()), "see-through %.1f%%" % (100 * (cb[back_glass] > 0.5).mean()))
