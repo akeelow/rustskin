@@ -101,7 +101,7 @@ TWISTED = 3                                # доска «пропеллером
 
 MAT = {"board": 1, "patch": 2, "steel": 3, "nail": 4, "frame": 5, "sill": 6, "putty": 7, "glass": 8,
        "towel": 9, "hook": 10, "leaf": 11, "gap": 12, "rail_end": 13, "rail": 14, "brace": 15, "hinge": 16,
-       "wire": 17, "end": 18}
+       "wire": 17, "end": 18, "handle": 19, "twine": 20}
 
 
 def in_poly(x, y, poly):
@@ -1124,3 +1124,148 @@ def end_field(X, Z, top):
     mat = np.where(st, MAT["steel"], mat)
     cav = np.where(st, 0.0, cav)
     return dict(h=H, mat=mat, grain=ring, cavity=cav)
+
+
+# ================================================================ ручка (v2.7)
+# Замеры OBJ (острова 8 и 9; копия сзади — зеркало по z: z' = HANDLE_MIRROR − z, обе копии на одних текселях):
+#   основание — тело вращения вокруг (−107.645, 106.485): розетка R 4.52 (z 5.37–6.32), конус до R 3.47 (z 7.49),
+#   ступень до стойки R 1.63, стойка до z 9.69;
+#   перекладина — веретено вдоль x (|u| ≤ 7.0 от оси), сечение — скруглённый восьмиугольник, низ плоский (z 9.56),
+#   верх 12.46 в середине → 11.24 на конце; высота по y 3.59 → 1.55.
+HC = (-107.645, 106.485)
+HANDLE_MIRROR = 5.37 + (-4.54)
+BOSS_PROFILE = [(4.52, 5.30), (4.52, 6.32), (3.47, 7.49), (1.63, 7.49), (1.63, 9.80)]
+BAR_U = [0.0, 1.4, 4.2, 6.71, 7.0]
+BAR_HALF_Y = [1.795, 1.795, 1.555, 1.125, 0.775]
+BAR_ZTOP = [12.46, 12.46, 12.15, 11.61, 11.24]
+BAR_ZBOT = [9.56, 9.56, 9.56, 9.57, 9.87]
+BAR_P = 2.6                     # показатель суперэллипса сечения (8 вершин low-poly ≈ скруглённый восьмиугольник)
+TWINE_R = 0.5                   # бечёвка Ø 10 мм (~4 px при 2.6 мм/px; v2.7 черновик Ø 9 мм читался полосками)
+TWINE_WRAPS = ((-6.2, -1.9), (1.9, 6.2))    # две обмотки по 4 витка по сторонам стойки, перехлёст поверху
+TWINE_PITCH = 1.075             # 4.3 см / 4 витка: обмотка кончается наверху, где начинается перехлёст
+
+
+def bar_section(u, th):
+    """Точка поверхности перекладины: u — вдоль (см от оси), th — угол сечения (π/2 — верх, к зрителю)."""
+    au = np.abs(u)
+    cap = np.sqrt(np.clip(1 - ((au - 6.95) / 0.27) ** 2, 0, 1)) * (au > 6.95) + (au <= 6.95)
+    hy = np.interp(au, BAR_U, BAR_HALF_Y) * cap
+    zt, zb = np.interp(au, BAR_U, BAR_ZTOP), np.interp(au, BAR_U, BAR_ZBOT)
+    zc, hz = 0.5 * (zt + zb), 0.5 * (zt - zb) * cap
+    c, s = np.cos(th), np.sin(th)
+    e = 2.0 / BAR_P
+    return np.stack([HC[0] + u, HC[1] + hy * np.sign(c) * np.abs(c) ** e, zc + hz * np.sign(s) * np.abs(s) ** e], -1)
+
+
+def surf_normals(P):
+    """Нормали сетки точек (ny, nx, 3) по разностям; знак — как у cross(d/dx, d/dy)."""
+    du = np.gradient(P, axis=1)
+    dv = np.gradient(P, axis=0)
+    n = np.cross(du, dv)
+    return n / (np.linalg.norm(n, axis=-1, keepdims=True) + 1e-9)
+
+
+def handle_wood(u_al, u_ac, seed, wear):
+    """Дерево ручки: волокна вдоль u_al (шаг ~0.9 см), затёртость гладит гребни. Возвращает h (см) и маски."""
+    g = sstep(0.4, 0.75, (u_ac / 0.9 + 0.6 * (fbm2(u_al * 0.05, u_ac * 0.2, seed, 3) - 0.5)) % 1.0)
+    h = 0.025 * (g - 0.4) * (1 - 0.7 * wear)
+    return h, g
+
+
+def bar_grid(step=0.06):
+    us = np.arange(-7.25, 7.25 + 1e-6, step)
+    per = 2 * (3.6 + 2.9)                       # длина обхода сечения ~13 см
+    ths = np.linspace(-np.pi, np.pi, int(per / step) + 1)
+    U, TH = np.meshgrid(us, ths)
+    return U, TH
+
+
+def bar_field(U, TH):
+    """Перекладина: поверхность, сдвиг по нормали, маски. Затёрта по хвату (верх и концы), три забоины."""
+    P = bar_section(U, TH)
+    n = -surf_normals(P)                         # обход сечения даёт нормаль внутрь (сетку в bake_v2 разворачиваем)
+    up = np.clip(np.sin(TH), 0, 1)
+    au = np.abs(U)
+    wear = np.clip(0.35 + 0.45 * up + 0.4 * sstep(5.0, 7.0, au), 0, 1)
+    ac = TH * 2.1                                  # координата по обходу сечения (см)
+    h, g = handle_wood(U, ac, 801, wear)
+    dent = np.zeros_like(U)
+    for (u0, t0, r) in ((-6.3, 1.2, 0.45), (3.1, 2.3, 0.4), (6.4, 0.6, 0.35)):
+        d = np.hypot(U - u0, (TH - t0) * 1.6)
+        dd = np.clip(1 - (d / r) ** 2, 0, 1)
+        h = h - 0.06 * dd
+        dent = np.maximum(dent, dd)
+    P = P + n * h[..., None]
+    z = np.zeros_like(U)
+    mat = np.full(U.shape, MAT["handle"], float)
+    return P, n, dict(m1=np.stack([g, z, dent], -1), m2=np.stack([z, z, wear], -1),
+                      m3=np.stack([z, z, z + 0.5], -1), idc=np.stack([mat / 32.0, z, z], -1))
+
+
+def boss_grid(step=0.06):
+    pr = np.array(BOSS_PROFILE)
+    seg = np.hypot(*np.diff(pr, axis=0).T)
+    s = np.concatenate([[0], np.cumsum(seg)])
+    ts = np.arange(0, s[-1] + 1e-6, step)
+    r = np.interp(ts, s, pr[:, 0])
+    z = np.interp(ts, s, pr[:, 1])
+    k = int(0.3 / step)                            # скругление углов профиля ~3 мм (скользящее среднее)
+    ker = np.ones(2 * k + 1) / (2 * k + 1)
+    rp, zp = np.pad(r, k, mode="edge"), np.pad(z, k, mode="edge")
+    r, z = np.convolve(rp, ker, "valid"), np.convolve(zp, ker, "valid")
+    phs = np.linspace(-np.pi, np.pi, int(2 * np.pi * 4.52 / step) + 1)
+    PH, TI = np.meshgrid(phs, np.arange(len(ts)))
+    return PH, r[TI], z[TI], ts[TI]
+
+
+def boss_field(PH, R, Z, T):
+    """Основание: розетка, конус, ступень, стойка. Волокна поперёк (вдоль y), затёртая кромка розетки, сухая трещина."""
+    P = np.stack([HC[0] + R * np.cos(PH), HC[1] + R * np.sin(PH), Z], -1)
+    n = surf_normals(P)
+    X, Y = P[..., 0] - HC[0], P[..., 1] - HC[1]
+    rim = np.exp(-((T - 1.35) / 0.35) ** 2)                      # кромка розетки → конус
+    wear = np.clip(0.25 + 0.6 * rim, 0, 1)
+    h, g = handle_wood(Y, X + 0.3 * Z, 811, wear)
+    cav = np.zeros_like(R)
+    a0 = 0.7                                                       # сухая трещина по конусу (жар), радиально
+    ang = np.angle(np.exp(1j * (PH - a0)))
+    cr = np.clip(1 - np.abs(ang * R) / 0.08, 0, 1) * sstep(0.6, 1.2, T) * sstep(2.9, 2.2, T)
+    h = h - 0.09 * cr
+    cav = np.maximum(cav, cr)
+    P = P + n * h[..., None]
+    z = np.zeros_like(R)
+    mat = np.full(R.shape, MAT["handle"], float)
+    return P, n, dict(m1=np.stack([g, cav, z], -1), m2=np.stack([z, z, wear], -1),
+                      m3=np.stack([z, z, z + 0.5], -1), idc=np.stack([mat / 32.0, z, z], -1))
+
+
+def _bar_point_n(u, th, eps=1e-3):
+    P = bar_section(u, th)
+    du = bar_section(u + eps, th) - bar_section(u - eps, th)
+    dt = bar_section(u, th + eps) - bar_section(u, th - eps)
+    n = np.cross(du, dt)
+    n /= np.linalg.norm(n, axis=-1, keepdims=True) + 1e-9
+    out = P - np.stack([np.full_like(u, HC[0]) + u, np.full_like(u, HC[1]), 0.5 * (np.interp(np.abs(u), BAR_U, BAR_ZTOP) + np.interp(np.abs(u), BAR_U, BAR_ZBOT))], -1)
+    n = n * np.sign((n * out).sum(-1, keepdims=True) + 1e-9)
+    return P, n
+
+
+def twine_paths():
+    """Средние линии бечёвки: две обмотки по 4 витка по сторонам стойки, у каждой оба конца подоткнуты под виток.
+    (Черновик v2.7 с перехлёстом поверху: в рендере перехлёст со стыками читался «скобкой» — сбоем, не верёвкой.)"""
+    r = TWINE_R * 0.85                         # бечёвка вжата в дерево
+    th0 = np.pi / 2
+    out = []
+    for (a0, a1) in TWINE_WRAPS:
+        turns = (a1 - a0) / TWINE_PITCH
+        s_ = np.linspace(0, 1, int(turns * 90))
+        u = a0 + (a1 - a0) * s_
+        th = th0 + 2 * np.pi * turns * s_
+        P, n = _bar_point_n(u, th)
+        out.append(P + n * r)
+        for (uu, tt, du) in ((a0, th0, 1.0), (a1, th[-1], -1.0)):       # хвост уходит под соседний виток
+            k = np.linspace(0, 1, 12)
+            Pt, nt = _bar_point_n(np.full_like(k, uu) + du * 0.45 * k, np.full_like(k, tt) + 0.5 * k)
+            C = Pt + nt * (r * (1 - 1.3 * k))[:, None]
+            out.append(C)
+    return out

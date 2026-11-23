@@ -444,15 +444,70 @@ def build_braces(low):
     return out
 
 
+# ================================================================ ручка (v2.7)
+def check_outward(ob, zmid, name):
+    """Доля граней, смотрящих от оси ручки (у замкнутого тела средняя нормаль ≈ 0 — check_normals не годится)."""
+    nf = len(ob.data.polygons)
+    n = np.zeros(nf * 3, np.float32)
+    c = np.zeros(nf * 3, np.float32)
+    ob.data.polygons.foreach_get("normal", n)
+    ob.data.polygons.foreach_get("center", c)
+    n, c = n.reshape(-1, 3), c.reshape(-1, 3)
+    out = c - np.array([FD.HC[0], FD.HC[1], zmid])
+    out[:, 0] *= 0.3
+    frac = float(((n * out).sum(1) > 0).mean())
+    log(f"  {name}: outward {frac:.3f}")
+    assert frac > 0.8, f"{name}: faces point inward"
+
+
+def build_handle(low):
+    """Ручка: основание и перекладина — поля fields_door (дерево), бечёвка — трубки со свивом. Копия сзади — зеркало
+    по z (обе копии на одних текселях островов 8 и 9)."""
+    out = []
+    U, TH = FD.bar_grid()
+    Pb, _, ab = FD.bar_field(U, TH)
+    PH, R, Z, T = FD.boss_grid()
+    Po, _, ao_ = FD.boss_field(PH, R, Z, T)
+    paths = FD.twine_paths()
+    for side, mirror in (("front", False), ("back", True)):
+        mz = (lambda P: np.concatenate([P[..., :2], (FD.HANDLE_MIRROR - P[..., 2])[..., None]], -1)) if mirror else (lambda P: P)
+        zm = lambda z: FD.HANDLE_MIRROR - z if mirror else z
+        bar = grid_mesh(f"hp_handle_bar_{side}", mz(Pb), ab)
+        if not mirror:
+            flip_quads(bar)                    # сетка перекладины обходит сечение внутрь; зеркало разворачивает само
+        boss = grid_mesh(f"hp_handle_boss_{side}", mz(Po), ao_)
+        if mirror:
+            flip_quads(boss)
+        acc = Acc()
+        for k, C in enumerate(paths):
+            Rr = np.full(len(C), FD.TWINE_R)
+            if k % 3:                           # хвосты (после каждой обмотки по два) сужаются под виток
+                Rr = FD.TWINE_R * np.linspace(1.0, 0.55, len(C))
+            V, Q, rid = tube(mz(C), Rr, seg=12, twist=0.7, ridge=0.3)
+            a = BB.attrs_const(len(V), "twig")
+            a["idc"][:, 0] = FD.MAT["twine"] / 32.0
+            a["m1"][:, 0] = rid
+            acc.add(V, Q, a)
+        tw = acc.build(f"hp_twine_{side}")     # трубка сама строит обход наружу — на зеркале не разворачивать
+        check_outward(bar, zm(11.0), bar.name)
+        check_outward(boss, zm(6.5), boss.name)
+        boss["group"] = "handle_boss"          # основание: 4 сектора на одних текселях — AO только от себя
+        bar["group"] = tw["group"] = "handle_bar"
+        out += [bar, boss, tw]
+    return out
+
+
 def sstep_np(e0, e1, x):
     return FD.sstep(e0, e1, x)
 
 
 PARTS = {"front": build_front, "edges": build_edges, "towel": build_towel, "leaves": build_leaves,
-         "back": build_back, "rails": build_rails, "braces": build_braces}
+         "back": build_back, "rails": build_rails, "braces": build_braces, "handle": build_handle}
 # группа: куски-цели (острова), вытяжка лучей (см)
-GROUPS = {"front": ({FRONT}, 4.5), "back": ({0, 4}, 3.2), "rails": ({1, 3, 5}, 2.6), "braces": ({6, 7}, 1.8)}
-GROUP_PARTS = {"front": ("front", "edges", "towel", "leaves"), "back": ("back",), "rails": ("rails",), "braces": ("braces",)}
+GROUPS = {"front": ({FRONT}, 4.5), "back": ({0, 4}, 3.2), "rails": ({1, 3, 5}, 2.6), "braces": ({6, 7}, 1.8),
+          "handle_boss": ({8}, 1.2), "handle_bar": ({9}, 1.4)}
+GROUP_PARTS = {"front": ("front", "edges", "towel", "leaves"), "back": ("back",), "rails": ("rails",), "braces": ("braces",),
+               "handle_boss": ("handle",), "handle_bar": ("handle",)}
 
 
 def main():
@@ -488,7 +543,8 @@ def main():
             ghp = [o for o in hp if o["group"] == g]
             if not ghp:
                 continue
-            res, mask = BB.bake_group(low, keep, ghp, size, extr, g, mat)
+            hide = [o for o in hp if o["group"] == "handle_bar"] if g == "handle_boss" else ()
+            res, mask = BB.bake_group(low, keep, ghp, size, extr, g, mat, hide_for_ao=hide)
             for k, arr in res.items():
                 if k not in result:
                     result[k] = np.zeros_like(arr) if k != "normal" else np.zeros_like(arr) + (0.5, 0.5, 1.0)

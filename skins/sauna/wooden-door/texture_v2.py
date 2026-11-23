@@ -291,7 +291,12 @@ def down(a):
     return np.stack([down(a[..., c]) for c in range(a.shape[-1])], -1)
 
 
-BACK_ISL = (0, 1, 3, 4, 5, 6, 7)      # зад, брусья с кромками, раскосы (v2.4); ручка 8, 9 — пока v1.2
+BACK_ISL = (0, 1, 3, 4, 5, 6, 7)      # зад, брусья с кромками, раскосы (v2.4)
+HANDLE_ISL = (8, 9)                    # ручка (v2.7): обе копии на одних текселях — только симметричное
+HANDLE_WOOD = hexc("#614B39")          # тон v1.2 (медиана #534131): тёмная, засаленная
+HANDLE_GREASE = hexc("#3F3125")
+JUTE = hexc("#94805F")
+JUTE_GRIME = hexc("#5E4F3B")
 
 
 def glass_paint(x, y, gl, col, gloss, spec, emis, frame_like):
@@ -436,13 +441,64 @@ def build_back(isl_img, pos_img):
                 isls=sorted(set(isl_img[F].tolist())))
 
 
+def build_handle(isl_img, pos_img):
+    """Ручка: дерево тоном v1.2, засаленный хват; бечёвка — джут, грязнее посередине хвата, свив светлее."""
+    bmask = load("mask", "L") > 0.5
+    F = bmask & np.isin(isl_img, HANDLE_ISL)
+    if not F.any():
+        return None
+    P = pos_img[F] * 100.0
+    lx, ly = P[:, 0] - FD.HC[0], P[:, 1] - FD.HC[1]
+    lz = np.where(P[:, 2] < 0, FD.HANDLE_MIRROR - P[:, 2], P[:, 2])      # копия сзади → в координаты переда
+    nb, ao = load("normal")[F], load("ao", "L")[F]
+    m1, m2, idc = load("m1")[F], load("m2")[F], load("idc")[F]
+    cover = load("cover", "L")[F] > 0.5
+    mat = np.rint(idc[:, 0] * 32).astype(np.int32)
+    gr, cav, dent, wear = np.clip(m1[:, 0], 0, 1), m1[:, 1], m1[:, 2], np.clip(m2[:, 2], 0, 1)
+    n = len(lx)
+    tw = mat == MAT["twine"]
+    col = np.zeros((n, 3), np.float32)
+    spec = np.full(n, 0.06, np.float32)
+    gloss = np.full(n, 0.3, np.float32)
+    # дерево: волокно, засаленность по маске затёртости (темнее и глаже), забоины и трещина темнее
+    blot = fbm(lx * 0.4, ly * 0.4 + lz * 0.3, 71)
+    wood = HANDLE_WOOD * ((1.04 - 0.16 * gr) * (0.92 + 0.16 * blot))[:, None]
+    wood = mix(wood, HANDLE_GREASE, wear * 0.45)
+    wood = mix(wood, wood * 0.7, np.clip(dent, 0, 1) * 0.5)
+    wood = mix(wood, GAP, np.clip(cav, 0, 1) * 0.8)
+    col[:] = wood
+    gloss[:] = 0.3 + 0.3 * wear
+    spec[:] = 0.06 + 0.03 * wear
+    # бечёвка: свив (рёбра прядей светлее), грязь хвата — сильнее у середины половинок, где пальцы
+    grip = np.exp(-((np.abs(lx) - 3.9) / 1.6) ** 2)
+    jute = mix(JUTE * (0.94 + 0.12 * fbm(lx * 1.5, ly * 1.5 + lz, 72))[:, None], JUTE_GRIME, 0.25 + 0.3 * grip)
+    jute = jute * (0.88 + 0.18 * np.clip(m1[:, 0], 0, 1))[:, None]
+    col[tw] = jute[tw]
+    gloss[tw] = 0.14 + 0.1 * grip[tw]
+    spec[tw] = 0.04
+    miss = ~cover
+    col[miss] = HANDLE_WOOD * 0.9
+    nb[miss] = (0.5, 0.5, 1.0)
+    # бечёвка: бороздки между витками по 1–2 px в 1024 — полный AO давал «зебру»; на ней AO слабее
+    aok = np.where(tw, 0.7 + 0.3 * ao, (0.45 + 0.55 * ao) ** 0.9)
+    col = col * aok[:, None]
+    occ = np.where(tw, 0.6 + 0.4 * ao, 0.35 + 0.65 * ao)
+    col = np.clip(col, 0.02, 0.92)
+    med = lambda m: "#%02X%02X%02X" % tuple((np.median(col[m], 0) * 255).astype(int)) if m.any() else "-"
+    print("handle texels", n, "no-hit", int(miss.sum()), "| median wood", med(~tw), "| twine", med(tw), "(v1.2 #534131)")
+    z = np.zeros(n, np.float32)
+    return dict(F=F, col=col, spec=spec, gloss=gloss, emis=np.zeros((n, 3), np.float32), alpha=z + 1, occ=occ, nrm=nb,
+                glass=z, isls=sorted(set(isl_img[F].tolist())))
+
+
 def main():
     tag = sys.argv[sys.argv.index("--tag") + 1] if "--tag" in sys.argv else "v2.0"
     r = build()
     isl = r["isl"]
     rb = build_back(isl, r["pos"])
-    parts = [r] + ([rb] if rb else [])
-    baked = [2] + (rb["isls"] if rb else [])
+    rh = build_handle(isl, r["pos"])
+    parts = [r] + [q_ for q_ in (rb, rh) if q_]
+    baked = [2] + (rb["isls"] if rb else []) + (rh["isls"] if rh else [])
     print("baked islands:", baked)
     F = np.zeros((S, S), bool)
     for q_ in parts:
