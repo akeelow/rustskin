@@ -29,7 +29,7 @@ BAKE = HERE / "bake" / "v2"
 OUT = HERE / "export"
 S, EXPORT = 4096, 1024
 OLD = "v1.2"
-RIM = 0.3                      # v2.2: яркость ободка свечения по краю потёков (0 — без ободка, как v2.1)
+RIM = 0.6                      # v2.3: ободок у края потёков — свечение под ним ярче в (1 + RIM) раз (0 — без ободка, как v2.1)
 MAT = FD.MAT
 hexc, mix, smooth, vnoise, fbm = T1.hexc, T1.mix, T1.smooth, T1.vnoise, T1.fbm
 
@@ -268,12 +268,14 @@ def main():
         a = np.zeros((S, S, ch), np.float32)
         a[F] = np.asarray(vals, np.float32).reshape(-1, ch)
         return a
-    # v2.2: по краю каждой дорожки — тонкий ободок свечения (край воды ловит свет): ночью дорожки читаются водой,
+    # v2.2–v2.3: по краю каждой дорожки — тонкий ободок свечения (край воды ловит свет): ночью дорожки читаются водой,
     # а не чёрными трещинами. Ширина ~1.5 px в 1024
     gl_img = img(r["glass"], 1)[..., 0]
     hole = (1 - img(r["alpha"], 1)[..., 0]) * gl_img
     ring = np.clip(fblur(hole, 5) * 2.5 - hole * 3.0, 0, 1) * gl_img * (hole < 0.5)
-    e_img = img(r["emis"], 3) + T1.GLOW_EDGE * (RIM * ring)[..., None]
+    # v2.3: не своя жёлтая яркость (v2.2: вверху стекла, где свечение тусклое, читалось неоновой обводкой), а то же
+    # свечение, только ярче у края: внизу заметно, вверху еле видно
+    e_img = img(r["emis"], 3) * (1 + RIM * ring)[..., None]
     print("rim texels (4096):", int((ring > 0.2).sum()))
     maps = {"col": img(r["col"], 3), "spec": img(r["spec"], 1), "gloss": img(r["gloss"], 1), "emis": e_img,
             "alpha": img(r["alpha"], 1), "occ": img(r["occ"], 1), "nrm": img(r["nrm"], 3)}
@@ -332,7 +334,7 @@ def main():
     occ = np.where(use, d["occ"][..., 0], oo)
     emi = np.where(use[..., None], d["emis"], oe)
     ring_b = np.clip(fblur(cb.astype(np.float32), 1) * 2.5 - cb * 3.0, 0, 1) * back_glass * (cb < 0.5)
-    emi = emi + T1.GLOW_EDGE * (RIM * ring_b)[..., None]
+    emi = emi * (1 + RIM * ring_b)[..., None]
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
     OUT.mkdir(exist_ok=True)
     Image.fromarray(q(dif), "RGBA").save(OUT / f"Door_{tag}_diffuse.png")
