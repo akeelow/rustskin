@@ -1,7 +1,76 @@
 # Sauna Door — публикация в Workshop
 
+> **Сейчас: обновление до v2.7 — раздел ниже.** Остальное — пакет первой публикации.
+>
 > Подготовлено 16.11.2026 для **v1.2** (правки по кадрам v1 и v1.1 из редактора). v1.2 проверена в редакторе днём и ночью; замки редактор не ставит, место сверено наложением
 > ([../README.md](../README.md), «Сравнение с оригиналом»). Публикует пользователь сам.
+
+## Обновление до v2.7 (23.11.2026)
+
+Опубликованная страница (v1.2): https://steamcommunity.com/sharedfiles/filedetails/?id=3841006157. Обновлять **эту же
+страницу**: в редакторе выбрать опубликованный Sauna Door из Workshop → Publish (как у Sauna Bench 21.11.2026).
+
+| Слот | Файл | Ползунки |
+|---|---|---|
+| Diffuse | `../export/Door_v2.7_diffuse.png` | Color 255/255/255, **Alpha Cutoff 0.50** (потёки на окне — насквозь) |
+| Normal | `../export/Door_v2.7_normal.png` | Normal Scale 1.00 |
+| Specular/Gloss | `../export/Door_v2.7_specgloss.png` | Spec Color 255/255/255, Glossiness 1.00 |
+| Occlusion | `../export/Door_v2.7_occlusion.png` | Occlusion Scale 0.70 |
+| Emission | `../export/Door_v2.7_emission.png` | **Emission Color 255/255/255** |
+
+Alpha Cutoff изменился: в v1.2 стоял 0.00, теперь **0.50** — иначе потёки на окне глухие.
+
+**Новое описание** (вместо старого):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+The door to a scrap-built steam room. Pale aspen boards nailed onto an
+old steel sheet, rust running from every nail, the foot of the door dark
+and streaked with dried minerals. A washed-out towel hangs on a bent nail.
+The steam on the little window has run down in clear streaks - you can
+see straight through them, so check who is waiting outside before you
+open up. At night the stove behind the glass lights your way back in.
+
+Inside, the boards are steamed brown and sooty under the top rail, the
+rails are hand-hewn, the nails go right through, and one hinge is held
+on with wire. The handle got too hot to hold, so it is wrapped in jute.
+
+Part of the Sauna set:
+https://steamcommunity.com/sharedfiles/filedetails/?id=3840348906
+```
+
+**Change notes** (если редактор или страница спросят):
+
+```
+v2: remodelled from scratch. Every board, crack, knot, dent and nail is now
+real geometry, front and back. The window streaks are see-through: watch the
+street before you open the door. Hewn rails and braces with through-nails,
+wire-bound hinge, jute-wrapped handle, soaked mineral stains.
+```
+
+**Картинки — папка `upload_v2/`** (кадры из редактора, F12, обрезка 16:9 как у `../../ingame_import.py`;
+исходники — `../screenshots/v2.*/`). Добавлять **все по номерам**, первая — обложка страницы:
+
+| # | Файл | Что | Кадр |
+|---|---|---|---|
+| 01 | `upload_v2/01_front_34_day_v2.jpg` | перед 3/4 днём на уровне глаз — обложка | **снять** (v2.7) |
+| 02 | `upload_v2/02_window_see_through_v2.jpg` | окно спереди вплотную днём: сквозь потёки видно улицу | **снять** (v2.7) |
+| 03 | `upload_v2/03_front_night_v2.jpg` | перед ночью: окно светится, ободок по потёкам | v2.4_5 (ночью перед не отличается от v2.7) |
+| 04 | `upload_v2/04_handle_front_v2.jpg` | ручка в бечёвке, низ переда: шляпки, загнутые концы | v2.7_1 |
+| 05 | `upload_v2/05_back_34_day_v2.jpg` | зад 3/4 днём | **снять** (v2.7; кадр v2.6_1 — со старой ручкой) |
+| 06 | `upload_v2/06_back_rail_handle_v2.jpg` | средний брус сзади, раскосы, ручка | v2.7_2 |
+| 07 | `upload_v2/07_back_hinge_wire_v2.jpg` | верхний брус, петля с проволокой, окно сзади | v2.4_2 (эта часть с v2.4 не менялась) |
+| 08 | `upload_v2/08_back_night_v2.jpg` | зад ночью | v2.4_4 |
+
+Кадры v2.0 и v2.3 сняты с открытой панелью материалов — в галерею не идут. Рендеры Blender (`hero.jpg` и др.) и
+`ingame/` — v1.2, в обновление не идут.
+
+**После Publish:** старые картинки остаются. Удалить на
+https://steamcommunity.com/sharedfiles/managepreviews/?id=3841006157 (крестик при наведении, удаляет сразу): все
+рендеры и кадры v1.2 и автокадры редактора от 16.11. Оставить автокадры редактора v2.7 и наши 8 из `upload_v2/`.
+
+Папка `../../upload/8 Sauna Door/` — пакет v1.2; её пересобирает основная сессия (эта папка её не трогает).
 
 ## Название и описание (англ.)
 
