@@ -29,6 +29,7 @@ BAKE = HERE / "bake" / "v2"
 OUT = HERE / "export"
 S, EXPORT = 4096, 1024
 OLD = "v1.2"
+RIM = 0.3                      # v2.2: яркость ободка свечения по краю потёков (0 — без ободка, как v2.1)
 MAT = FD.MAT
 hexc, mix, smooth, vnoise, fbm = T1.hexc, T1.mix, T1.smooth, T1.vnoise, T1.fbm
 
@@ -140,6 +141,19 @@ def build():
     ic = mix(IRON, hexc("#5A3A28"), smooth(0.35, 0.8, rr + 0.1) * 0.5)
     col[ir] = ic[ir]
     gloss[ir], spec[ir] = 0.32, 0.22
+    # v2.2: сплющенный молотком стержень загнутого конца — светлый тёртый металл (в v2.0–v2.1 тёмный читался прорезью)
+    cl = np.zeros(n, np.float32)
+    for (cx, cy, a0, L) in fr.clinch:
+        sel = ir & (np.abs(x - cx) < L + 1) & (np.abs(y - cy) < L + 1)
+        if not sel.any():
+            continue
+        u = (x[sel] - cx) * np.cos(a0) + (y[sel] - cy) * np.sin(a0)
+        v = -(x[sel] - cx) * np.sin(a0) + (y[sel] - cy) * np.cos(a0)
+        half = 0.5 * (1 - 0.45 * np.clip(u / L, 0, 1)) + 0.06
+        cl[sel] = np.maximum(cl[sel], ((u > -0.3) & (u < L)) * np.clip(1 - np.abs(v) / half, 0, 1) ** 0.5)
+    cl = cl * ir
+    col = mix(col, hexc("#7C746B") * (0.9 + 0.2 * rr)[:, None], cl * 0.75)
+    gloss = np.where(cl > 0.3, 0.45, gloss)
 
     # ---------------- замазка: старая, серо-охристая, грязная в трещинах
     pu = is_("putty")
@@ -222,7 +236,8 @@ def build():
     dry = wood & (y > 60) & (y < 200) & (cav < 0.1) & (wear < 0.1)
     print("median: front dry", med(dry), "| wet low", med(wood & (y < 20)), "| towel", med(tw), "| glass", med(gl),
           "| see-through %.1f%% of glass" % (100 * (cut[gl] > 0.5).mean()))
-    return dict(F=F, isl=isl_img, pos=pos_img, col=col, spec=spec, gloss=gloss, emis=emis, alpha=alpha, occ=occ, nrm=nb)
+    return dict(F=F, isl=isl_img, pos=pos_img, col=col, spec=spec, gloss=gloss, emis=emis, alpha=alpha, occ=occ, nrm=nb,
+                glass=gl.astype(np.float32))
 
 
 def fblur(a, r, passes=3):
@@ -253,7 +268,14 @@ def main():
         a = np.zeros((S, S, ch), np.float32)
         a[F] = np.asarray(vals, np.float32).reshape(-1, ch)
         return a
-    maps = {"col": img(r["col"], 3), "spec": img(r["spec"], 1), "gloss": img(r["gloss"], 1), "emis": img(r["emis"], 3),
+    # v2.2: по краю каждой дорожки — тонкий ободок свечения (край воды ловит свет): ночью дорожки читаются водой,
+    # а не чёрными трещинами. Ширина ~1.5 px в 1024
+    gl_img = img(r["glass"], 1)[..., 0]
+    hole = (1 - img(r["alpha"], 1)[..., 0]) * gl_img
+    ring = np.clip(fblur(hole, 5) * 2.5 - hole * 3.0, 0, 1) * gl_img * (hole < 0.5)
+    e_img = img(r["emis"], 3) + T1.GLOW_EDGE * (RIM * ring)[..., None]
+    print("rim texels (4096):", int((ring > 0.2).sum()))
+    maps = {"col": img(r["col"], 3), "spec": img(r["spec"], 1), "gloss": img(r["gloss"], 1), "emis": e_img,
             "alpha": img(r["alpha"], 1), "occ": img(r["occ"], 1), "nrm": img(r["nrm"], 3)}
     # ближайший остров для каждого пустого текселя (отступы делятся между соседями пополам)
     owner = isl.astype(np.int16).copy()
@@ -309,6 +331,8 @@ def main():
     sg[..., 3] = np.where(use, d["gloss"][..., 0], osg[..., 3])
     occ = np.where(use, d["occ"][..., 0], oo)
     emi = np.where(use[..., None], d["emis"], oe)
+    ring_b = np.clip(fblur(cb.astype(np.float32), 1) * 2.5 - cb * 3.0, 0, 1) * back_glass * (cb < 0.5)
+    emi = emi + T1.GLOW_EDGE * (RIM * ring_b)[..., None]
     q = lambda a: (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
     OUT.mkdir(exist_ok=True)
     Image.fromarray(q(dif), "RGBA").save(OUT / f"Door_{tag}_diffuse.png")
