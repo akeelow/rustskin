@@ -44,6 +44,36 @@ THREAD = hexc("#B3A994")
 RUST_RUN = hexc("#6B4630")
 
 
+def mineral_runs(x, y, gr, seed, step=2.6, keep=0.4):
+    """Минеральные дорожки воды (v2.6). Раньше — шум 3/см по x: нити тоньше текселя, идеально прямые («линейки»).
+    Теперь отдельные дорожки через ~step см (доля keep): каждая гуляет вбок (±1.5 см на ~25 см, мелкие изломы),
+    рвётся на капли и кончается на своей высоте. Вокруг — ореол: вода впиталась в дерево пятнами, вытянутыми по
+    волокну, с рваным краем и местами расплывом; по краю — тёмная кайма высохшей воды. Возвращает (ядро, ореол, кайма)."""
+    xw = (x + 3.0 * (fbm(x * 0.03, y * 0.04, seed, 3) - 0.5)
+          + 1.0 * (vnoise(x * 0.2, y * 0.16, seed + 1) - 0.5)
+          + 0.3 * (vnoise(x * 0.5, y * 0.7, seed + 8) - 0.5))
+    col = np.floor(xw / step)
+    ci = col.astype(np.int64)
+    h = lambda k: T1.hash1((ci * 7919 + k * 104729) & 0x7FFFFFFF, seed + k)
+    on = h(1) < keep
+    cx = (col + 0.5 + 0.5 * (h(2) - 0.5)) * step
+    d = np.abs(xw - cx)
+    stop = 8.0 + 70.0 * h(3) ** 1.5                     # где дорожка высохла (выше — источник)
+    alive = smooth(stop - 3.0, stop + 10.0, y)
+    beads = smooth(0.35, 0.65, vnoise(ci * 3.7 + 0.5, y * 0.3, seed + 4))   # разрывы и капли вдоль дорожки
+    wcore = 0.14 + 0.1 * vnoise(ci * 5.1 + 0.5, y * 0.2, seed + 5)
+    core = smooth(wcore, wcore * 0.3, d) * beads * alive * on
+    bloom = 1 + 1.4 * smooth(0.6, 0.9, vnoise(ci * 2.9 + 0.5, y * 0.09, seed + 9))   # местами вода расплылась
+    w = (0.8 + 1.0 * fbm(ci * 2.3 + 0.5, y * 0.07, seed + 6, 2)) * bloom
+    # рваный край: порог по полю «близость к дорожке + пятна, вытянутые по волокну (по y в 4 раза длиннее)»
+    blot = fbm(x * 0.9, y * 0.22, seed + 7, 3) - 0.5
+    f = 1 - d / w + 0.9 * blot + 0.15 * (np.clip(gr, 0, 1) - 0.5)
+    soak = smooth(0.0, 0.35, f) * (0.55 + 0.45 * fbm(x * 0.3, y * 0.1, seed + 10, 2))
+    halo = soak * (0.35 + 0.65 * alive) * on
+    tide = np.clip(1 - np.abs(f - 0.02) / 0.08, 0, 1) * (0.35 + 0.65 * alive) * on * 0.7
+    return core, halo, tide
+
+
 def load(name, mode="RGB"):
     return np.asarray(Image.open(BAKE / f"{name}.png").convert(mode), np.float32) / 255.0
 
@@ -103,11 +133,13 @@ def build():
     runs = (vnoise(x * 2.3, y * 0.02, 41) > 0.62) * under * smooth(55.0, wy0, y) ** 1.5
     cf = mix(cf, STEAMED * 0.9, np.clip(under * smooth(95.0, wy0, y) * 0.25 + runs * 0.3, 0, 1))
     # белые минеральные разводы в мокрой зоне и под подоконником (v2: реже и тише — урок полока)
-    sx = vnoise(x * 3.3, y * 0.015, 43)
-    streak = smooth(0.76, 0.88, sx) * vnoise(x * 5.0, y * 0.3, 44)
+    core, halo, tide = mineral_runs(x, y, gr, 43)
     env = smooth(2.0, 10.0, y) * smooth(level + 12, level - 12, y) * (0.4 + 0.6 * vnoise(x * 0.14, y * 0, 45))
     env = np.maximum(env, under * smooth(75.0, wy0 - 3, y) * 0.7 * (vnoise(x * 1.2, y * 0, 46) > 0.5))
-    cf = mix(cf, MINERAL, np.clip(streak * env * 1.6, 0, 1) * 0.45)
+    env = np.clip(env * 1.6, 0, 1)
+    cf = mix(cf, cf * 0.9, tide * env * 0.5)
+    cf = mix(cf, mix(cf, MINERAL, 0.5), halo * env * 0.45)
+    cf = mix(cf, MINERAL, core * env * 0.4)
     # рамка и подоконник: та же осина, серее и выветреннее
     fc = mix(cf, ASPEN_GREY * (0.92 + 0.12 * (1 - gr))[:, None], 0.55)
     cf = np.where(frame[:, None], fc, cf)
@@ -333,10 +365,12 @@ def build_back(isl_img, pos_img):
     # минеральные полосы от подоконника вниз (вода с окна), тоньше по всей двери
     wx0, wx1, wy0, wy1 = FD.WINDOW
     underb = smooth(wx0 - 4, wx0 + 3, x) * smooth(wx1 + 5, wx1 - 2, x) * (y < FD.SILL[2])
-    sxb = vnoise(x * 3.0, y * 0.012, 53)
-    streakb = smooth(0.72, 0.86, sxb) * (0.35 + 0.65 * vnoise(x * 4.8, y * 0.26, 54))
+    coreb, halob, tideb = mineral_runs(x, y, gr, 53, step=3.0, keep=0.35)
     envb = underb * smooth(5.0, 50.0, y) * 0.9 + (1 - underb) * smooth(120.0, 20.0, y) * 0.35 * (vnoise(x * 0.11, y * 0, 55) > 0.45)
-    cb = mix(cb, MINERAL * 0.92, np.clip(streakb * envb * 1.4, 0, 1) * np.where(planks, 0.25, 0.5))
+    envb = np.clip(envb * 1.4, 0, 1) * np.where(planks, 0.5, 1.0)
+    cb = mix(cb, cb * 0.9, tideb * envb * 0.5)
+    cb = mix(cb, mix(cb, MINERAL * 0.92, 0.5), halob * envb * 0.4)
+    cb = mix(cb, MINERAL * 0.92, coreb * envb * 0.35)
     # подтёки сажи под гвоздями
     fr = FD.Front()
     bk = FD.Back()
