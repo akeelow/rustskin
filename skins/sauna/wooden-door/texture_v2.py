@@ -259,26 +259,177 @@ def down(a):
     return np.stack([down(a[..., c]) for c in range(a.shape[-1])], -1)
 
 
+BACK_ISL = (0, 1, 3, 4, 5, 6, 7)      # зад, брусья с кромками, раскосы (v2.4); ручка 8, 9 — пока v1.2
+
+
+def glass_paint(x, y, gl, col, gloss, spec, emis, frame_like):
+    """Стекло (обе стороны одинаково): запотевшее, свет каменки за ним; потёки — насквозь. Возвращает альфу."""
+    xi0, xi1, yi0, yi1 = FD.PANE
+    u = np.clip((x - xi0) / (xi1 - xi0), 0, 1)
+    v = np.clip((y - yi0) / (yi1 - yi0), 0, 1)
+    heat = np.clip((1 - v) ** 1.1 * (0.62 + 0.38 * np.exp(-((u - 0.47) / 0.42) ** 2)) + 0.14, 0, 1)
+    fog = 0.72 + 0.28 * fbm(x * 0.2, y * 0.2, 91)
+    cut = FD.drip_cut(x, y) * gl
+    border = np.minimum(np.minimum(u, 1 - u) * (xi1 - xi0), np.minimum(v, 1 - v) * (yi1 - yi0))
+    edge_dirt = smooth(3.0, 0.0, border)
+    g_day = mix(hexc("#8F7458"), hexc("#BC966C"), heat) * fog[:, None]
+    g_day = mix(g_day, hexc("#5A4636"), edge_dirt * 0.6)
+    g_day = mix(g_day, hexc("#6A4C34"), np.clip(cut, 0, 1) * 0.7)
+    col[gl] = g_day[gl]
+    gloss[gl] = (0.45 + 0.35 * cut - 0.15 * edge_dirt)[gl]
+    spec[gl] = 0.16
+    e_col = mix(GLOW_CORE, GLOW_EDGE, np.clip(heat * 1.25 - 0.1, 0, 1) ** 1.2)
+    e_int = (0.13 + 0.40 * heat ** 1.2) * (0.94 + 0.06 * fbm(x * 0.09, y * 0.09, 96)) * (1 - 0.7 * edge_dirt) * (1 - cut)
+    emis[gl] = (e_col * e_int[:, None])[gl]
+    near = frame_like & (x > xi0 - 1.6) & (x < xi1 + 1.6) & (y > yi0 - 2.0) & (y < yi1 + 1.6)
+    spill = 0.045 * (0.4 + 0.6 * np.clip(1 - (y - yi0) / (yi1 - yi0), 0, 1))
+    emis[near] = (GLOW_CORE * spill[:, None] * col.mean(1, keepdims=True) * 2.2)[near]
+    alpha = np.ones(len(x), np.float32)
+    alpha[gl] = 1 - cut[gl]
+    return alpha, cut
+
+
+def build_back(isl_img, pos_img):
+    """Зад, брусья, колодка, раскосы, петли, кромки — палитра v1.2 (проверена в игре) по маскам геометрии."""
+    bmask = load("mask", "L") > 0.5
+    F = bmask & np.isin(isl_img, BACK_ISL)
+    if not F.any():
+        return None
+    x, y, z = (pos_img[F][:, i] * 100.0 for i in range(3))
+    nb, ao = load("normal")[F], load("ao", "L")[F]
+    m1, m2, m3, idc = load("m1")[F], load("m2")[F], load("m3")[F], load("idc")[F]
+    cover = load("cover", "L")[F] > 0.5
+    mat = np.rint(idc[:, 0] * 32).astype(np.int32)
+    board = np.rint(idc[:, 1] * 16).astype(np.int32)
+    grain, cav, dent = m1[:, 0], m1[:, 1], m1[:, 2]
+    nail, knot, wear = m2[:, 0], m2[:, 1], m2[:, 2]
+    tone = m3[:, 2]
+    n = len(x)
+    print("back texels", n, "no-hit", int((~cover).sum()))
+    is_ = lambda *k: np.isin(mat, [MAT[i] for i in k])
+    col = np.zeros((n, 3), np.float32)
+    spec = np.full(n, 0.05, np.float32)
+    gloss = np.full(n, 0.2, np.float32)
+    emis = np.zeros((n, 3), np.float32)
+    gr = np.clip(grain, 0, 1)
+    up = smooth(15.0, 205.0, y)
+    blotch = fbm(x * 0.07 + board * 3.1, y * 0.03, 59)
+
+    # ---------------- дерево парной: распаренное, кверху темнее (v1.2), брусья и раскосы чуть светлее
+    wood = is_("board", "frame", "sill", "rail", "brace")
+    tn = mix(STEAMED * 1.02, SMOKED * 1.12, up ** 0.85) * (0.86 + 0.28 * np.clip(tone, 0, 1))[:, None]
+    planks = is_("rail", "brace")
+    tn = np.where(planks[:, None], tn * 1.13, tn)
+    fb = is_("frame", "sill")
+    tn = np.where(fb[:, None], mix(STEAMED * 1.15, SMOKED * 1.3, up * 0.6), tn)
+    cb = tn * (1.05 - 0.15 * gr)[:, None] * (0.9 + 0.2 * blotch)[:, None]    # 0.24 в рендере — брусья «вельветом»
+    cb = cb * (1 - 0.12 * np.clip(dent, 0, 1))[:, None]                     # дно лунок топора темнее
+    soot = np.clip(smooth(145.0, 208.0, y) * (0.45 + 0.6 * fbm(x * 0.05, y * 0.05, 51)), 0, 1)
+    cb = mix(cb, SOOT, soot * 0.7)
+    # затёртые кромки брусьев, раскосов и рамки — светлее (по маске скругления геометрии)
+    cb = mix(cb, hexc("#8C7B66"), np.clip(wear, 0, 1) * (0.40 - 0.25 * soot) * (planks | fb | is_("board")))
+    wetb = smooth(50.0, 0.0, y + 25.0 * (fbm(x * 0.06, y * 0.04, 52) - 0.5)) * 0.8
+    cb = mix(cb, cb * 0.62, wetb)
+    # минеральные полосы от подоконника вниз (вода с окна), тоньше по всей двери
+    wx0, wx1, wy0, wy1 = FD.WINDOW
+    underb = smooth(wx0 - 4, wx0 + 3, x) * smooth(wx1 + 5, wx1 - 2, x) * (y < FD.SILL[2])
+    sxb = vnoise(x * 3.0, y * 0.012, 53)
+    streakb = smooth(0.72, 0.86, sxb) * (0.35 + 0.65 * vnoise(x * 4.8, y * 0.26, 54))
+    envb = underb * smooth(5.0, 50.0, y) * 0.9 + (1 - underb) * smooth(120.0, 20.0, y) * 0.35 * (vnoise(x * 0.11, y * 0, 55) > 0.45)
+    cb = mix(cb, MINERAL * 0.92, np.clip(streakb * envb * 1.4, 0, 1) * np.where(planks, 0.25, 0.5))
+    # подтёки сажи под гвоздями
+    fr = FD.Front()
+    bk = FD.Back()
+    pts = [(a / 100, b / 100) for a, b, _ in bk.heads] + [(a / 100, b / 100) for a, b in fr.through_rails + fr.through_braces]
+    canvas, cx0, cy0, scl = T1.nail_runs(pts, 0.03, np.random.default_rng(29))
+    cb = mix(cb, SOOT * 1.2, np.clip(T1.sample(canvas, x / 100, y / 100, cx0, cy0, scl), 0, 1) * 0.45)
+    cb = mix(cb, SMOKED * 0.75, np.clip(knot, 0, 1) * 0.55)          # почти чёрные сучки читались дырками
+    cb = mix(cb, GAP, np.clip(cav * 1.05, 0, 1) * 0.85)
+    # v1 в игре: зад уходил в рыжий — насыщенность −30 %
+    cb = mix(cb, cb.mean(1, keepdims=True) * np.array([1.06, 1.0, 0.93], np.float32), 0.30) * 0.94
+    col[wood] = cb[wood]
+    gloss[wood] = (0.22 + 0.10 * gr + 0.35 * wetb + 0.12 * (1 - soot))[wood]
+
+    # ---------------- торцы: досок на кромках двери и брусьев на боковых кромках
+    en = is_("end", "rail_end")
+    front_layer = z > 3.0
+    ec = np.where(front_layer[:, None], mix(ASPEN_GREY, STEAMED, 0.35) * 0.85, STEAMED * 0.95)
+    ec = ec * (0.85 + 0.25 * gr)[:, None] * (1 - 0.3 * smooth(30.0, 0.0, y))[:, None]
+    ec = mix(ec, SOOT, soot * 0.6)
+    ec = mix(ec, GAP, np.clip(cav, 0, 1))
+    col[en] = ec[en]
+    gloss[en] = 0.18
+
+    # ---------------- сталь, железо (в парной — чёрное от сажи), петли, проволока
+    st = is_("steel", "gap")
+    rn = fbm(x * 0.4, y * 0.4 + z, 61)
+    sc_ = mix(mix(hexc("#4A3024"), IRON, smooth(0.3, 0.7, rn)), RUST * 0.75, smooth(0.62, 0.92, fbm(x * 0.9, y * 0.9 + z, 62)) * 0.4)
+    col[st] = mix(sc_, GAP, np.clip(cav * 0.6, 0, 1))[st]
+    gloss[st], spec[st] = 0.22, 0.12
+    ir = is_("nail") | (is_("hinge") & (nail > 0.5))
+    rr = fbm(x * 1.6, y * 1.6, 63)
+    col[ir] = mix(mix(IRON, hexc("#5A3A28"), smooth(0.35, 0.8, rr) * 0.4), SOOT * 1.3, 0.45)[ir]
+    gloss[ir], spec[ir] = 0.3, 0.2
+    hg = is_("hinge") & ~ir
+    hc = mix(IRON * 1.1, RUST * 0.9, smooth(0.3, 0.75, fbm(x * 0.5, y * 0.5, 64) + 0.15) * 0.55)
+    hc = mix(hc, hexc("#6E655C"), np.clip(wear, 0, 1) * 0.35)                 # рёбра полосы и шарнира затёрты
+    col[hg] = hc[hg]
+    gloss[hg], spec[hg] = 0.32, 0.2
+    wi = is_("wire")
+    col[wi] = mix(hexc("#4A4038"), RUST * 0.8, 0.3 + 0.4 * gr)[wi]
+    gloss[wi], spec[wi] = 0.3, 0.22
+
+    # ---------------- окно сзади: замазка и стекло — как спереди
+    pu = is_("putty")
+    col[pu] = mix(PUTTY * 0.85 * (0.9 + 0.2 * fbm(x * 0.8, y * 0.8, 65))[:, None], GAP, np.clip(cav * 1.2, 0, 1) * 0.7)[pu]
+    gloss[pu] = 0.25
+    gl = is_("glass")
+    alpha, cut = glass_paint(x, y, gl, col, gloss, spec, emis, fb | pu)
+
+    miss = ~cover
+    col[miss] = (tn * 0.9)[miss]
+    nb[miss] = (0.5, 0.5, 1.0)
+    soft = gl
+    col = col * np.where(soft, 1.0, (0.45 + 0.55 * ao) ** 0.9)[:, None]
+    occ = np.where(gl, 1.0, 0.35 + 0.65 * ao)
+    col = np.clip(col, 0.02, 0.92)
+
+    def med(m):
+        return "#%02X%02X%02X" % tuple((np.median(col[m], 0) * 255).astype(int)) if m.any() else "-"
+    print("median: back boards", med(is_("board") & (y > 40) & (y < 140)), "| rails", med(is_("rail")),
+          "| braces", med(is_("brace")), "| hinges", med(hg), "| see-through %.1f%% of back glass" % (100 * (cut[gl] > 0.5).mean()))
+    return dict(F=F, col=col, spec=spec, gloss=gloss, emis=emis, alpha=alpha, occ=occ, nrm=nb, glass=gl.astype(np.float32),
+                isls=sorted(set(isl_img[F].tolist())))
+
+
 def main():
     tag = sys.argv[sys.argv.index("--tag") + 1] if "--tag" in sys.argv else "v2.0"
     r = build()
-    F, isl = r["F"], r["isl"]
+    isl = r["isl"]
+    rb = build_back(isl, r["pos"])
+    parts = [r] + ([rb] if rb else [])
+    baked = [2] + (rb["isls"] if rb else [])
+    print("baked islands:", baked)
+    F = np.zeros((S, S), bool)
+    for q_ in parts:
+        F |= q_["F"]
 
-    def img(vals, ch):
+    def img(key, ch):
         a = np.zeros((S, S, ch), np.float32)
-        a[F] = np.asarray(vals, np.float32).reshape(-1, ch)
+        for q_ in parts:
+            a[q_["F"]] = np.asarray(q_[key], np.float32).reshape(-1, ch)
         return a
     # v2.2–v2.3: по краю каждой дорожки — тонкий ободок свечения (край воды ловит свет): ночью дорожки читаются водой,
     # а не чёрными трещинами. Ширина ~1.5 px в 1024
-    gl_img = img(r["glass"], 1)[..., 0]
-    hole = (1 - img(r["alpha"], 1)[..., 0]) * gl_img
+    gl_img = img("glass", 1)[..., 0]
+    hole = (1 - img("alpha", 1)[..., 0]) * gl_img
     ring = np.clip(fblur(hole, 5) * 2.5 - hole * 3.0, 0, 1) * gl_img * (hole < 0.5)
     # v2.3: не своя жёлтая яркость (v2.2: вверху стекла, где свечение тусклое, читалось неоновой обводкой), а то же
     # свечение, только ярче у края: внизу заметно, вверху еле видно
-    e_img = img(r["emis"], 3) * (1 + RIM * ring)[..., None]
+    e_img = img("emis", 3) * (1 + RIM * ring)[..., None]
     print("rim texels (4096):", int((ring > 0.2).sum()))
-    maps = {"col": img(r["col"], 3), "spec": img(r["spec"], 1), "gloss": img(r["gloss"], 1), "emis": e_img,
-            "alpha": img(r["alpha"], 1), "occ": img(r["occ"], 1), "nrm": img(r["nrm"], 3)}
+    maps = {"col": img("col", 3), "spec": img("spec", 1), "gloss": img("gloss", 1), "emis": e_img,
+            "alpha": img("alpha", 1), "occ": img("occ", 1), "nrm": img("nrm", 3)}
     # ближайший остров для каждого пустого текселя (отступы делятся между соседями пополам)
     owner = isl.astype(np.int16).copy()
     for _ in range(48):
@@ -292,7 +443,7 @@ def main():
         new = np.zeros_like(filled)
         for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
             src = np.roll(np.roll(filled, dy, 0), dx, 1)
-            take = ~filled & ~new & src & (owner == 2) & (isl < 0)
+            take = ~filled & ~new & src & np.isin(owner, baked) & (isl < 0)
             for k, a in maps.items():
                 sh = np.roll(np.roll(a, dy, 0), dx, 1)
                 a[take] = sh[take]
@@ -301,25 +452,27 @@ def main():
     maps["alpha"][~filled] = 1.0
     print("downscale")
     d = {k: down(v) for k, v in maps.items()}
-    use = down(((owner == 2) & filled).astype(np.float32)) > 0.5
+    use = down((np.isin(owner, baked) & filled).astype(np.float32)) > 0.5
     old = lambda nm, mode: np.asarray(Image.open(OUT / f"Door_{OLD}_{nm}.png").convert(mode), np.float32) / 255
     od, on, osg, oo, oe = old("diffuse", "RGBA"), old("normal", "RGB"), old("specgloss", "RGBA"), old("occlusion", "L"), old("emission", "RGB")
 
     dif = od.copy()
     dif[..., :3] = np.where(use[..., None], d["col"], od[..., :3])
     dif[..., 3] = np.where(use, np.clip(d["alpha"][..., 0], 0, 1), 1.0)
+    dif[..., 3] = np.where(dif[..., 3] > 0.97, 1.0, dif[..., 3])     # v2.4: Lanczos у лужиц давал 254 вне стекла
     # стекло сзади (v1.2): та же маска потёков по x, y — альфа и потёки в цвете
     # v2.1: маска сзади считается в 4096 и уменьшается так же, как перед (в v2.0 — сразу в 1024, края ступенькой)
     P4 = r["pos"] * 100.0
     xi0, xi1, yi0, yi1 = FD.PANE
-    bg4 = (isl == 4) & (P4[..., 0] > xi0 + 1.3) & (P4[..., 0] < xi1 - 1.3) & (P4[..., 1] > yi0 + 1.3) & (P4[..., 1] < yi1 - 1.3)
+    bg4 = (isl == 4) & (4 not in baked) & (P4[..., 0] > xi0 + 1.3) & (P4[..., 0] < xi1 - 1.3) & (P4[..., 1] > yi0 + 1.3) & (P4[..., 1] < yi1 - 1.3)
     c4 = np.zeros((S, S), np.float32)
     c4[bg4] = FD.drip_cut(P4[..., 0][bg4], P4[..., 1][bg4])
     back_glass = down(bg4.astype(np.float32)) > 0.5
     cb = np.clip(down(c4), 0, 1) * back_glass
     dif[..., 3] = np.where(back_glass, 1 - cb, dif[..., 3])
     dif[..., :3] = np.where(back_glass[..., None], mix(dif[..., :3].reshape(-1, 3), hexc("#5E4430"), (cb * 0.75).reshape(-1)).reshape(dif[..., :3].shape), dif[..., :3])
-    print("back glass texels (1024)", int(back_glass.sum()), "see-through %.1f%%" % (100 * (cb[back_glass] > 0.5).mean()))
+    if back_glass.any():
+        print("back glass (v1.2) texels (1024)", int(back_glass.sum()), "see-through %.1f%%" % (100 * (cb[back_glass] > 0.5).mean()))
 
     # нормаль: мелкая деталь ×1.5 (днём в игре рельеф слабее), крупная поправка на сглаженную модель — как есть
     n = d["nrm"] * 2 - 1

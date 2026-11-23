@@ -100,7 +100,8 @@ PATCH = (6, 26.5)                          # доска 6 у низа замен
 TWISTED = 3                                # доска «пропеллером»
 
 MAT = {"board": 1, "patch": 2, "steel": 3, "nail": 4, "frame": 5, "sill": 6, "putty": 7, "glass": 8,
-       "towel": 9, "hook": 10, "leaf": 11, "gap": 12, "rail_end": 13}
+       "towel": 9, "hook": 10, "leaf": 11, "gap": 12, "rail_end": 13, "rail": 14, "brace": 15, "hinge": 16,
+       "wire": 17, "end": 18}
 
 
 def in_poly(x, y, poly):
@@ -134,6 +135,13 @@ def busy(x, y, m=0.0):
 
 # ------------------------------------------------------------------ перед
 class Front:
+    # что у стороны своё (Back переопределяет)
+    PATCH_ON = True            # заплата снизу на доске 6
+    HAND_K = 1.0               # затёртость у ручки
+    AMP0 = 0.075               # высота гребней волокон, см
+    WET = (40.0, 12.0)         # мокрый низ: от y … до y
+    STEEL = STEEL_H            # стальной лист под досками
+
     def __init__(self, seed=31):
         rng = np.random.default_rng(seed)
         self.rng = rng
@@ -189,6 +197,7 @@ class Front:
                 if any(in_poly(px, py, br) for br in BRACES):
                     continue
                 clinch.append((px, py))
+        n_rails = len(clinch)
         for poly in BRACES:
             (xa, ya) = ((poly[0][0] + poly[1][0]) / 2, poly[0][1])
             (xb, yb) = ((poly[-1][0] + poly[-2][0]) / 2, poly[-1][1])
@@ -198,6 +207,8 @@ class Front:
                 py = ya + (yb - ya) * t + rng.uniform(-2, 2)
                 if in_poly(px, py, poly):
                     clinch.append((px, py))
+        # гвозди насквозь: сзади — шляпки на брусьях и раскосах, спереди — загнутые концы (одни и те же точки)
+        self.through_rails, self.through_braces = list(clinch[:n_rails]), list(clinch[n_rails:])
         out = []
         for (px, py) in clinch:
             if towel_cover(px, py) or in_rect(px, py, LOCK_ZONE, 1.0) or in_rect(px, py, (SILL[0], SILL[1], SILL[2], WINDOW[3]), 1.5):
@@ -295,8 +306,8 @@ class Front:
         yhi = np.asarray(self.y_hi)[ii] + 0.3 * (n2(X * 0.9, ii * 2.3, 8) - 0.5)
         # заплата: доска 6 ниже стыка — отдельный обрезок
         pi_, py_ = PATCH
-        patch = (idx == pi_) & (Y < py_)
-        joint_lo = np.where((idx == pi_) & (Y >= py_), Y - (py_ + 0.25), 1e9)
+        patch = (idx == pi_) & (Y < py_) & self.PATCH_ON
+        joint_lo = np.where((idx == pi_) & (Y >= py_) & self.PATCH_ON, Y - (py_ + 0.25), 1e9)
         joint_hi = np.where(patch, (py_ - 0.25) - Y, 1e9)
         dside = np.minimum(X - a, b - X)
         dend = np.minimum(np.minimum(Y - ylo, yhi - Y), np.minimum(joint_lo, joint_hi))
@@ -304,8 +315,8 @@ class Front:
 
         # ---- зоны по истории
         hand = np.exp(-(((X - HANDLE[0]) / 11.0) ** 2 + ((Y - HANDLE[1]) / 17.0) ** 2))
-        hand = np.clip(hand * 1.3 * (0.85 + 0.3 * n2(X * 0.2, Y * 0.2, 11)), 0, 1)
-        wet = sstep(40.0, 12.0, Y + 6 * (n2(X * 0.15, 0.5, 12) - 0.5))
+        hand = np.clip(hand * 1.3 * (0.85 + 0.3 * n2(X * 0.2, Y * 0.2, 11)), 0, 1) * self.HAND_K
+        wet = sstep(self.WET[0], self.WET[1], Y + 6 * (n2(X * 0.15, 0.5, 12) - 0.5))
 
         # ---- фаски: у ручки затёрто сильнее, внизу кромки размочалены
         r_side = 0.55 + 0.6 * hand + 0.2 * wet
@@ -330,7 +341,7 @@ class Front:
             if not m.any():
                 continue
             xs, ys = X[m], Y[m]
-            if i == pi_:
+            if i == pi_ and self.PATCH_ON:
                 ys = np.where(ys < py_, ys + 300.0, ys)        # у обрезка своё бревно
             warp = 0.9 * (fbm2(ys * 0.012, xs * 0.08, g["seed"], 3) - 0.5) + 0.2 * (n2(ys * 0.06, xs * 0.3, g["seed"] + 3) - 0.5)
             if g["quarter"]:
@@ -343,7 +354,7 @@ class Front:
                 ph = ph + 1.4 * kr * np.exp(-(dd / (2.2 * kr)) ** 2) / g["s"]
             f = ph - np.floor(ph)
             g_ridge[m] = sstep(0.42, 0.72, f) * sstep(1.0, 0.86, f)     # гребень ~1/3 шага (8–11 мм), склон к поздней
-        amp = 0.075 * (1 - 0.75 * hand) + 0.07 * wet
+        amp = self.AMP0 * (1 - 0.75 * hand) + 0.07 * wet
         amp = np.where(patch, 0.05, amp)
         H += amp * (g_ridge - 0.4)
         # размочаленные волокна у низа: мелкие продольные гребни
@@ -365,7 +376,7 @@ class Front:
             hb = H[box]
             if fallen:
                 hole = sstep(kr * 0.95, kr * 0.7, dd)
-                hb = hb * (1 - hole) + hole * (STEEL_H + 0.1)
+                hb = hb * (1 - hole) + hole * (self.STEEL + 0.1)
                 cav[box] = np.maximum(cav[box], sstep(kr * 0.95, kr * 0.7, dd))
                 hb -= 0.08 * ring
             else:
@@ -418,10 +429,10 @@ class Front:
             H[box] -= d * u * (0.7 + 0.6 * n2(X[box] * 2, Y[box] * 2, 17))
             dent_m[box] = np.maximum(dent_m[box], u)
         # ---- скол нижнего угла доски (клин, излом волокнами)
-        ci, side = self.chip
+        ci, side = self.chip if self.chip else (0, -1)
         cx, cy = B[ci][0] if side < 0 else B[ci][1], self.y_lo[ci]
         u_, v_ = (X - cx) * (-side), Y - cy
-        wedge = (idx == ci) & (u_ > -0.5) & (v_ > -0.5) & (u_ / 3.0 + v_ / 4.5 < 1)
+        wedge = (idx == ci) & (u_ > -0.5) & (v_ > -0.5) & (u_ / 3.0 + v_ / 4.5 < 1) & bool(self.chip)
         H = np.where(wedge, np.minimum(H, -0.45 - 0.3 * (1 - (u_ / 3.0 + v_ / 4.5)) + 0.08 * (n2(X * 2, Y * 0.5, 5) - 0.5)), H)
         dent_m = np.maximum(dent_m, wedge * 1.0)
 
@@ -490,7 +501,7 @@ class Front:
             dent_m[box] = np.maximum(dent_m[box], sm)
 
         # ---- щели и стальной лист (под досками и полосой вдоль кромок)
-        steel = STEEL_H + 0.06 * (fbm2(X * 0.25, Y * 0.25, 51, 3) - 0.5) - 0.08 * sstep(0.62, 0.8, fbm2(X * 0.6, Y * 0.6, 53, 2))
+        steel = self.STEEL + 0.06 * (fbm2(X * 0.25, Y * 0.25, 51, 3) - 0.5) - 0.08 * sstep(0.62, 0.8, fbm2(X * 0.6, Y * 0.6, 53, 2))
         H = np.where(inside, H, steel)
         cav = np.where(inside, cav, 1.0)
         mat = np.where(inside, np.where(patch, MAT["patch"], MAT["board"]), MAT["gap"])
@@ -784,3 +795,329 @@ def drip_cut(x, y):
         cut = np.maximum(cut, body)
     inside = (x > xi0 + 1.1) & (x < xi1 - 1.1) & (y > yi0 + 1.0) & (y < yi1 - 1.2)   # не под замазкой
     return cut * inside
+
+
+# ================================================================== зад (v2.4)
+# Сторона парной: те же 9 досок, распаренные (гребни волокон выше), трещины гуще в верхнем поле (жар), по одному
+# гвоздю на доску в каждом поле; окно — то же, что спереди (рамка, замазка, подоконник); брусья, колодка и раскосы
+# модели — тёсаные, с лунками топора и затёртыми кромками; две кованые петли, верхняя примотана проволокой.
+LOCK_BLOCK = (-119.6, -97.1, 74.6, 98.5)          # колодка под замок под средним брусом
+LOCK_ZONE_B = (-120.0, -95.0, 64.0, 99.0)         # сзади замки садятся на колодку, кодовый свисает ниже
+RAIL_BOX = tuple(((-120.9, y0, ZR), (-0.1, y1, 0.0)) for (y0, y1) in ((0.0, 22.5), (97.1, 119.7), (187.5, 211.2)))
+HINGES_Y = (11.8, 199.0)
+HINGE = dict(xe=-1.1, L=30.0, h0=6.2, h1=4.0, t=0.55)
+
+
+def in_braces(x, y, m=0.0):
+    out = np.zeros(np.broadcast(np.asarray(x), np.asarray(y)).shape, bool)
+    for poly in BRACES:
+        for dx, dy in ((0, 0), (m, 0), (-m, 0), (0, m), (0, -m)):
+            out |= in_poly(np.asarray(x) + dx, np.asarray(y) + dy, poly)
+    return out
+
+
+def busy_back(x, y, m=0.0):
+    on_rail = np.zeros(np.shape(np.asarray(x, float) + np.asarray(y, float)), bool)
+    for (lo, hi) in RAIL_BOX:
+        on_rail |= (np.asarray(y) > lo[1] - m) & (np.asarray(y) < hi[1] + m)
+    return (in_rect(x, y, (SILL[0], SILL[1], SILL[2], WINDOW[3]), m) | in_rect(x, y, LOCK_ZONE_B, m)
+            | on_rail | in_braces(x, y, m))
+
+
+class Back(Front):
+    PATCH_ON = False
+    HAND_K = 0.0
+    AMP0 = 0.11                # пар вымывает мягкую древесину — гребни выше, чем спереди
+    WET = (45.0, 23.0)         # вода стоит на нижнем брусе
+    STEEL = -1.2
+
+    def __init__(self, seed=47):
+        super().__init__(seed)
+
+    def _features(self, rng):
+        B = BOARDS
+        heads = []
+        for i, (a, b) in enumerate(B):
+            for y in (60.0, 152.0):
+                for _t in range(20):
+                    px, py = (a + b) / 2 + rng.uniform(-2.5, 2.5), y + rng.uniform(-4, 4)
+                    if not busy_back(px, py, 2.0):
+                        heads.append((px, py, 1 if rng.random() < 0.15 else 0))
+                        break
+        self.heads = heads
+        self.clinch = []
+        self.smiles = [(x, y, rng.uniform(0, 2 * np.pi), 1.6) for (x, y, k) in heads if rng.random() < 0.2]
+        knots, tries = [], 0
+        while len(knots) < 7 and tries < 5000:
+            tries += 1
+            i = int(rng.integers(len(B)))
+            a, b = B[i]
+            x, y = rng.uniform(a + 2.5, b - 2.5), rng.uniform(25, 186)
+            if busy_back(x, y, 4.0) or any(np.hypot(x - kx, y - ky) < 25 for kx, ky, *_ in knots):
+                continue
+            knots.append((x, y, rng.uniform(1.3, 2.4), False))
+        self.knots = knots
+        cracks = []
+        for (n, y0, y1) in ((7, 122, 186), (2, 25, 95)):          # жар сверху — трещин больше
+            for _ in range(n):
+                for _t in range(60):
+                    i = int(rng.integers(len(B)))
+                    a, b = B[i]
+                    x, y = rng.uniform(a + 2, b - 2), rng.uniform(y0, y1 - 8)
+                    L = rng.uniform(8, 28)
+                    if not (busy_back(x, y, 2) or busy_back(x, min(y + L, y1), 2) or busy_back(x, y + L / 2, 2)):
+                        cracks.append((x, y, min(y + L, y1), 0.28, 0.4, int(rng.integers(1000))))
+                        break
+        self.cracks = cracks
+        dents = []
+        for _ in range(5):
+            x, y = rng.uniform(-115, -6), rng.uniform(24, 45)
+            if not busy_back(x, y, 2):
+                r = rng.uniform(1.5, 3.0)
+                dents.append((x, y, r, 0.04 + 0.03 * r))
+        self.dents = dents
+        nicks = []
+        for _ in range(10):
+            i = int(rng.integers(len(B)))
+            x, y = B[i][int(rng.integers(2))], rng.uniform(24, 186)
+            if not busy_back(x, y, 1):
+                nicks.append((x, y, rng.uniform(0.8, 1.6), rng.uniform(0.12, 0.22)))
+        self.nicks = nicks
+        self.chip = None
+
+
+def back_grid(step=STEP):
+    xs = np.arange(EDGE_X[0] - 0.3, EDGE_X[1] + 0.3 + 1e-6, step)
+    ys = np.arange(-0.5, FACE_Y[1] + 0.5 + 1e-6, step)
+    return np.meshgrid(xs, ys)
+
+
+# ------------------------------------------------------------------ тёсаный брус: общие детали
+def grain_ridge(across, along, pitch, seed):
+    warp = 0.8 * (fbm2(along * 0.012, across * 0.1, seed, 3) - 0.5)
+    f = (across / pitch + warp) % 1
+    return sstep(0.42, 0.72, f) * sstep(1.0, 0.86, f)
+
+
+def hewn(along, across, seed):
+    """Лунки тесла/топора: пологие вытянутые чаши ~6 × 3 см (0 — гребень между лунками, 1 — дно)."""
+    f1, f2 = _voronoi(along / 2.6, across, 2.2, seed)        # ~6 × 2.2 см (мельче в превью — «булыжник»)
+    return np.clip(1 - (f1 / 1.5) ** 2, 0, 1)
+
+
+def _head(H, X, Y, x, y, kind=0, r=0.9):
+    """Кованая шляпка (как на переде) поверх поля H (смещение наружу); возвращает H и маску."""
+    xs, ys = X - x, Y - y
+    aa = (x * 7.3 + y * 3.1) % 1.57
+    ca, sa = np.cos(aa), np.sin(aa)
+    u, v = xs * ca + ys * sa, -xs * sa + ys * ca
+    q = ((np.abs(u) / r) ** 4 + (np.abs(v) / r) ** 4) ** 0.25
+    pyr = 1 - np.maximum(np.abs(u), np.abs(v)) / r
+    dome = np.sqrt(np.clip(1 - q ** 2, 0, 1))
+    lift = {0: 0.05, 1: -0.1, 2: 0.4}[kind]
+    hh = H + lift + 0.12 * dome + 0.08 * np.clip(pyr, 0, 1)
+    dd = np.hypot(xs, ys)
+    H2 = H - 0.04 * np.clip(1 - ((dd - 1.15) / 0.45) ** 2, 0, 1)
+    if kind == 1:
+        H2 = H2 - 0.14 * np.clip(1 - (dd / 1.7) ** 2, 0, 1) ** 2
+    return np.where(q < 1, np.maximum(H2, hh), H2), sstep(1.03, 0.92, q)
+
+
+def _crack(H, cav, along, across, a0, a1, c0, hw, dep, sd):
+    box = (along > a0 - 1) & (along < a1 + 1) & (np.abs(across - c0) < 2.5)
+    if not box.any():
+        return H, cav
+    t = np.clip((along[box] - a0) / (a1 - a0), 0, 1)
+    cc = c0 + 0.6 * (n2(along[box] * 0.08, sd, sd) - 0.5)
+    prof = np.sin(np.pi * t) ** 0.6
+    w = hw * prof + 1e-3
+    core = np.clip(1 - np.abs(across[box] - cc) / w, 0, 1)
+    H[box] -= dep * prof * core ** 0.7 + 0.05 * np.clip(1 - np.abs(across[box] - cc) / (w + 0.5), 0, 1) * prof
+    cav[box] = np.maximum(cav[box], core * prof)
+    return H, cav
+
+
+def _pack(h, grain, cav, dent, nail, wear, tone, mat):
+    z = np.zeros_like(h)
+    return dict(h=h, m1=np.stack([grain, cav, dent], -1), m2=np.stack([nail, z, wear], -1),
+                m3=np.stack([z, z, z + tone], -1), mat=mat)
+
+
+def _hinge_rect(x, y, m=0.0):
+    hit = False
+    for yh in HINGES_Y:
+        hit = hit or (x > HINGE["xe"] - HINGE["L"] - m and abs(y - yh) < HINGE["h0"] / 2 + m)
+    return hit
+
+
+def rail_face(k, face, U, V, P, lo, hi, nails):
+    """Грань бруса k (0 — нижний, 1 — средний, 2 — верхний) для bed/bake_v2.rbox: h — сдвиг наружу (см)."""
+    z = np.zeros_like(U)
+    sd = 500 + 17 * k
+    tone = 0.3 + 0.2 * k
+    if face == "z-":                                   # лицо бруса (видно из парной)
+        y, x = U, V
+        de = np.minimum(np.minimum(x - lo[0], hi[0] - x), np.minimum(y - lo[1], hi[1] - y))
+        gr = grain_ridge(y, x, 2.6, sd)
+        dish = hewn(x, y, sd + 1)
+        h = 0.1 * (gr - 0.4) - 0.11 * dish + 0.04 * (n2(x * 0.1, y * 0.3, sd + 2) - 0.5)
+        wear = sstep(2.2, 0.0, de)                     # затёртые кромки: скругление шире, цвет светлее
+        h = h - 0.6 * round_drop(de, 1.4)
+        cav = np.zeros_like(U)
+        rng = np.random.default_rng(sd)
+        for _ in range(2):
+            a0 = rng.uniform(-110, -40)
+            h, cav = _crack(h, cav, x, y, a0, a0 + rng.uniform(20, 45), rng.uniform(lo[1] + 5, hi[1] - 5), 0.28, 0.4, sd + 3)
+        nm = np.zeros_like(U)
+        for (nx, ny) in nails:
+            if lo[1] < ny < hi[1] and not _hinge_rect(nx, ny, 1.0):
+                box = (np.abs(x - nx) < 2.6) & (np.abs(y - ny) < 2.6)
+                if box.any():
+                    hb, mb = _head(h[box], x[box], y[box], nx, ny)
+                    h[box] = hb
+                    nm[box] = np.maximum(nm[box], mb)
+        mat = np.where(nm > 0.5, MAT["nail"], MAT["rail"])
+        return _pack(h, gr, cav, dish * 0.4, nm, wear, tone, mat)
+    if face in ("y-", "y+"):                           # бока бруса: волокна вдоль, забоины
+        x, zz = U, V
+        gr = grain_ridge(zz, x, 2.2, sd + 5)
+        h = 0.08 * (gr - 0.4) + 0.03 * (n2(x * 0.15, zz, sd + 6) - 0.5)
+        dent = np.zeros_like(U)
+        rng = np.random.default_rng(sd + 7)
+        for _ in range(6):
+            cx, cz, r = rng.uniform(-115, -5), rng.uniform(-4.0, -1.0), rng.uniform(0.8, 1.5)
+            u = np.clip(1 - ((x - cx) ** 2 + (zz - cz) ** 2) / r ** 2, 0, 1)
+            h = h - 0.15 * u
+            dent = np.maximum(dent, u)
+        wear = sstep(1.6, 0.0, zz - lo[2])             # кромка у лица бруса затёрта
+        return _pack(h, gr, z, dent, z, wear, tone, np.full(U.shape, MAT["rail"]))
+    if face in ("x-", "x+"):                           # торцы на кромках двери: кольца, пила, трещина
+        y, zz = U, V
+        cy, cz = (lo[1] + hi[1]) / 2 + (6 if k % 2 else -6), -2.3 - 14.0
+        rr = np.hypot(y - cy, zz - cz)
+        ring = sstep(0.42, 0.7, (rr / 2.4 + 0.25 * n2(y * 0.2, zz * 0.2, sd + 8)) % 1)
+        h = 0.06 * (ring - 0.5) + 0.015 * np.sin(zz * 3.1 + y * 0.4)
+        ang = np.arctan2(y - cy, zz - cz)
+        chk = sstep(0.04, 0.0, np.abs(ang - 0.15 * (1 if k % 2 else -1))) * (rr > 14.5)
+        h = h - 0.3 * chk
+        return _pack(h, ring, chk, z, z, z, tone, np.full(U.shape, MAT["rail_end"]))
+    return _pack(z, z, z, z, z, z, tone, np.full(U.shape, MAT["rail"]))
+
+
+def lock_face(face, U, V, P, lo, hi):
+    """Колодка под замок: чистое дерево, волокна вдоль y, кромки затёрты руками и замком."""
+    z = np.zeros_like(U)
+    if face == "z-":
+        y, x = U, V
+        de = np.minimum(np.minimum(x - lo[0], hi[0] - x), np.minimum(y - lo[1], hi[1] - y))
+        gr = grain_ridge(x, y, 2.4, 541)
+        h = 0.07 * (gr - 0.4) - 0.08 * hewn(y, x, 542) - 0.6 * round_drop(de, 1.6)
+        return _pack(h, gr, z, z, z, sstep(2.4, 0.0, de), 0.6, np.full(U.shape, MAT["rail"]))
+    if face in ("x-", "x+", "y-", "y+"):
+        gr = grain_ridge(V, U, 2.2, 543)
+        return _pack(0.06 * (gr - 0.4), gr, z, z, z, sstep(1.6, 0.0, V - lo[2]), 0.6, np.full(U.shape, MAT["rail"]))
+    return _pack(z, z, z, z, z, z, 0.6, np.full(U.shape, MAT["rail"]))
+
+
+# ------------------------------------------------------------------ раскосы
+def seg_dist(x, y, poly):
+    """Расстояние до контура многоугольника (см)."""
+    d = np.full(np.shape(x), 1e9)
+    n = len(poly)
+    for i in range(n):
+        (xa, ya), (xb, yb) = poly[i], poly[(i + 1) % n]
+        dx, dy = xb - xa, yb - ya
+        t = np.clip(((x - xa) * dx + (y - ya) * dy) / (dx * dx + dy * dy + 1e-12), 0, 1)
+        d = np.minimum(d, np.hypot(x - xa - t * dx, y - ya - t * dy))
+    return d
+
+
+def brace_field(X, Y, bi, nails):
+    """Лицо раскоса bi: высота над полем досок (см, 4.6 на лице), маски. Волокна и лунки — вдоль раскоса."""
+    poly = BRACES[bi]
+    (xa, ya) = ((poly[0][0] + poly[1][0]) / 2, poly[0][1])
+    (xb, yb) = ((poly[-1][0] + poly[-2][0]) / 2, poly[-1][1])
+    dvec = np.array([xb - xa, yb - ya])
+    dvec /= np.linalg.norm(dvec)
+    along = (X - xa) * dvec[0] + (Y - ya) * dvec[1]
+    across = -(X - xa) * dvec[1] + (Y - ya) * dvec[0]
+    sd = 600 + 13 * bi
+    inside = in_poly(X, Y, poly)
+    de = seg_dist(X, Y, poly)
+    gr = grain_ridge(across, along, 2.5, sd)
+    dish = hewn(along, across, sd + 1)
+    h = -ZR + 0.1 * (gr - 0.4) - 0.11 * dish + 0.04 * (n2(along * 0.1, across * 0.3, sd + 2) - 0.5)
+    h = h - round_drop(de, 0.7) - 0.6 * round_drop(de, 1.4)
+    cav = np.zeros_like(X, dtype=np.float64)
+    h, cav = _crack(h, cav, along, across, 15.0, 45.0, 1.5, 0.28, 0.4, sd + 3)
+    nm = np.zeros_like(X, dtype=np.float64)
+    for (nx, ny) in nails:
+        if in_poly(nx, ny, poly):
+            box = (np.abs(X - nx) < 2.6) & (np.abs(Y - ny) < 2.6)
+            if box.any():
+                hb, mb = _head(h[box], X[box], Y[box], nx, ny)
+                h[box] = hb
+                nm[box] = np.maximum(nm[box], mb)
+    mat = np.where(nm > 0.5, MAT["nail"], MAT["brace"])
+    out = _pack(h, gr, cav, dish * 0.4, nm, sstep(2.2, 0.0, de), 0.45 + 0.1 * bi, mat)
+    out["inside"] = inside
+    return out
+
+
+# ------------------------------------------------------------------ петли
+def hinge_outline(yh):
+    xe, L, h0, h1 = HINGE["xe"], HINGE["L"], HINGE["h0"], HINGE["h1"]
+    tip = [(xe - L + 0.5 * h1 * (1 - np.cos(a)), yh + 0.5 * h1 * np.sin(a)) for a in np.radians((80, 50, 20, -20, -50, -80))]
+    return [(xe, yh - h0 / 2), (xe, yh + h0 / 2), (xe - 5.0, yh + h0 / 2 - 0.4)] + tip + [(xe - 5.0, yh - h0 / 2 + 0.4)]
+
+
+def hinge_field(X, Y, yh, hi):
+    """Кованая полоса петли поверх лица бруса: h — высота над лицом (см), вне полосы — уходит в брус."""
+    poly = hinge_outline(yh)
+    inside = in_poly(X, Y, poly)
+    de = seg_dist(X, Y, poly)
+    t = HINGE["t"]
+    h = t - round_drop(de, 0.25) - 0.07 * np.clip(1 - _voronoi(X, Y, 1.8, 700 + hi)[0] / 1.1, 0, 1) ** 2
+    nm = np.zeros_like(X, dtype=np.float64)
+    xe, L = HINGE["xe"], HINGE["L"]
+    for k, tt in enumerate((0.14, 0.45, 0.72)):
+        nx, ny = xe - L * tt, yh + (0.3 if k % 2 else -0.3)
+        box = (np.abs(X - nx) < 1.6) & (np.abs(Y - ny) < 1.6)
+        dd = np.hypot(X[box] - nx, Y[box] - ny)
+        dome = np.sqrt(np.clip(1 - (dd / 1.0) ** 2, 0, 1))
+        h[box] = np.where(dd < 1.0, np.maximum(h[box], t + 0.05 + 0.25 * dome), h[box])
+        nm[box] = np.maximum(nm[box], sstep(1.03, 0.9, dd))
+    h = np.where(inside, h, -0.5)
+    z = np.zeros_like(X, dtype=np.float64)
+    return dict(h=h, m1=np.stack([z, z, z], -1), m2=np.stack([nm, z, sstep(0.5, 0.0, de) * inside], -1),
+                m3=np.stack([z, z, z + 0.5], -1), mat=np.full(X.shape, MAT["hinge"]), inside=inside)
+
+
+# ------------------------------------------------------------------ верхняя и нижняя кромки (торцы досок)
+def end_field(X, Z, top):
+    """Торцы досок на верхней (top) или нижней кромке: плоскость y = const, h — наружу. По z: торец доски переда,
+    стальной лист, торец доски зада. Кольца, следы пилы, у низа размочалено."""
+    H = np.full(X.shape, -1.0)
+    mat = np.full(X.shape, MAT["gap"])
+    ring = np.zeros_like(X, dtype=np.float64)
+    cav = np.ones_like(X, dtype=np.float64)
+    for layer, (z0, z1) in enumerate(((4.15, ZF), (0.0, 1.15))):
+        for i, (a, b) in enumerate(BOARDS):
+            m = (X > a) & (X < b) & (Z > z0) & (Z < z1)
+            if not m.any():
+                continue
+            cx = (a + b) / 2 + 3.0 * np.sin(i * 2.3 + layer)
+            cz = (z0 + z1) / 2 - 18.0 * (1 if (i + layer) % 2 else -1)
+            rr = np.hypot(X[m] - cx, Z[m] - cz)
+            rg = sstep(0.42, 0.7, (rr / 2.3 + 0.3 * n2(X[m] * 0.2, Z[m] * 0.3, 800 + i)) % 1)
+            de = np.minimum(np.minimum(X[m] - a, b - X[m]), np.minimum(Z[m] - z0, z1 - Z[m]))
+            hh = 0.06 * (rg - 0.5) - round_drop(de, 0.35) + 0.015 * np.sin(X[m] * 2.7 + i)
+            if not top:
+                hh = hh + 0.08 * (n2(X[m] * 1.5, Z[m] * 4, 810) - 0.5)          # размочалено водой
+            H[m], mat[m], ring[m], cav[m] = hh, MAT["end"], rg, 0.0
+    st = (Z >= 1.15) & (Z <= 4.15)
+    f1, _ = _voronoi(X, Z * 2, 1.4, 820 + int(top))
+    H = np.where(st, -0.1 - 0.06 * np.clip(1 - f1 / 0.6, 0, 1) ** 2, H)
+    mat = np.where(st, MAT["steel"], mat)
+    cav = np.where(st, 0.0, cav)
+    return dict(h=H, mat=mat, grain=ring, cavity=cav)

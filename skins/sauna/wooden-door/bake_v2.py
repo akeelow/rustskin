@@ -285,15 +285,182 @@ def build_leaves(low):
     return [ob]
 
 
-PARTS = {"front": build_front, "edges": build_edges, "towel": build_towel, "leaves": build_leaves}
+# ================================================================ зад (v2.4)
+def flip_quads(ob):
+    """Развернуть грани (нормали в −z / наружу)."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bmesh.ops.reverse_faces(bm, faces=bm.faces[:])
+    bm.to_mesh(ob.data)
+    bm.free()
+    return ob
+
+
+def check_normals(ob, want, name):
+    """Средняя нормаль граней объекта против ожидаемого направления — гранями внутрь AO и нормаль чёрные."""
+    n = np.zeros(len(ob.data.polygons) * 3, np.float32)
+    ob.data.polygons.foreach_get("normal", n)
+    m = n.reshape(-1, 3).mean(0)
+    log(f"  {name}: mean normal {np.round(m, 2)} (want {want})")
+    assert np.dot(m, want) > 0.3, f"{name}: faces point the wrong way"
+
+
+def field_mesh(name, P, f, group, want, flip):
+    attrs = {k: f[k] for k in ("m1", "m2", "m3")}
+    z = np.zeros(P.shape[:2])
+    attrs["idc"] = np.stack([np.asarray(f["mat"], float) / 32.0, f.get("board", z) / 16.0, z], -1)
+    ob = grid_mesh(name, P, attrs)
+    if flip:
+        flip_quads(ob)
+    check_normals(ob, np.array(want), name)
+    ob["group"] = group
+    return ob
+
+
+def build_back(low):
+    X, Y = FD.back_grid()
+    log("back field", X.shape)
+    f = FD.Back().field(X, Y)
+    fa = field_attrs(f)
+    f2 = dict(m1=fa["m1"], m2=fa["m2"], m3=fa["m3"], mat=f["mat"], board=f["board"])
+    P = np.stack([X, Y, FD.ZB - f["h"]], -1)
+    return [field_mesh("hp_back", P, f2, "back", (0, 0, -1), flip=True)]
+
+
+def build_rails(low):
+    fr = FD.Front()
+    out = []
+    for k, (lo, hi) in enumerate(FD.RAIL_BOX):
+        ob = BB.rbox(f"hp_rail_{k}", lo, hi, 0.7,
+                     lambda face, U, V, P, k=k, lo=lo, hi=hi: FD.rail_face(k, face, U, V, P, np.asarray(lo), np.asarray(hi), fr.through_rails),
+                     step=FD.STEP, group="rails")
+        out.append(ob)
+    x0, x1, y0, y1 = FD.LOCK_BLOCK
+    lo, hi = np.array([x0, y0, FD.ZR]), np.array([x1, y1, 0.0])
+    out.append(BB.rbox("hp_lock", lo, hi, 0.7, lambda face, U, V, P: FD.lock_face(face, U, V, P, lo, hi),
+                       step=FD.STEP, group="rails"))
+    # петли: кованая полоса по лицу бруса, шарнир по кромке двери
+    hg = FD.HINGE
+    for k, yh in enumerate(FD.HINGES_Y):
+        xs = np.arange(hg["xe"] - hg["L"] - 1.0, hg["xe"] + 0.3, FD.STEP * 0.8)
+        ys = np.arange(yh - hg["h0"] / 2 - 1.0, yh + hg["h0"] / 2 + 1.0, FD.STEP * 0.8)
+        X, Y = np.meshgrid(xs, ys)
+        f = FD.hinge_field(X, Y, yh, k)
+        P = np.stack([X, Y, FD.ZR - f["h"]], -1)
+        out.append(field_mesh(f"hp_hinge_{k}", P, f, "rails", (0, 0, -1), flip=True))
+    acc = Acc()
+
+    def add(V, Q, mat, rid=None):
+        a = BB.attrs_const(len(V), "twig")
+        a["idc"][:, 0] = FD.MAT[mat] / 32.0
+        if rid is not None:
+            a["m1"][:, 0] = rid
+        acc.add(V, Q, a)
+    for yh in FD.HINGES_Y:                    # шарнир: ствол по кромке двери
+        t = np.linspace(-hg["h0"] / 2 - 0.7, hg["h0"] / 2 + 0.7, 40)
+        C = np.stack([np.full_like(t, hg["xe"] + 0.6), yh + t, np.full_like(t, FD.ZR - 0.5)], -1)
+        V, Q, _ = tube(C, np.full(len(t), 1.1), seg=16)
+        add(V, Q, "hinge")
+    # проволока: последнего гвоздя у верхней петли нет — конец прикручен через брус; жгут Ø ~0.9 см, скрутка вниз
+    yh = FD.HINGES_Y[1]
+    xw = hg["xe"] - hg["L"] * 0.9
+    for k in range(3):
+        x = xw + k * 1.1
+        key = np.array([(x - 0.4, yh - 5.0, FD.ZR + 0.1), (x - 0.2, yh - 3.6, FD.ZR - 0.6), (x, yh, FD.ZR - 1.0),
+                        (x + 0.2, yh + 3.6, FD.ZR - 0.6), (x + 0.4, yh + 5.0, FD.ZR + 0.1)])
+        s = np.linspace(0, 4, 60)
+        C = np.stack([np.interp(s, np.arange(5), key[:, i]) for i in range(3)], -1)
+        V, Q, rid = tube(C, np.full(len(s), 0.42), seg=10, twist=0.9, ridge=0.25)
+        add(V, Q, "wire", rid)
+    t = np.linspace(0, 1, 50)
+    C = np.stack([xw + 1.1 + 0.6 * np.sin(t * 16), yh - 5.0 - 3.5 * t, FD.ZR - 0.4 - 0.3 * np.cos(t * 16)], -1)
+    V, Q, rid = tube(C, np.full(len(t), 0.33), seg=8, twist=0.8, ridge=0.25)
+    add(V, Q, "wire", rid)
+    iron = acc.build("hp_hinge_iron")
+    iron["group"] = "rails"
+    out.append(iron)
+    # верхняя и нижняя кромки: торцы досок переда и зада, стальной лист
+    xs = np.arange(FD.EDGE_X[0] - 0.3, FD.EDGE_X[1] + 0.3, FD.STEP)
+    zs = np.arange(-0.3, 5.7, FD.STEP)
+    X, Z = np.meshgrid(xs, zs)
+    for top, ye, want in ((True, 211.3, (0, 1, 0)), (False, -0.1, (0, -1, 0))):
+        f = FD.end_field(X, Z, top)
+        P = np.stack([X, ye + (1 if top else -1) * f["h"], Z], -1)
+        zz = np.zeros_like(X)
+        f2 = dict(m1=np.stack([f["grain"], f["cavity"], zz], -1), m2=np.stack([zz, zz, zz], -1),
+                  m3=np.stack([zz, zz, zz + 0.4], -1), mat=f["mat"])
+        out.append(field_mesh(f"hp_end_{'top' if top else 'bottom'}", P, f2, "rails", want, flip=top))
+    return out
+
+
+def build_braces(low):
+    fr = FD.Front()
+    out = []
+    for bi, poly in enumerate(FD.BRACES):
+        pa = np.array(poly)
+        xs = np.arange(pa[:, 0].min() - 0.3, pa[:, 0].max() + 0.3, FD.STEP)
+        ys = np.arange(pa[:, 1].min() - 0.3, pa[:, 1].max() + 0.3, FD.STEP)
+        X, Y = np.meshgrid(xs, ys)
+        f = FD.brace_field(X, Y, bi, fr.through_braces)
+        P = np.stack([X, Y, FD.ZB - f["h"]], -1)
+        ny, nx = X.shape
+        ii = np.arange(ny * nx).reshape(ny, nx)
+        ins = f["inside"]
+        qm = ins[:-1, :-1] & ins[:-1, 1:] & ins[1:, 1:] & ins[1:, :-1]
+        Q = np.stack([ii[:-1, :-1], ii[1:, :-1], ii[1:, 1:], ii[:-1, 1:]], -1)[qm]       # обход для −z
+        z = np.zeros((ny, nx))
+        attrs = {"m1": f["m1"], "m2": f["m2"], "m3": f["m3"], "idc": np.stack([np.asarray(f["mat"], float) / 32.0, z, z], -1)}
+        acc = Acc()
+        acc.add(P.reshape(-1, 3), Q, {k: v.reshape(-1, 3) for k, v in attrs.items()})
+        # стенки по контуру: от поля досок до скругления лица
+        area = 0.5 * np.sum(pa[:, 0] * np.roll(pa[:, 1], -1) - np.roll(pa[:, 0], -1) * pa[:, 1])
+        zl = np.linspace(FD.ZB, FD.ZB - 3.6, 25)
+        cx, cy = pa.mean(0)
+        for i in range(len(pa)):
+            a, b = pa[i], pa[(i + 1) % len(pa)]
+            L = np.hypot(*(b - a))
+            s = np.linspace(0, 1, max(2, int(L / FD.STEP)))
+            pts = a[None] + s[:, None] * (b - a)[None]
+            n_out = np.array([b[1] - a[1], a[0] - b[0]]) / L * (1 if area > 0 else -1)
+            Vw = np.stack([np.repeat(pts[:, 0:1], len(zl), 1), np.repeat(pts[:, 1:2], len(zl), 1),
+                           np.repeat(zl[None], len(pts), 0)], -1)
+            nu, nv = len(pts), len(zl)
+            jj = np.arange(nu * nv).reshape(nu, nv)
+            Qw = np.stack([jj[:-1, :-1], jj[1:, :-1], jj[1:, 1:], jj[:-1, 1:]], -1).reshape(-1, 4)
+            # нормаль квада (вдоль × вниз по z) должна смотреть наружу
+            e1 = np.append(b - a, 0.0)
+            e2 = np.array([0, 0, zl[1] - zl[0]])
+            if np.dot(np.cross(e1, e2)[:2], n_out) < 0:
+                Qw = Qw[:, ::-1]
+            zz = np.zeros(nu * nv)
+            g = FD.grain_ridge(Vw[..., 2].ravel(), (pts[:, 0:1] * 0 + s[:, None] * L).repeat(nv, 1).ravel(), 2.2, 650 + i)
+            aw = {"m1": np.stack([g, zz, zz], -1), "m2": np.stack([zz, zz, sstep_np(1.6, 0.0, -(Vw[..., 2].ravel()) - 2.0)], -1),
+                  "m3": np.stack([zz, zz, zz + 0.45 + 0.1 * bi], -1), "idc": np.stack([zz + FD.MAT["brace"] / 32.0, zz, zz], -1)}
+            acc.add(Vw.reshape(-1, 3), Qw, aw)
+        ob = acc.build(f"hp_brace_{bi}")
+        ob["group"] = "braces"
+        check_normals(ob, np.array((0, 0, -1)), ob.name)
+        out.append(ob)
+    return out
+
+
+def sstep_np(e0, e1, x):
+    return FD.sstep(e0, e1, x)
+
+
+PARTS = {"front": build_front, "edges": build_edges, "towel": build_towel, "leaves": build_leaves,
+         "back": build_back, "rails": build_rails, "braces": build_braces}
 # группа: куски-цели (острова), вытяжка лучей (см)
-GROUPS = {"front": ({FRONT}, 4.5)}
+GROUPS = {"front": ({FRONT}, 4.5), "back": ({0, 4}, 3.2), "rails": ({1, 3, 5}, 2.6), "braces": ({6, 7}, 1.8)}
+GROUP_PARTS = {"front": ("front", "edges", "towel", "leaves"), "back": ("back",), "rails": ("rails",), "braces": ("braces",)}
 
 
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     size = int(argv[argv.index("--size") + 1]) if "--size" in argv else 4096
-    parts = argv[argv.index("--parts") + 1].split(",") if "--parts" in argv else list(PARTS)
+    groups = argv[argv.index("--groups") + 1].split(",") if "--groups" in argv else list(GROUPS)
+    # для AO нужны и соседи (брусья и раскосы бросают тень на поле досок)
+    parts = sorted({p for g in groups for p in GROUP_PARTS[g]} | ({"back", "rails", "braces"} if set(groups) & {"back", "rails", "braces"} else set()))
     bpy.ops.wm.read_factory_settings(use_empty=True)
     BB.setup_cycles("--gpu" in argv)
     bpy.context.scene.world.light_settings.distance = 3.0          # AO: 3 см
@@ -307,7 +474,17 @@ def main():
         OUT.mkdir(parents=True, exist_ok=True)
         mat = BB.hp_material()
         result = {}
-        for g, (keep, extr) in GROUPS.items():
+        if "--groups" in argv:          # пекутся только эти группы; остальное — из прошлого запекания
+            for k in ("ao", "m1", "m2", "m3", "idc", "cover", "normal", "mask"):
+                path = OUT / f"{k}.png"
+                if path.exists():
+                    im = bpy.data.images.load(str(path))
+                    im.colorspace_settings.name = "Non-Color"
+                    result[k] = BB.pixels(im).copy()
+                    bpy.data.images.remove(im)
+            log("merging into the previous bake:", sorted(result))
+        for g in groups:
+            keep, extr = GROUPS[g]
             ghp = [o for o in hp if o["group"] == g]
             if not ghp:
                 continue
