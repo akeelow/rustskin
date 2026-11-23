@@ -3,13 +3,14 @@
 // server when the item/entity carries their Workshop ID as skin.
 //
 // Chat commands (admins only):
-//   /sauna                       give every published Sauna item with its skin
+//   /sauna [n]                   give every published Sauna item with its skin (n of each deployable)
+//   /build                       building kit: plan, hammer, cupboard, lots of wood/stone/metal
 //   /give <shortname> [skin] [n] give an item with a skin (e.g. /give locker 3840340102)
 //   /skin <id>                   reskin the held item, or the entity you look at
 //   /skin <id> look              reskin only the entity you look at
 //   /t <hour>                    set time of day (e.g. /t 12, /t 22)
 //   /bp                          unlock all blueprints (admins also get them on join)
-// The same in the F1 console, without the slash: sauna, skin <id>, bp, giveskin <shortname> [skin] [n]
+// The same in the F1 console, without the slash: sauna [n], build, skin <id>, bp, giveskin <shortname> [skin] [n]
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -30,7 +31,29 @@ namespace Oxide.Plugins
             new KeyValuePair<string, ulong>("jacket.snow",      3840344106UL), // Sauna Robe
             new KeyValuePair<string, ulong>("door.hinged.wood", 3841006157UL), // Sauna Door
             new KeyValuePair<string, ulong>("furnace",          3841360723UL), // Sauna Boiler
+            new KeyValuePair<string, ulong>("bucket.helmet",    3842910954UL), // Sauna Bucket
+            new KeyValuePair<string, ulong>("tactical.gloves",  3843000799UL), // Sauna Mitts
         };
+
+        // Wearables: one is enough even when /sauna <n> asks for more
+        static readonly HashSet<string> Wear = new HashSet<string>
+            { "burlap.headwrap", "jacket.snow", "bucket.helmet", "tactical.gloves" };
+
+        // Building kit for /build
+        static readonly string[][] Kit =
+        {
+            new[] { "building.planner", "1" }, new[] { "hammer", "1" }, new[] { "cupboard.tool", "1" },
+            new[] { "wood", "100000" }, new[] { "stones", "100000" },
+            new[] { "metal.fragments", "50000" }, new[] { "metal.refined", "2000" },
+            new[] { "lowgradefuel", "500" },
+        };
+
+        void OnServerInitialized()
+        {
+            foreach (var kv in Sauna)
+                if (ItemManager.FindItemDefinition(kv.Key) == null) PrintWarning($"Unknown shortname in Sauna list: {kv.Key}");
+            Puts($"Sauna list: {Sauna.Count} items");
+        }
 
         bool Allowed(BasePlayer p)
         {
@@ -57,7 +80,8 @@ namespace Oxide.Plugins
         }
         [ConsoleCommand("sauna")]    void CcSauna(ConsoleSystem.Arg a) { var p = a.Player(); if (p != null) CmdSauna(p, "sauna", A(a)); }
         [ConsoleCommand("skin")]     void CcSkin(ConsoleSystem.Arg a)  { var p = a.Player(); if (p != null) CmdSkin(p, "skin", A(a)); }
-        [ConsoleCommand("bp")]       void CcBp(ConsoleSystem.Arg a)    { var p = a.Player(); if (p != null) CmdBp(p, "bp", A(a)); }
+        [ConsoleCommand("build")]    void CcBuild(ConsoleSystem.Arg a) { var p = a.Player(); if (p != null) CmdBuild(p, "build", A(a)); }
+        [ConsoleCommand("bp")]      void CcBp(ConsoleSystem.Arg a)    { var p = a.Player(); if (p != null) CmdBp(p, "bp", A(a)); }
         [ConsoleCommand("giveskin")] void CcGive(ConsoleSystem.Arg a)  { var p = a.Player(); if (p != null) CmdGive(p, "give", A(a)); }
 
         // Admins get every blueprint on join (and with /bp)
@@ -86,7 +110,17 @@ namespace Oxide.Plugins
         void CmdSauna(BasePlayer p, string cmd, string[] args)
         {
             if (!Allowed(p)) return;
-            foreach (var kv in Sauna) Give(p, kv.Key, kv.Value, 1);
+            int n = 1;
+            if (args.Length > 0) int.TryParse(args[0], out n);
+            n = Mathf.Clamp(n, 1, 20);
+            foreach (var kv in Sauna) Give(p, kv.Key, kv.Value, Wear.Contains(kv.Key) ? 1 : n);
+        }
+
+        [ChatCommand("build")]
+        void CmdBuild(BasePlayer p, string cmd, string[] args)
+        {
+            if (!Allowed(p)) return;
+            foreach (var k in Kit) Give(p, k[0], 0, int.Parse(k[1]));
         }
 
         [ChatCommand("give")]
