@@ -899,9 +899,9 @@ def grain_ridge(across, along, pitch, seed):
     return sstep(0.42, 0.72, f) * sstep(1.0, 0.86, f)
 
 
-def hewn(along, across, seed):
+def hewn(along, across, seed, stretch=2.6, cell=2.2):
     """Лунки тесла/топора: пологие вытянутые чаши ~6 × 3 см (0 — гребень между лунками, 1 — дно)."""
-    f1, f2 = _voronoi(along / 2.6, across, 2.2, seed)        # ~6 × 2.2 см (мельче в превью — «булыжник»)
+    f1, f2 = _voronoi(along / stretch, across, cell, seed)        # ~6 × 2.2 см (мельче в превью — «булыжник»)
     return np.clip(1 - (f1 / 1.5) ** 2, 0, 1)
 
 
@@ -1044,9 +1044,12 @@ def brace_field(X, Y, bi, nails):
     sd = 600 + 13 * bi
     inside = in_poly(X, Y, poly)
     de = seg_dist(X, Y, poly)
-    gr = grain_ridge(across, along, 2.5, sd)
-    dish = hewn(along, across, sd + 1)
-    h = -ZR + 0.1 * (gr - 0.4) - 0.11 * dish + 0.04 * (n2(along * 0.1, across * 0.3, sd + 2) - 0.5)
+    # v2.5: в игре вблизи раскос читался «шахматкой» — лунки 6 × 2.2 см ровной сеткой и волокна через ровные 2.5 см.
+    # Лунки длиннее и мельче (~13 × 3 см, 0.07), шаг волокон плавает, высота гребня меняется вдоль раскоса.
+    acr = across * (1 + 0.3 * (n2(along * 0.025, across * 0.15, sd + 4) - 0.5))
+    gr = grain_ridge(acr, along, 3.0, sd) * (0.55 + 0.45 * n2(along * 0.04, across * 0.4, sd + 5))
+    dish = hewn(along, across, sd + 1, stretch=4.5, cell=2.9)
+    h = -ZR + 0.07 * (gr - 0.3) - 0.07 * dish + 0.04 * (n2(along * 0.1, across * 0.3, sd + 2) - 0.5)
     h = h - round_drop(de, 0.7) - 0.6 * round_drop(de, 1.4)
     cav = np.zeros_like(X, dtype=np.float64)
     h, cav = _crack(h, cav, along, across, 15.0, 45.0, 1.5, 0.28, 0.4, sd + 3)
@@ -1059,7 +1062,7 @@ def brace_field(X, Y, bi, nails):
                 h[box] = hb
                 nm[box] = np.maximum(nm[box], mb)
     mat = np.where(nm > 0.5, MAT["nail"], MAT["brace"])
-    out = _pack(h, gr, cav, dish * 0.4, nm, sstep(2.2, 0.0, de), 0.45 + 0.1 * bi, mat)
+    out = _pack(h, gr, cav, dish * 0.25, nm, sstep(2.2, 0.0, de), 0.45 + 0.1 * bi, mat)
     out["inside"] = inside
     return out
 
