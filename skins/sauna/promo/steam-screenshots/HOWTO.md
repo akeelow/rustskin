@@ -70,3 +70,17 @@ Sauna Door - Wooden Door skin, in-game editor, night. Workshop: https://steamcom
 Перевод: «Sauna Door — скин на Wooden Door, редактор игры, ночь. Workshop: ссылка».
 
 Превью кадров (как они выглядят в списке): `1_stove_night_*.jpg`, `2_stone_box_night_*.jpg`, `3_locker_day_*.jpg`, `4_door_night_*.jpg` в этой папке.
+
+## Загружено 24.11.2026 (проверено без входа в аккаунт — видны публично)
+
+Все ссылки открываются без логина, подписи и ссылки на коллекцию на месте. Список: https://steamcommunity.com/id/akeelow/screenshots?appid=252490
+
+| Кадр | Ссылка |
+|---|---|
+| Комната (кресло, халат, шкафчик, дверь, ящик) | https://steamcommunity.com/sharedfiles/filedetails/?id=3845377703 |
+| Дверь | https://steamcommunity.com/sharedfiles/filedetails/?id=3845377038 |
+| Шкафчик | https://steamcommunity.com/sharedfiles/filedetails/?id=3845376833 |
+| Ящик | https://steamcommunity.com/sharedfiles/filedetails/?id=3845376463 |
+| Каменка | https://steamcommunity.com/sharedfiles/filedetails/?id=3845376066 |
+
+Общая лента хаба Rust (Скриншоты → «Самые новые») из скрипта не читается — проверить глазами; свежие кадры там могут появиться с задержкой.
