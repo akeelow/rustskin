@@ -1,6 +1,6 @@
 # Sauna Door — публикация в Workshop
 
-> **Сейчас: готовится обновление до v2.9 (глухое стекло, ладонь) — первый раздел ниже.** v2.7 опубликована 23.11.2026. Остальное — пакет первой публикации.
+> **Сейчас: пакет обновления до v2.9 готов (глухое стекло, ладонь, 9 кадров) — первый раздел ниже.** v2.7 опубликована 23.11.2026. Остальное — пакет первой публикации.
 >
 > Подготовлено 16.11.2026 для **v1.2** (правки по кадрам v1 и v1.1 из редактора). v1.2 проверена в редакторе днём и ночью; замки редактор не ставит, место сверено наложением
 > ([../README.md](../README.md), «Сравнение с оригиналом»). Публикует пользователь сам.
@@ -53,14 +53,14 @@ is pressed into the fogged glass instead, warm against the stove light at night.
 | # | Файл | Что | Кадр |
 |---|---|---|---|
 | 01 | `upload_v3/01_front_day_v3.jpg` | перед днём — обложка | `../screenshots/v2.9/v2.9_1.jpg` |
-| 02 | `upload_v3/02_window_day_v3.jpg` | окно спереди вплотную днём: ладонь на запотевшем стекле | **снять** |
+| 02 | `upload_v3/02_window_day_v3.jpg` | окно спереди вплотную днём: ладонь на запотевшем стекле | `../screenshots/workshop_v3/window_day.jpg` |
 | 03 | `upload_v3/03_front_night_v3.jpg` | перед ночью | `v2.9_2` |
 | 04 | `upload_v3/04_window_night_v3.jpg` | окно ночью вплотную: ладонь светится | `v2.9_3` |
-| 05 | `upload_v3/05_handle_front_v3.jpg` | ручка в бечёвке, низ переда | **снять** |
-| 06 | `upload_v3/06_back_34_day_v3.jpg` | зад 3/4 днём | **снять** |
-| 07 | `upload_v3/07_back_rail_handle_v3.jpg` | средний брус сзади, раскосы, ручка | **снять** |
-| 08 | `upload_v3/08_back_top_hinge_v3.jpg` | верхний брус, петля с проволокой, окно сзади с ладонью | **снять** |
-| 09 | `upload_v3/09_back_night_v3.jpg` | зад ночью | **снять** |
+| 05 | `upload_v3/05_handle_front_v3.jpg` | ручка в бечёвке, низ переда | `workshop_v3/handle_front.jpg` |
+| 06 | `upload_v3/06_back_34_day_v3.jpg` | зад 3/4 днём | `workshop_v3/back_34_day.jpg` |
+| 07 | `upload_v3/07_back_rail_handle_v3.jpg` | средний брус сзади, раскосы, ручка | `workshop_v3/back_rail_handle.jpg` |
+| 08 | `upload_v3/08_back_top_hinge_v3.jpg` | верхний брус, петля с проволокой, окно сзади с ладонью | `workshop_v3/back_top_hinge.jpg` |
+| 09 | `upload_v3/09_back_night_v3.jpg` | зад ночью | `workshop_v3/back_night.jpg` |
 
 **После Publish:** удалить на https://steamcommunity.com/sharedfiles/managepreviews/?id=3841006157 все 12 картинок
 v2.7 (4 автокадра редактора от 23.11 и 8 из `upload_v2/`) — оставить автокадры v2.9 и наши 9 из `upload_v3/`.
