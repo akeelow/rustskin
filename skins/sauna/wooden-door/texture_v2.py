@@ -307,13 +307,14 @@ def palm_glass(x, y, gl, col, gloss, spec, emis):
     clear, rim = FD.palm_print(x, y)
     clear, rim = clear * gl, rim * gl
     inside = mix(hexc("#5C4130"), col, 0.2)
-    c = mix(col, inside, clear * 0.75)
+    c = mix(col, inside, clear * 0.85)
     c = mix(c, np.clip(c * 1.12, 0, 1), rim * 0.4)
     col[gl] = c[gl]
-    gloss[gl] = np.clip(gloss + 0.4 * clear, 0, 0.9)[gl]
-    spec[gl] = (0.16 + 0.14 * clear)[gl]
-    e = emis * ((1 + 0.6 * clear) * (1 - 0.15 * rim))[:, None]
-    e = mix(e, GLOW_CORE * np.clip(e.max(1, keepdims=True), 0, 1), clear * 0.25)
+    # v2.9: блеск слабее — с 0.85 / 0.30 ладонь днём отражала небо полосами
+    gloss[gl] = np.clip(gloss + 0.15 * clear, 0, 0.7)[gl]
+    spec[gl] = (0.16 + 0.04 * clear)[gl]
+    # v2.9: свечение в отпечатке +30 % (было +60 %): днём с Emission 255 ладонь горела оранжевой краской
+    e = emis * ((1 + 0.3 * clear) * (1 - 0.15 * rim))[:, None]
     emis[gl] = e[gl]
 
 
