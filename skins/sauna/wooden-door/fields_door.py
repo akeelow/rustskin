@@ -1269,3 +1269,63 @@ def twine_paths():
             C = Pt + nt * (r * (1 - 1.3 * k))[:, None]
             out.append(C)
     return out
+
+
+# ================================================================ отпечаток ладони (v2.8)
+# Вместо прозрачных потёков (риск отказа: сквозное окно в двери) — глухое запотевшее стекло и чёткий отпечаток
+# правой ладони: из парной приложили руку к стеклу и сняли. Одна маска в мировых x, y для переда и зада — это один
+# отпечаток, видимый с двух сторон. Изнутри большой палец слева от смотрящего, то есть в +x.
+PALM_C = (-33.0, 149.5)          # центр ладони (см)
+PALM_ROT = -7.0                  # наклон, градусы (пальцы чуть к −x)
+# пальцы: (u основания, длина, радиус, угол°) — от указательного к мизинцу; большой палец отдельно
+PALM_FINGERS = ((2.95, 7.6, 0.85, 13.0), (1.0, 8.4, 0.9, 3.0), (-0.95, 7.8, 0.85, -8.0), (-2.85, 6.2, 0.75, -21.0))
+PALM_THUMB = ((3.7, -1.0), 5.8, 1.05, 52.0)
+
+
+def _sd_capsule(u, v, a, b, r):
+    pa = np.stack([u - a[0], v - a[1]], -1)
+    ba = np.array([b[0] - a[0], b[1] - a[1]])
+    h = np.clip((pa @ ba) / (ba @ ba), 0, 1)
+    d = pa - h[..., None] * ba
+    return np.hypot(d[..., 0], d[..., 1]) - r, h
+
+
+def _sd_rbox(u, v, hx, hy, r):
+    qx, qy = np.abs(u) - hx + r, np.abs(v) - hy + r
+    return np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) + np.minimum(np.maximum(qx, qy), 0) - r
+
+
+def palm_print(x, y):
+    """Отпечаток: clear 0..1 — стекло протёрто (кожа коснулась), rim 0..1 — кайма, где конденсат уже нарастает.
+    Чёткий силуэт, края чуть расплылись (0.25 см + шум), в центре ладони касание слабее (впадина), на пальцах —
+    складки суставов."""
+    a = np.radians(PALM_ROT)
+    dx, dy = x - PALM_C[0], y - PALM_C[1]
+    u = dx * np.cos(a) + dy * np.sin(a)
+    v = -dx * np.sin(a) + dy * np.cos(a)
+    # ладонь: скруглённый прямоугольник, к запястью уже; подушка большого пальца
+    taper = 1 - 0.12 * np.clip(-v / 4.8, 0, 1)
+    d = _sd_rbox(u / taper, v + 0.3, 4.2, 4.6, 2.3)
+    th_pad = np.hypot((u - 2.4) / 2.5, (v + 1.9) / 3.1) - 1.0
+    d = np.minimum(d, th_pad * 2.5)
+    crease = np.zeros_like(u)
+    for (ub, L, r, ang) in PALM_FINGERS:
+        t = np.radians(ang)
+        a0 = (ub, 4.0)
+        b0 = (ub + L * np.sin(t), 4.0 + L * np.cos(t))      # угол > 0 — кончик к +u (веер от среднего)
+        df, h = _sd_capsule(u, v, a0, b0, r)
+        d = np.minimum(d, df)
+        inside = df < 0
+        for hc in (0.42, 0.72):                      # складки суставов: узкая полоска слабее касания
+            crease = np.maximum(crease, inside * np.exp(-((h - hc) * L / 0.18) ** 2))
+    (tu, tv), L, r, ang = PALM_THUMB
+    t = np.radians(ang)
+    dt, h = _sd_capsule(u, v, (tu, tv), (tu + L * np.sin(t), tv + L * np.cos(t)), r)
+    d = np.minimum(d, dt)
+    crease = np.maximum(crease, (dt < 0) * np.exp(-((h - 0.55) * L / 0.18) ** 2))
+    d = d + 0.18 * (n2(x * 1.3, y * 1.3, 951) - 0.5)          # края слегка расплылись
+    edge = sstep(0.25, -0.25, d)
+    hollow = np.exp(-(((u + 0.2) / 2.0) ** 2 + ((v - 0.6) / 2.3) ** 2))
+    clear = edge * (1 - 0.3 * hollow) * (1 - 0.3 * crease)
+    rim = np.exp(-((d - 0.35) / 0.3) ** 2) * (d > -0.1)
+    return np.clip(clear, 0, 1), np.clip(rim, 0, 1)

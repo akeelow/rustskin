@@ -2,9 +2,9 @@
 
   .venv/Scripts/python skins/sauna/wooden-door/checks_v2.py [--tag v2.0]
 
-1. Альфа: вне стекла ровно 255; на стекле — только потёки.
-2. Ширина потёков: в каждой строке каждая прозрачная дорожка не уже 4 px (мипы не закроют дырку).
-3. Потёки спереди и сзади: одни и те же точки двери (x, y) — доля совпадения.
+1. Альфа: везде ровно 255 (v2.8: стекло глухое; проверки ширины потёков v2.0–v2.7 — в истории git).
+2. Отпечаток ладони: на переде и сзади темнее тумана вокруг (днём протёртое стекло видно).
+3. Ладонь спереди и сзади — одна маска в x, y: площади почти равны.
 4. Нормаль на гладком стекле — (128, 128, 255) ± 3.
 5. Diffuse против Normal на переде: мелкий рисунок яркости Diffuse без пары в Normal (подсветка в картинке).
 """
@@ -32,40 +32,25 @@ xi0, xi1, yi0, yi1 = FD.PANE
 in_pane = (x > xi0) & (x < xi1) & (y > yi0) & (y < yi1) & np.isin(isl, (2, 4))
 ok = True
 
-# 1
-outside = ~in_pane
-bad = (a[outside] < 0.999).sum()
-print(f"1. альфа вне стекла < 255: {bad} текселей", "OK" if bad == 0 else "FAIL")
+# 1 (v2.8: стекло глухое — прозрачных потёков больше нет)
+bad = (a < 0.999).sum()
+print(f"1. альфа < 255 где угодно: {bad} текселей", "OK" if bad == 0 else "FAIL")
 ok &= bad == 0
-
-# 2
 cut = a < 0.5
-for side, k in (("перед", 2), ("зад", 4)):
-    m = cut & (isl == k)
-    rows = np.where(m.any(1))[0]
-    widths = []
-    for r in rows:
-        line = m[r].astype(np.int8)
-        d = np.diff(np.concatenate([[0], line, [0]]))
-        s, e = np.where(d == 1)[0], np.where(d == -1)[0]
-        widths += list(e - s)
-    widths = np.array(widths)
-    thin = (widths < 4).sum()
-    print(f"2. {side}: дорожек в строках {len(widths)}, ширина {widths.min() if len(widths) else 0}–{widths.max() if len(widths) else 0} px, "
-          f"уже 4 px: {thin} ({100 * thin / max(len(widths), 1):.0f} %) — старт дорожки сужается, это допустимо до 15 %")
-    ok &= thin <= 0.15 * max(len(widths), 1)
 
-# 3
-def grid(k):
-    m = cut & (isl == k)
-    g = np.zeros((60, 40), bool)
-    gx = ((x[m] - xi0) / (xi1 - xi0) * 40).astype(int).clip(0, 39)
-    gy = ((y[m] - yi0) / (yi1 - yi0) * 60).astype(int).clip(0, 59)
-    g[gy, gx] = True
-    return g
-gf, gb = grid(2), grid(4)
-iou = (gf & gb).sum() / max((gf | gb).sum(), 1)
-print(f"3. потёки спереди/сзади совпадают (IoU по сетке 0.8 см): {iou:.2f}", "OK" if iou > 0.7 else "CHECK")
+# 2–3: отпечаток ладони — на переде и сзади в одних и тех же x, y, темнее тумана вокруг (днём)
+clear, rim = FD.palm_print(x, y)
+lum = dif[..., :3].mean(-1)
+for side, k in (("перед", 2), ("зад", 4)):
+    g = in_pane & (isl == k)
+    pin = g & (clear > 0.6)
+    ring = g & (clear < 0.02) & (rim < 0.05) & (np.hypot(x - FD.PALM_C[0], y - FD.PALM_C[1]) < 13)
+    d = np.median(lum[ring]) - np.median(lum[pin]) if pin.any() and ring.any() else 0
+    print(f"2. {side}: ладонь {pin.sum()} px (1024), темнее тумана вокруг на {d:.3f}", "OK" if d > 0.06 else "CHECK")
+    ok &= bool(d > 0.06)
+both = [((isl == k) & in_pane & (clear > 0.6)).sum() for k in (2, 4)]
+r = min(both) / max(max(both), 1)
+print(f"3. ладонь спереди/сзади — одна маска (x, y); площадь {both[0]} / {both[1]} px, отношение {r:.2f}", "OK" if r > 0.8 else "CHECK")
 
 # 4
 glass_f = in_pane & (isl == 2) & ~cut

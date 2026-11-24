@@ -201,7 +201,7 @@ def build():
     v = np.clip((y - yi0) / (yi1 - yi0), 0, 1)
     heat = np.clip((1 - v) ** 1.1 * (0.62 + 0.38 * np.exp(-((u - 0.47) / 0.42) ** 2)) + 0.14, 0, 1)
     fog = 0.72 + 0.28 * fbm(x * 0.2, y * 0.2, 91)
-    cut = FD.drip_cut(x, y) * gl
+    cut = np.zeros_like(x) * gl                  # v2.8: глухое стекло, потёков-вырезов нет (риск отказа)
     rim = np.clip(smooth(0.0, 0.5, cut) - smooth(0.5, 1.0, cut), 0, 1)
     border = np.minimum(np.minimum(u, 1 - u) * (xi1 - xi0), np.minimum(v, 1 - v) * (yi1 - yi0))
     edge_dirt = smooth(3.0, 0.0, border)
@@ -221,6 +221,7 @@ def build():
     emis[near] = (GLOW_CORE * spill[:, None] * col.mean(1, keepdims=True) * 2.2)[near]
     alpha = np.ones(n, np.float32)
     alpha[gl] = 1 - cut[gl]
+    palm_glass(x, y, gl, col, gloss, spec, emis)
 
     # ---------------- полотенце: застиранный лён, кирпичные полосы, строчка на подгибах
     tw = is_("towel")
@@ -299,6 +300,23 @@ JUTE = hexc("#94805F")
 JUTE_GRIME = hexc("#5E4F3B")
 
 
+def palm_glass(x, y, gl, col, gloss, spec, emis):
+    """v2.8: отпечаток ладони на запотевшем стекле (fields_door.palm_print, одна маска на обе стороны).
+    Днём протёртое стекло темнее (видно полумрак парной) и глянцевее; ночью — ярче: свет каменки идёт без тумана.
+    По краю — кайма, где конденсат уже нарастает: чуть светлее днём, чуть тусклее ночью."""
+    clear, rim = FD.palm_print(x, y)
+    clear, rim = clear * gl, rim * gl
+    inside = mix(hexc("#5C4130"), col, 0.2)
+    c = mix(col, inside, clear * 0.75)
+    c = mix(c, np.clip(c * 1.12, 0, 1), rim * 0.4)
+    col[gl] = c[gl]
+    gloss[gl] = np.clip(gloss + 0.4 * clear, 0, 0.9)[gl]
+    spec[gl] = (0.16 + 0.14 * clear)[gl]
+    e = emis * ((1 + 0.6 * clear) * (1 - 0.15 * rim))[:, None]
+    e = mix(e, GLOW_CORE * np.clip(e.max(1, keepdims=True), 0, 1), clear * 0.25)
+    emis[gl] = e[gl]
+
+
 def glass_paint(x, y, gl, col, gloss, spec, emis, frame_like):
     """Стекло (обе стороны одинаково): запотевшее, свет каменки за ним; потёки — насквозь. Возвращает альфу."""
     xi0, xi1, yi0, yi1 = FD.PANE
@@ -306,7 +324,7 @@ def glass_paint(x, y, gl, col, gloss, spec, emis, frame_like):
     v = np.clip((y - yi0) / (yi1 - yi0), 0, 1)
     heat = np.clip((1 - v) ** 1.1 * (0.62 + 0.38 * np.exp(-((u - 0.47) / 0.42) ** 2)) + 0.14, 0, 1)
     fog = 0.72 + 0.28 * fbm(x * 0.2, y * 0.2, 91)
-    cut = FD.drip_cut(x, y) * gl
+    cut = np.zeros_like(x) * gl                  # v2.8: глухое стекло, потёков-вырезов нет (риск отказа)
     border = np.minimum(np.minimum(u, 1 - u) * (xi1 - xi0), np.minimum(v, 1 - v) * (yi1 - yi0))
     edge_dirt = smooth(3.0, 0.0, border)
     g_day = mix(hexc("#8F7458"), hexc("#BC966C"), heat) * fog[:, None]
@@ -323,6 +341,7 @@ def glass_paint(x, y, gl, col, gloss, spec, emis, frame_like):
     emis[near] = (GLOW_CORE * spill[:, None] * col.mean(1, keepdims=True) * 2.2)[near]
     alpha = np.ones(len(x), np.float32)
     alpha[gl] = 1 - cut[gl]
+    palm_glass(x, y, gl, col, gloss, spec, emis)
     return alpha, cut
 
 
