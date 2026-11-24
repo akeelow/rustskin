@@ -1,9 +1,69 @@
 # Sauna Door — публикация в Workshop
 
-> **Сейчас: v2.7 опубликована 23.11.2026, галерея обновлена — раздел ниже.** Остальное — пакет первой публикации.
+> **Сейчас: готовится обновление до v2.9 (глухое стекло, ладонь) — первый раздел ниже.** v2.7 опубликована 23.11.2026. Остальное — пакет первой публикации.
 >
 > Подготовлено 16.11.2026 для **v1.2** (правки по кадрам v1 и v1.1 из редактора). v1.2 проверена в редакторе днём и ночью; замки редактор не ставит, место сверено наложением
 > ([../README.md](../README.md), «Сравнение с оригиналом»). Публикует пользователь сам.
+
+## Обновление до v2.9 (24.11.2026) — глухое стекло, отпечаток ладони
+
+Та же страница: https://steamcommunity.com/sharedfiles/filedetails/?id=3841006157. Редактор → опубликованный Sauna Door
+из Workshop → Publish. Причина обновления: в v2.7 потёки на окне были сквозными — риск отказа (сквозное окно в двери
+даёт игроку информацию); в v2.9 стекло глухое, на нём отпечаток ладони.
+
+| Слот | Файл | Ползунки |
+|---|---|---|
+| Diffuse | `../export/Door_v2.9_diffuse.png` | Color 255/255/255, Alpha Cutoff 0.00 (альфа везде 255 — ни на что не влияет) |
+| Normal | `../export/Door_v2.9_normal.png` | Normal Scale 1.00 |
+| Specular/Gloss | `../export/Door_v2.9_specgloss.png` | Spec Color 255/255/255, Glossiness 1.00 |
+| Occlusion | `../export/Door_v2.9_occlusion.png` | Occlusion Scale 0.70 |
+| Emission | `../export/Door_v2.9_emission.png` | **Emission Color 255/255/255** |
+
+**Новое описание** (вместо описания v2.7):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+The door to a scrap-built steam room. Pale aspen boards nailed onto an
+old steel sheet, rust running from every nail, the foot of the door dark
+and streaked with dried minerals. A washed-out towel hangs on a bent nail.
+The little window is fogged solid, and someone inside has pressed a palm
+against the glass. At night the stove shines through that handprint
+first - it is the only light you need to find your way back in.
+
+Inside, the boards are steamed brown and sooty under the top rail, the
+rails are hand-hewn, the nails go right through, and one hinge is held
+on with wire. The handle got too hot to hold, so it is wrapped in jute.
+
+Part of the Sauna set:
+https://steamcommunity.com/sharedfiles/filedetails/?id=3840348906
+```
+
+**Change notes:**
+
+```
+v2.9: the window is no longer see-through. The streaks are gone; a palm print
+is pressed into the fogged glass instead, warm against the stove light at night.
+```
+
+**Картинки — папка `upload_v3/`** (кадры редактора v2.9 с закрытой панелью, обрезка 16:9 как у
+`../../ingame_import.py`). На всех кадрах `upload_v2/`, кроме ручки вплотную, видно сквозное окно v2.7 — в
+обновление они не идут.
+
+| # | Файл | Что | Кадр |
+|---|---|---|---|
+| 01 | `upload_v3/01_front_day_v3.jpg` | перед днём — обложка | `../screenshots/v2.9/v2.9_1.jpg` |
+| 02 | `upload_v3/02_window_day_v3.jpg` | окно спереди вплотную днём: ладонь на запотевшем стекле | **снять** |
+| 03 | `upload_v3/03_front_night_v3.jpg` | перед ночью | `v2.9_2` |
+| 04 | `upload_v3/04_window_night_v3.jpg` | окно ночью вплотную: ладонь светится | `v2.9_3` |
+| 05 | `upload_v3/05_handle_front_v3.jpg` | ручка в бечёвке, низ переда | **снять** |
+| 06 | `upload_v3/06_back_34_day_v3.jpg` | зад 3/4 днём | **снять** |
+| 07 | `upload_v3/07_back_rail_handle_v3.jpg` | средний брус сзади, раскосы, ручка | **снять** |
+| 08 | `upload_v3/08_back_top_hinge_v3.jpg` | верхний брус, петля с проволокой, окно сзади с ладонью | **снять** |
+| 09 | `upload_v3/09_back_night_v3.jpg` | зад ночью | **снять** |
+
+**После Publish:** удалить на https://steamcommunity.com/sharedfiles/managepreviews/?id=3841006157 все 12 картинок
+v2.7 (4 автокадра редактора от 23.11 и 8 из `upload_v2/`) — оставить автокадры v2.9 и наши 9 из `upload_v3/`.
 
 ## Обновление до v2.7 (23.11.2026)
 
