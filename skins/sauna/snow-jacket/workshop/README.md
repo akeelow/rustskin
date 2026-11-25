@@ -1,5 +1,73 @@
 # Sauna Robe — публикация в Workshop
 
+> **v3.2 — обновление готово к публикации (26.11.2026)**, раздел ниже. Всё, что после него, — про публикацию v2.5
+> (15.11.2026).
+
+## Обновление до v3.2
+
+Опубликованная страница (v2.5): https://steamcommunity.com/sharedfiles/filedetails/?id=3840344106. Обновлять **эту же
+страницу**: в редакторе выбрать опубликованный Sauna Robe из Workshop → Publish (так обновлены полок 21.11 и ящик 25.11).
+⚠️ Snow Jacket принимают только **декабрь–февраль** — обновить до начала декабря.
+
+| Слот | Файл / значение |
+|---|---|
+| Diffuse | `../export/SnowJacket_v3.2_diffuse.png`, Color 255/255/255, Alpha Cutoff 0.00 |
+| Normal | `../export/SnowJacket_v3.2_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `../export/SnowJacket_v3.2_specgloss.png`, Spec Color 255, Glossiness 1.00 |
+| Occlusion | `../export/SnowJacket_v3.2_occlusion.png`, Occlusion Scale 1.00 (**новое**: у v2.5 слот был пуст) |
+| Emission | нет |
+| Fuzz Mask | `../export/SnowJacket_v3.2_fuzz.png`, **Fuzz 0.5**, Fuzz Scatter 0.91 |
+
+**Новое описание** (вместо старого):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+A short robe sewn from two old waffle bath towels, for the dash from the
+steam room into the snow and back. Wrapped across with a brick-striped
+collar band, tied with a belt through side loops, the ends frayed into
+fringe. A rolled towel sticks out of one pocket, a birch twig out of the
+other. The elbows are patched with pieces of a linen towel, a wet birch
+leaf is stuck to the back, a corner is darned, and the hem carries the
+towel's stripes and a few spark burns from the stove.
+
+Part of the Sauna set.
+```
+
+**Картинки для загрузки — папка `upload_v3/`** (кадры из редактора, F12, обрезаны как у ящика; исходники —
+`../screenshots/v3/`). Добавлять **все по номерам**, первая — обложка:
+
+| # | Файл | Что | Версия |
+|---|---|---|---|
+| 01 | `upload_v3/01_three_quarter_day_v3.jpg` | 3/4 спереди днём: запах с кантом, пояс с узлом, рулон в кармане, веточка — обложка | v3.2 |
+| 02 | `upload_v3/02_front_day_v3.jpg` | перёд: узел, концы с бахромой, четыре кармана, подпалины | v3.1 (перёд = v3.2) |
+| 03 | `upload_v3/03_back_day_v3.jpg` | сзади: кокетка, мокрый лист, заплаты на локтях, кайма, штопка | v3.2 |
+| 04 | `upload_v3/04_side_day_v3.jpg` | сбоку: полоса по кромке, пояс, вафля | v3.2 |
+
+Рендеры Blender (`hero.jpg` и др.) и `ingame/*.jpg` — v2.3–v2.5, в обновление не идут. Сумерки v3.x не сняты
+(кадр v3.0 в сумерках — со старым узлом и «манишкой»): можно доснять и добавить пятым.
+
+**Change notes** (если редактор или страница спросят, англ.):
+
+```
+v3: remodelled from scratch. The robe is no longer painted on: every
+waffle cell, seam, fold and stitch is real geometry. Kimono collar band
+along the front edge, a belt through side loops with a wrapped knot and
+fringed ends, patch pockets with a rolled towel and a birch twig, towel
+patches on the elbows, a darned corner, a wet leaf and spark burns.
+```
+
+**После публикации (чек-лист):**
+1. Проверить, что обновилась **та же страница** 3840344106 (иконка, описание, дата).
+2. Старые картинки не удаляются: на странице *Add/edit images* (`/sharedfiles/managepreviews/?id=3840344106`)
+   удалить всё старое (6 рендеров v2.x, кадры v2.5 и автокадры редактора от 15.11) — крестик появляется при
+   наведении на миниатюру, удаляет сразу. Оставить новые автокадры редактора и наши 4 из `upload_v3/`.
+3. Проверить, что предмет остался в коллекции **Sauna**.
+4. Записать дату и что осталось в галерее сюда и в `../README.md` («Заметки»).
+
+---
+
+
 > Подготовлено 21.10.2026, обновлено для **v2.3** (27.10.2026: двойной кирпичный кант, как у полотенец, пояс без полосок, мягкая тень в горловине вместо тёмных пятен, ткань менее жёлтая; файлы `SnowJacket_v2.3_*`; v2.2 — `SnowJacket_v2_*`). Публикует пользователь сам из игрового редактора.
 > ⚠️ Snow Jacket принимают **только в декабре–феврале** — опубликовать до конца ноября, чтобы скин был
 > в очереди к сезону.
