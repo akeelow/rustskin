@@ -252,7 +252,8 @@ def stock_folds(cov1024):
 
 
 # ------------------------------------------------------------------ сборка
-def build():
+def model():
+    """OBJ, острова, растр атласа (pos, nrm, isl) и плотность px (2048) на мм по островам."""
     V, T, F = load_obj(OBJ)
     VN, FN = load_vn(OBJ)
     I = islands(F)
@@ -260,10 +261,6 @@ def build():
     for n, fs in enumerate(I):
         fi[fs] = n
     pos, nrm, isl = rasterize(V, T, F, VN, FN, fi)
-    cov = isl >= 0
-    log("растр:", cov.sum(), "текселей")
-
-    # плотность: px (2048) на мм по островам
     Va, Ta = np.array(V), np.array(T)
     pxmm = {}
     for n, fs in enumerate(I):
@@ -274,6 +271,13 @@ def build():
             ua, ub, uc = (Ta[t] for t in F[f][1])
             au += 0.5 * abs((ub[0] - ua[0]) * (uc[1] - ua[1]) - (uc[0] - ua[0]) * (ub[1] - ua[1]))
         pxmm[n] = (au * R * R / (a3 * 1e6)) ** 0.5
+    return V, T, F, I, fi, pos, nrm, isl, pxmm
+
+
+def build():
+    V, T, F, I, fi, pos, nrm, isl, pxmm = model()
+    cov = isl >= 0
+    log("растр:", cov.sum(), "текселей")
     log("px/мм:", {k: round(v, 2) for k, v in pxmm.items()})
 
     segs = seam_segments(V, T, F, fi)
@@ -355,21 +359,16 @@ def build():
     # --- воротник-стойка: кант у верхнего сгиба по наружной стороне
     col = isl == 4
     if col.any():
-        ang = np.arctan2(X, Z + 0.03)
-        bins = np.linspace(-np.pi, np.pi, 73)
-        rim = np.full(72, np.nan)
-        cv = np.array([V[i] for f in I[4] for i in F[f][0]])
-        ca = np.arctan2(cv[:, 0], cv[:, 2] + 0.03)
-        for k in range(72):
-            m = (ca >= bins[k] - 0.05) & (ca < bins[k + 1] + 0.05)
-            if m.any():
-                rim[k] = cv[m, 1].max()
-        rim = np.where(np.isnan(rim), np.nanmax(rim), rim)
-        kk = np.clip(np.digitize(ang, bins) - 1, 0, 71)
-        below = (rim[kk] - Y) * 1000
-        outer = (nrm[..., 0] * X + nrm[..., 2] * (Z + 0.03)) > 0
-        for a, b in ((5, 14), (18, 22)):
-            STRIPE = np.maximum(STRIPE, col * outer * sstep(a - 0.6, a + 0.6, below) * (1 - sstep(b - 0.6, b + 0.6, below)))
+        # стойка = полоса, перегнутая по верху: в развёртке это вертикальная лента, сгиб идёт по её середине.
+        # Расстояние до краёв острова 4 (шов втачивания снаружи и изнутри) максимально на сгибе; по строкам
+        # атласа берём это максимум (полувысоту стойки) и кладём кант в 5–14 и 18–22 мм от сгиба (с обеих сторон).
+        segs4 = [s_ for c in ("neck", "open", "seam") for s_ in segs[c] if s_[0] == 4]
+        d4 = seg_distance(segs4, isl, pxmm, 80.0)
+        rows = np.where(col, d4, 0).max(1)
+        rows = np.convolve(rows, np.ones(9) / 9, mode="same")
+        from_fold = rows[:, None] - d4
+        for a_, b_ in ((5, 14), (18, 22)):
+            STRIPE = np.maximum(STRIPE, col * sstep(a_ - 0.6, a_ + 0.6, from_fold) * (1 - sstep(b_ - 0.6, b_ + 0.6, from_fold)))
 
     # ================================================================== перёд (остров 0): запах B
     # Дизайн задан точками в плоскости (x, y) модели, а считается в мм развёртки острова 0: она почти
@@ -621,6 +620,10 @@ def build():
             H = np.where(loops, H + 1.2 * sstep(0.62, 0.72, ph), H)
             THREAD = np.maximum(THREAD, loops * 1.0)
 
+    # клапаны: две стороны лежат в 2–3 мм друг от друга — рельеф вдвое мельче, иначе слои протыкают друг друга
+    # только наружу, без крупных складок: иначе изнанка проходит сквозь лицо и лучи ловят её с обратной стороны
+    flap = np.isin(isl, (5, 6, 8, 9))
+    H = np.where(flap, np.clip(H - FOLD + 1.4, 0, 3.0) * 0.6, H)
     H[~cov] = 0
     return dict(H=H.astype(np.float32), CODE=CODE, CAV=CAV, STRIPE=STRIPE, GROOVE=np.clip(GROOVE, 0, 1),
                 SCORCH=SCORCH, THREAD=THREAD, ISL=isl, POS=pos, NRM=nrm)
@@ -635,10 +638,12 @@ def dilate(a, cov, steps=6):
         cnt = np.zeros(m.shape, np.float32)
         for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
             mm = np.roll(m, (dy, dx), (0, 1))
-            acc += np.where(mm, np.roll(a, (dy, dx), (0, 1)), 0)
+            mk = mm[..., None] if a.ndim == 3 else mm
+            acc += np.where(mk, np.roll(a, (dy, dx), (0, 1)), 0)
             cnt += mm
         new = ~m & (cnt > 0)
-        a[new] = (acc[new] / cnt[new]).astype(a.dtype)
+        c = cnt[new][:, None] if a.ndim == 3 else cnt[new]
+        a[new] = (acc[new] / c).astype(a.dtype)
         m |= new
     return a
 

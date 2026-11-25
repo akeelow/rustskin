@@ -6,7 +6,7 @@ bake/v3/fields.npz (выборка по UV вершины, 2048), маски п�
 texture_v3.py нормаль = рельеф − база, поэтому гранёность low-poly не запекается (как у перчаток).
 
 Группы (лучи одной группы не ловят high-poly другой: клапаны стоят над телом на 4 мм):
-  torso {0, 3} · sleeves {1, 2, 11, 12} · collar {4, 10} · flaps {5, 6, 8, 9} · hem {7}
+  front {0} · back {3} · sleeve_l {1} · sleeve_r {2} · cuffends {11, 12} · collar {4, 10} · flaps {5, 6, 8, 9} · hem {7}
 
   "C:/Program Files (x86)/Steam/steamapps/common/Blender/blender.exe" -b -P skins/sauna/snow-jacket/bake_v3.py -- \
       [--size 4096] [--edge 1.2] [--groups torso,sleeves] [--only normal,ao] [--preview] [--nobake] [--blend] [--cpu]
@@ -42,11 +42,15 @@ def arg(name, default):
 
 
 SIZE = arg("--size", 4096)
-EDGE = arg("--edge", 1.2)
+EDGE = arg("--edge", 1.0)
 MM = 0.001
-GROUPS = {"torso": ({0, 3}, 26.0), "sleeves": ({1, 2, 11, 12}, 10.0), "collar": ({4, 10}, 10.0),
-          "flaps": ({5, 6, 8, 9}, 8.0), "hem": ({7}, 8.0)}
-SHRINK = {"torso": 7.0, "sleeves": 3.0, "collar": 3.0, "flaps": 2.0, "hem": 2.0}   # мм, цель внутрь на время AO
+# Группы: лучи одной группы не ловят high-poly другой. Перёд и спина раздельно — у горловины лучи переда
+# с вылетом 26 мм (под узел) залетали внутрь и ловили спину; торцы манжет отдельно от рукавов.
+GROUPS = {"front": ({0}, 26.0), "back": ({3}, 12.0), "sleeve_l": ({1}, 8.0), "sleeve_r": ({2}, 8.0),
+          "cuffends": ({11, 12}, 4.0), "collar": ({4, 10}, 10.0), "flaps": ({5, 6, 8, 9}, 3.0), "hem": ({7}, 8.0)}
+SHRINK = {"front": 7.0, "back": 5.0, "sleeve_l": 3.0, "sleeve_r": 3.0, "cuffends": 1.0, "collar": 3.0,
+          "flaps": 0.6, "hem": 2.0}   # мм, цель внутрь на время AO
+AO_DIST = {"flaps": 0.0025, "cuffends": 0.003}   # м; у остальных 6 мм
 T0 = time.time()
 
 
@@ -131,6 +135,12 @@ def dense_copy(low, isls, max_edge, name):
         prev = len(long_e)
         bmesh.ops.subdivide_edges(bm, edges=long_e, cuts=1, use_grid_fill=True)
         bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3])
+    # дробление оставляет треугольники нулевой площади (130 тыс. на торсе) и вершины с нулевой нормалью: такие
+    # вершины не смещаются, соседи уходят на миллиметры — в предпросмотре «осколки» перевёрнутых граней
+    nf0 = len(bm.faces)
+    bmesh.ops.dissolve_degenerate(bm, dist=1e-6, edges=bm.edges[:])
+    bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 3])
+    log(f"{name}: вырожденных граней убрано {nf0 - len(bm.faces)}")
     el = np.array([e.calc_length() for e in bm.edges])
     log(f"{name}: рёбра медиана {np.median(el) * 1000:.2f} мм, 99 % {np.percentile(el, 99) * 1000:.2f}, "
         f"макс {el.max() * 1000:.2f}")
@@ -171,10 +181,85 @@ def color_attr(me, name, rgb):
     a.data.foreach_set("color", buf.ravel())
 
 
+MODEL = None
+
+
+def model():
+    """Растр low-poly на атласе 2048 (fields_v3.model): положение, сглаженная нормаль, остров, px/мм."""
+    global MODEL
+    if MODEL is None:
+        import fields_v3 as FV
+        V, T, F, I, fi, pos, nrm, isl, pxmm = FV.model()
+        cov = isl >= 0
+        pos = np.nan_to_num(pos)
+        # за край островов на 1 тексель — чтобы сетка доходила до шва
+        isl_d = isl.copy()
+        for _ in range(1):
+            for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+                sh = np.roll(isl_d, (dy, dx), (0, 1))
+                isl_d = np.where(isl_d < 0, sh, isl_d)
+        pos = FV.dilate(pos, cov, 6)
+        nrm = FV.dilate(nrm, cov, 6)
+        MODEL = (pos.astype(np.float32), nrm.astype(np.float32), isl_d, pxmm)
+    return MODEL
+
+
+def grid_mesh(name, isls):
+    """Регулярная сетка в мм развёртки каждого острова (шаг EDGE): без вырожденных граней, ровно по вафле.
+    Положение — по растру low-poly (плоские грани, гранёность снимает вычитание normal_base), нормаль сглажена."""
+    pos, nrm, isl_d, pxmm = model()
+    Vs, Ns, PXs, Fs = [], [], [], []
+    off = 0
+    for n in sorted(isls):
+        ys, xs = np.nonzero(isl_d == n)
+        step = EDGE * pxmm[n]
+        gx = np.arange(xs.min(), xs.max() + 1 + step, step)
+        gy = np.arange(ys.min(), ys.max() + 1 + step, step)
+        GX, GY = np.meshgrid(gx, gy)
+        inside = isl_d[np.clip(GY.astype(int), 0, FR - 1), np.clip(GX.astype(int), 0, FR - 1)] == n
+        idx = -np.ones(GX.shape, np.int64)
+        idx[inside] = np.arange(inside.sum()) + off
+        a, b, c, d = idx[:-1, :-1], idx[:-1, 1:], idx[1:, 1:], idx[1:, :-1]
+        q = (a >= 0) & (b >= 0) & (c >= 0) & (d >= 0)
+        # строки атласа идут вниз: обход (a, d, c), (a, c, b) даёт нормаль наружу (проверяется ниже)
+        tri = np.concatenate([np.stack([a[q], d[q], c[q]], 1), np.stack([a[q], c[q], b[q]], 1)])
+        px = np.stack([GX[inside], GY[inside]], 1)
+        Vs.append(bilinear(pos, px + 0.5))
+        Ns.append(bilinear(nrm, px + 0.5))
+        PXs.append(px + 0.5)
+        Fs.append(tri)
+        off += inside.sum()
+    V = np.concatenate(Vs)
+    N = np.concatenate(Ns)
+    N /= np.maximum(np.linalg.norm(N, axis=1, keepdims=True), 1e-9)
+    PX = np.concatenate(PXs)
+    Fa = np.concatenate(Fs)
+    # ориентация: нормаль грани должна смотреть по сглаженной нормали
+    e1 = V[Fa[:, 1]] - V[Fa[:, 0]]
+    e2 = V[Fa[:, 2]] - V[Fa[:, 0]]
+    fn = np.cross(e1, e2)
+    flip = (fn * N[Fa].mean(1)).sum(1) < 0
+    Fa[flip] = Fa[flip][:, ::-1]
+    me = bpy.data.meshes.new(name)
+    me.vertices.add(len(V))
+    me.vertices.foreach_set("co", V.astype(np.float32).ravel())
+    me.loops.add(len(Fa) * 3)
+    me.loops.foreach_set("vertex_index", Fa.astype(np.int32).ravel())
+    me.polygons.add(len(Fa))
+    me.polygons.foreach_set("loop_start", np.arange(0, len(Fa) * 3, 3, dtype=np.int32))
+    me.polygons.foreach_set("loop_total", np.full(len(Fa), 3, np.int32))
+    me.update()
+    me.validate()
+    me.polygons.foreach_set("use_smooth", [True] * len(Fa))
+    ob = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(ob)
+    log(f"{name}: {len(V)} вершин, {len(Fa)} граней (шаг {EDGE} мм), перевёрнуто при сборке {flip.sum()}")
+    return ob, V, N, PX
+
+
 def build_group(low, key):
     isls, _ = GROUPS[key]
-    hp = dense_copy(low, isls, EDGE * MM, f"hp_{key}")
-    co, nr, px = vdata(hp)
+    hp, co, nr, px = grid_mesh(f"hp_{key}", isls)
     H = bilinear(FH, px)
     base = hp.copy()
     base.data = hp.data.copy()
@@ -318,6 +403,13 @@ def bake_all(low, built):
         img = bpy.data.images.new(f"bake_{name}", SIZE, SIZE, alpha=True, float_buffer=True)
         img.colorspace_settings.name = "Non-Color"
         img.generated_color = (0, 0, 0, 0)
+        partial = len(built) < len(GROUPS) and (OUT / f"{name}.png").exists()
+        if partial:   # перепекаются не все группы: остальное берём из прошлого запекания
+            old = bpy.data.images.load(str(OUT / f"{name}.png"))
+            old.colorspace_settings.name = "Non-Color"
+            img.pixels[:] = old.pixels[:]
+            bpy.data.images.remove(old)
+            log(f"{name}: поверх прошлого запекания")
         tex.image = img
         for gi, k in enumerate(built):
             hp, base = built[k]
@@ -329,6 +421,7 @@ def bake_all(low, built):
             for l2 in lows.values():
                 l2.hide_render = l2 is not lg
             ext = GROUPS[k][1]
+            scene.world.light_settings.distance = AO_DIST.get(k, 0.006)
             sh = SHRINK[k] if name == "ao" else 0.0
             if sh:
                 me = lg.data
@@ -345,7 +438,7 @@ def bake_all(low, built):
             lg.select_set(True)
             bpy.context.view_layer.objects.active = lg
             log(f"запекание {name}, группа {k}…")
-            bpy.ops.object.bake(type=kind, use_clear=(gi == 0), margin=0)
+            bpy.ops.object.bake(type=kind, use_clear=(gi == 0 and not partial), margin=0)
             if sh:
                 me.vertices.foreach_set("co", co0.astype(np.float32))
                 me.update()
