@@ -1,8 +1,73 @@
 # Sauna Stone Box — публикация в Workshop
 
+> **Сейчас: обновление до v2.3** — раздел ниже. Всё, что после него, — про публикацию v1.6 (15.11.2026).
+
 > Подготовлено для **v1.5** (27.10.2026): как v1.4 (крышка вырезана альфой, край со стороны печи целый, тёплый свет
 > в прорезях ручек и щелях между досками), но камни лежат кучей — три размера, наклон, второй слой (v1.4 — ровные «соты»). Публикует пользователь сам из игрового редактора.
 > **v1.6 (12.11.2026, по [CRITIQUE_ART.md](../../CRITIQUE_ART.md)):** угли светятся гнёздами, а не ровной сеткой; пик свечения янтарный `#FFB347`; дерево чуть теплее; обугленный банный лист на камнях. Файлы `Box_v1.6_*`. **В игре не проверено** — посмотреть в редакторе перед публикацией; если не понравится, прежняя версия v1.5 лежит рядом (`Box_v1.5_*`).
+
+## Обновление до v2.3 (25.11.2026)
+
+Опубликованная страница (v1.6): https://steamcommunity.com/sharedfiles/filedetails/?id=3840337593. Обновлять **эту же
+страницу**: в редакторе выбрать опубликованный Sauna Stone Box из Workshop → Publish (так обновлён полок v2, 21.11).
+
+| Слот | Файл / значение |
+|---|---|
+| Diffuse | `../export/Box_v2.3_diffuse.png`, **Color 255/255/255**, **Alpha Cutoff 0.50** |
+| Normal | `../export/Box_v2.3_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `../export/Box_v2.3_specgloss.png`, **Spec Color 255/255/255**, Glossiness 1.00 |
+| Occlusion | `../export/Box_v2.3_occlusion.png`, Occlusion Scale 1.00 |
+| Emission | `../export/Box_v2.3_emission.png`, **Emission Color 255/255/255** |
+
+Ползунки по умолчанию у ящика не нейтральные — выставить ровно как в таблице.
+
+**Новое описание** (вместо старого):
+
+```
+Every Rust life starts naked. Might as well warm up properly.
+
+An old crate kept by the sauna stove for the spare stones and the embers
+to light it with. Two hoops off a barrel hold the aspen boards together,
+a steel tray on the bottom keeps the coals off the wood. The side facing
+the stove has charred to the grain and is nicked by the coal scoop, and
+a flattened tin can covers the corner that burnt through. Split basalt,
+a few charred logs and a dry leaf lie in the ash; at night the embers
+glow between the stones and through the handle grips.
+
+Part of the Sauna set.
+```
+
+**Картинки для загрузки — папка `upload_v2/`** (кадры из редактора, F12, обрезаны `../../ingame_import.py place`;
+исходники — `../screenshots/editor_16x9/*_v2.jpg`). Добавлять **все по номерам**, первая — обложка:
+
+| # | Файл | Что | Версия |
+|---|---|---|---|
+| 01 | `upload_v2/01_three_quarter_day_v2.jpg` | 3/4 сверху днём: обугленная кромка у печи, заплата, камни внутри — обложка | v2.3 |
+| 02 | `upload_v2/02_top_day_v2.jpg` | сверху днём: колотый базальт, поленья, пепел, совок, лист, жар между камнями | v2.3 |
+| 03 | `upload_v2/03_stove_side_v2.jpg` | бок к печи в лоб: уголь «языками», зарубки, заплата из банки, обручи | v2.2 (стенки = v2.3) |
+| 04 | `upload_v2/04_top_night_v2.jpg` | сверху ночью: гнёзда жара, свет в прорезях ручек | v2.3 |
+| 05 | `upload_v2/05_three_quarter_night_v2.jpg` | 3/4 ночью | v2.2 (свечение = v2.3) |
+
+Кадры v2.2 со дном (сверху днём, 3/4 слева) не берём: там пепел и лист ещё старые. Рендеры Blender (`studio.jpg` и др.)
+и `ingame/*.jpg` без `_v2` — v1.6, в обновление не идут.
+
+**Change notes** (если редактор или страница спросят, англ.):
+
+```
+v2: remodelled from scratch. Every board, nail, hoop, stone and coal is now
+real geometry: weathered aspen with grain, knots and cracks, riveted barrel
+hoops, a charred rim and scoop nicks on the stove side, a tin-can patch,
+split basalt, charred logs, ash, a coal scoop and a dry leaf on the tray.
+```
+
+**После публикации:**
+1. Проверить, что обновилась **та же страница** 3840337593 (иконка, описание, дата).
+2. Старые картинки не удаляются: на странице *Add/edit images* (`/sharedfiles/managepreviews/?id=3840337593`)
+   удалить всё старое (рендеры v1.6, кадры v1.6 и автокадры редактора от 15.11) — крестик при наведении, удаляет
+   сразу. Оставить 4 новых автокадра редактора и наши 5 из `upload_v2/`.
+3. Записать дату и что осталось в галерее сюда и в `../README.md` («Заметки»).
+
+---
 
 ## Название и описание (англ.)
 
