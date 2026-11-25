@@ -239,6 +239,36 @@ def board_nails(b):
 NAILS_BENT = {("right", 1, -1), ("left", 3, 1)}       # (стенка, доска, конец): рядом гнутый гвоздь — перебили
 
 
+# ------------------------------------------------------------------ сторона печи: уголь, зарубки, заплата, колышек
+PATCH = dict(wall="right", plank=1, z=(31.5, 43.0), y=(15.2, 25.2))      # жесть из банки над прогоревшим углом
+PEG = dict(wall="left", plank=1, z=-12.0, y=20.3, r=0.95)                # колышек в пулевом отверстии
+NICKS = (-31.0, -12.5, 3.0, 17.5, 33.0)                                   # зарубки совка на кромке +x (z)
+
+
+def char_depth(b, al, x):
+    """Глубина обугливания от верха доски (см): верхние доски бока к печи и заход через углы на торцы."""
+    if b["plank"] != 3:
+        return None
+    sd = b["seed"]
+    tongue = 2.0 + 2.6 * fbm2(al * 0.07, 0.3, sd + 61, 3) + 2.2 * np.clip(np.sin(al * 0.21 + sd) - 0.55, 0, 1) / 0.45
+    if b["wall"] == "right":
+        return tongue
+    if b["wall"] in ("front", "back"):
+        return tongue * 0.8 * sstep(19.0, 29.0, x)
+    return None
+
+
+def char_cells(H, cav, u, v, inzone, sd):
+    """«Крокодиловая кожа»: ячейки 1.6-2.6 см чуть выпуклые, трещины 3-4 мм между ними; поверхность выгорела вглубь."""
+    f1, f2, idn = voronoi(u + 0.4 * fbm2(u * 0.3, v * 0.3, sd, 2), v, 2.0, sd + 71)
+    crack = sstep(0.2, 0.04, f2 - f1)
+    dome = np.clip(1 - (f1 / 1.3) ** 2, 0, 1) ** 0.5
+    Hc = -0.12 + 0.07 * dome - 0.22 * crack + 0.02 * ((idn % 31) / 31.0 - 0.5)
+    H = np.where(inzone > 0, H * (1 - inzone) + Hc * inzone, H)
+    cav = np.maximum(cav, crack * inzone * 0.9)
+    return H, cav
+
+
 def board_face(b, face, U, V, P):
     """Поле грани доски. face — 'x-'... по rbox; P — точки на скруглённой коробке (см)."""
     k, s, a = b["k"], b["s"], b["a"]
@@ -277,7 +307,12 @@ def board_face(b, face, U, V, P):
         de = np.minimum(np.minimum(y - lo[1], hi[1] - y), np.minimum(across - lo[k], hi[k] - across))
         H -= 0.12 * sstep(0.55, 0.0, de) * sstep(0.55, 0.75, n2(y * 0.9, across * 2, sd + 9))
         mat = np.full(U.shape, MAT["end"])
-        return dict(h=H, m1=np.stack([ring, np.clip(cav, 0, 1), dent], -1), m2=np.stack([zero] * 3, -1),
+        char = zero.copy()
+        if b["wall"] == "right" and top:
+            zone = sstep(4.0, 2.5, hi[1] - y)
+            H, cav = char_cells(H, cav, across * 1.5, y, zone, sd + 9)
+            char = zone
+        return dict(h=H, m1=np.stack([ring, np.clip(cav, 0, 1), dent], -1), m2=np.stack([zero, zero, char], -1),
                     m3=np.stack([zero, zero, zero + b["tone"]], -1), mat=mat)
     knots = []
     for _ in range(rng.integers(0, 3)):
@@ -300,24 +335,24 @@ def board_face(b, face, U, V, P):
             sw = sw * sstep(0.35, 0.7, n2(al * 0.05, y * 0.12, sd + 2))           # пятнами: выветрило не везде
             H -= 0.018 * sw
             saw = sw * 0.5
-        # сучки: твёрдое выпуклое кольцо, тёмная середина, радиальные трещинки; один выпал
+        # сучки: вытянуты вдоль волокна (2:1), тёмные, чуть выпуклые без кольца; трещина с одной стороны; один выпал
+        # (v2.0 в игре: круглые с трещиной поперёк читались шляпками шурупов)
         for j, (ka, kc, kr) in enumerate(knots):
-            dd = np.hypot((al - ka) / 1.15, y - kc)
-            kn = sstep(kr, kr * 0.75, dd)
+            dd = np.hypot((al - ka) / 2.2, (y - kc) / (1.0 + 0.15 * np.sin(j + sd)))
+            kn = sstep(kr, kr * 0.55, dd)
             fell = (sd + j) % 7 == 3
             if fell:
-                H -= 0.35 * sstep(kr * 0.8, kr * 0.6, dd)
-                cav = np.maximum(cav, sstep(kr * 0.8, kr * 0.6, dd))
+                H -= 0.35 * sstep(kr * 0.75, kr * 0.55, dd)
+                cav = np.maximum(cav, sstep(kr * 0.75, kr * 0.55, dd))
             else:
-                H += 0.06 * kn * (0.6 + 0.4 * sstep(kr * 0.2, kr * 0.8, dd)) - 0.04 * np.exp(-((dd - kr) / 0.18) ** 2)
-                ang = np.arctan2(y - kc, al - ka)
-                for q in range(1 + (sd + j) % 2):                                 # 1-2 трещины из сучка вдоль волокна
-                    a0 = (0.0 if q == 0 else np.pi) + 0.25 * (q - 0.5)
-                    da = np.abs(np.angle(np.exp(1j * (ang - a0))))
-                    w = 0.11 * sstep(kr * 2.6, kr * 0.9, dd)
-                    rc = np.clip(1 - dd * da / (w + 1e-3), 0, 1) * (dd > kr * 0.7) * (dd < kr * 2.6)
-                    H -= 0.2 * rc
-                    cav = np.maximum(cav, rc)
+                H += 0.04 * kn
+                side = 1 if (sd + j) % 2 else -1
+                t = (al - ka) * side
+                yy = kc + 0.15 * np.sin(t * 0.6 + j)
+                w = 0.12 * sstep(kr * 6.0, kr * 1.5, t)
+                rc = np.clip(1 - np.abs(y - yy) / (w + 1e-3), 0, 1) * (t > kr * 1.2) * (t < kr * 6.0)
+                H -= 0.22 * rc
+                cav = np.maximum(cav, rc)
             knot = np.maximum(knot, kn)
         # торцевые трещины от концов доски, у печи (+x) гуще и длиннее
         hot = b["wall"] == "right"
@@ -379,8 +414,50 @@ def board_face(b, face, U, V, P):
                 u = np.clip(1 - ((x - px) ** 2 / 1.1 ** 2 + (y - (yb + 0.9)) ** 2 / 0.7 ** 2), 0, 1) ** 2
                 H -= d * u * inside
                 dent = np.maximum(dent, u * inside)
-        return dict(h=H, m1=np.stack([g, np.clip(cav, 0, 1), dent], -1), m2=np.stack([nail, knot, zero], -1),
-                    m3=np.stack([saw, grease, zero + b["tone"]], -1), mat=np.where(nail > 0.5, MAT["nail"], mat))
+        char = zero.copy()
+        cd = char_depth(b, al, x)
+        if cd is not None:                          # обугленный верх: угли сыплют совком через край
+            dz = hi[1] - y
+            zone = sstep(cd + 0.6, cd - 0.4, dz)
+            H, cav = char_cells(H, cav, al, y, zone, sd)
+            char = zone
+            g = g * (1 - zone)
+        rings = zero.copy()
+        if (b["wall"], b["plank"]) == (PATCH["wall"], PATCH["plank"]):
+            (z0, z1), (y0, y1) = PATCH["z"], PATCH["y"]
+            ez = np.minimum.reduce([al - z0, z1 - al, y - y0, y1 - y])
+            inp = ez > 0
+            # жесть 0.8 мм; кольца-рёбра банки; край загнут (валик); 6 гвоздиков по периметру; помята
+            rr = np.hypot(al - (z0 + z1) / 2, y - (y0 + y1) / 2)
+            rings = np.exp(-((rr % 1.6 - 0.8) / 0.22) ** 2) * sstep(0.6, 1.4, rr) * (rr < 4.8)
+            bead = np.exp(-((ez - 0.35) / 0.2) ** 2)
+            dents = 0.05 * (fbm2(al * 0.35, y * 0.35, sd + 81, 3) - 0.5)
+            Hp = 0.12 + 0.05 * rings + 0.07 * bead + dents
+            H = np.where(inp, np.maximum(H * 0.3, Hp), H)
+            H -= 0.04 * sstep(0.5, 0.0, np.abs(ez)) * (ez < 0)                     # смятое дерево по краю
+            for (nz_, ny_) in ((z0 + 0.6, y0 + 0.6), (z1 - 0.6, y0 + 0.6), (z0 + 0.6, y1 - 0.6), (z1 - 0.6, y1 - 0.6),
+                               ((z0 + z1) / 2, y0 + 0.5), ((z0 + z1) / 2 + 0.4, y1 - 0.5)):
+                dd = np.hypot(al - nz_, y - ny_)
+                H = np.where(dd < 0.38, np.maximum(H, 0.2 + 0.05 * np.sqrt(np.clip(1 - (dd / 0.38) ** 2, 0, 1))), H)
+                nail = np.maximum(nail, (dd < 0.4) * 1.0)
+            mat = np.where(inp, MAT["tin"], mat)
+            g = np.where(inp, 0, g)
+        if (b["wall"], b["plank"]) == (PEG["wall"], PEG["plank"]):
+            dd = np.hypot(al - PEG["z"], y - PEG["y"])
+            pr = PEG["r"]
+            plug = dd < pr
+            ring, _ = end_rings(al, y, PEG["z"] + 0.3, PEG["y"] - 0.2, 0.28, sd + 91)
+            H = np.where(plug, -0.05 + 0.03 * ring - 0.06 * (dd / pr) ** 2, H)
+            H -= 0.12 * np.exp(-((dd - pr) / 0.08) ** 2)                            # щель вокруг колышка
+            ang = np.arctan2(y - PEG["y"], al - PEG["z"])
+            spl = sstep(0.5, 0.8, np.abs(np.sin(ang * 3 + 1.0))) * np.exp(-((dd - pr * 1.5) / 0.35) ** 2)
+            H += 0.08 * spl * (np.abs(np.cos(ang)) > 0.5)                           # поднятая щепа по волокну
+            mat = np.where(plug, MAT["peg"], mat)
+            cav = np.maximum(cav, np.exp(-((dd - pr) / 0.08) ** 2))
+            g = np.where(plug, ring, g)
+        return dict(h=H, m1=np.stack([np.where(mat == MAT["tin"], rings, g), np.clip(cav, 0, 1), dent], -1),
+                    m2=np.stack([nail, knot, char], -1), m3=np.stack([saw, grease, zero + b["tone"]], -1),
+                    mat=np.where(nail > 0.5, MAT["nail"], mat))
     # кромки доски (верх/низ): волокна вдоль, у верхних досок — обод ящика: вмятины, стёртость
     across = P[..., k] - depth_c
     g = grain_relief(al, across, rng.uniform(0.6, 1.6), 0.0, 0.0, rng.uniform(1.05, 1.4), sd)
@@ -392,11 +469,28 @@ def board_face(b, face, U, V, P):
             H -= d * u
             dent = np.maximum(dent, u)
         H -= 0.04 * (fbm2(al * 0.4, across, sd + 11, 2) - 0.5)
+    char = zero.copy()
+    if face == "y+" and top:
+        cd = char_depth(b, al, x)
+        if cd is not None:
+            zone = sstep(0.3, 1.2, cd) * np.ones_like(al)
+            H, cav = char_cells(H, cav, al, across * 1.6, zone, sd + 5)
+            char = zone
+        if b["wall"] == "right":                       # зарубки совка поперёк обода, со сколом наружной кромки
+            for j, zc in enumerate(NICKS):
+                zc2 = zc + 0.8 * np.sin(j * 2.3)
+                dzn = np.abs(al - zc2 - 0.25 * across)
+                gro = np.clip(1 - dzn / 0.32, 0, 1)
+                H -= 0.32 * gro * sstep(-1.2, 0.6, across)
+                chip = np.clip(1 - np.hypot((al - zc2) / 1.1, (across - 0.85) / 0.6), 0, 1)
+                H -= 0.25 * chip
+                cav = np.maximum(cav, gro * 0.6)
+                dent = np.maximum(dent, chip)
     if face == "y-" and b["slot"]:                    # срез прорези: дуги сверла и пила
         inside = np.abs(x - SLOT["xc"]) < SLOT["hw"]
         H -= inside * 0.02 * np.abs(np.sin((x + 0.3 * across) / 1.1 * np.pi)) ** 2
         grease = inside * 0.7
-    return dict(h=H, m1=np.stack([g, np.clip(cav, 0, 1), dent], -1), m2=np.stack([zero] * 3, -1),
+    return dict(h=H, m1=np.stack([g, np.clip(cav, 0, 1), dent], -1), m2=np.stack([zero, zero, char], -1),
                 m3=np.stack([zero, grease, zero + b["tone"]], -1), mat=mat)
 
 
@@ -488,6 +582,7 @@ def hoop_field(S, Y, y0, y1, length, seed, corners_s, joint_s):
         near = np.maximum(near, np.exp(-((S - sc) ** 2 + (Y - yy) ** 2) / 3.0 ** 2))
     nest = np.clip(0.55 * sstep(0.45, 0.7, fbm2(S * 0.15, Y * 0.5, seed + 5, 3)) + 0.5 * edge + 0.6 * near + 0.4 * lap, 0, 1)
     nest = nest * sstep(0.35, 0.6, n2(np.floor(S / 0.55) * 0.9, np.floor(Y / 0.55) * 1.3, seed + 7) + 0.25 * nest)
+    nest = nest * sstep(0.45, 0.75, nest)                 # v2.1: только у гвоздей, кромок и нахлёста
     pit = np.clip(1 - (f1 / rr) ** 2, 0, 1) * nest * (t > 0.05) * (1 - np.clip(nail, 0, 1))
     H -= 0.055 * pit
     # хлопья окалины: чуть приподнятые островки

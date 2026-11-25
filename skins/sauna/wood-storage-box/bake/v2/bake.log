@@ -1,108 +1,108 @@
-00:01.594  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
-[07:50:43] GPU OPTIX
-[07:50:43] low-poly 1682 faces, centre mismatch 0.0000 cm
-[07:50:44] board left 0 island 8 76319
-[07:50:44] board left 1 island 6 76319
-[07:50:44] board left 2 island 7 76319
-[07:50:44] board left 3 island 13 76319
-[07:50:45] board right 0 island 0 76319
-[07:50:45] board right 1 island 2 76204
-[07:50:45] board right 2 island 12 75662
-[07:50:46] board right 3 island 15 75534
-[07:50:46] board front 0 island 16 57713
-[07:50:46] board front 1 island 25 55104
-[07:50:46] board front 2 island 27 55343
-[07:50:46] board front 3 island 14 58234
-[07:50:46] board back 0 island 21 55577
-[07:50:46] board back 1 island 4 57000
-[07:50:47] board back 2 island 11 58190
-[07:50:47] board back 3 island 22 55627
-[07:50:47]   flipped hp_hoop0
-[07:50:47] hoop 0 (2193, 52) corners 8 joint s 299.4
-[07:50:48]   flipped hp_hoop1
-[07:50:48] hoop 1 (2194, 52) corners 8 joint s 299.6
-[07:50:49]   flipped hp_floor
-[07:50:49] floor field (449, 331)
-[07:51:01] hp_stones 1587510
-[07:51:01] hp_coals 76860
-[07:51:01] hp_logs 13182
-[07:51:01] scoop 10622 handle 1520 ground 4.69
-[07:51:01] leaf on stone at -7.0 -7.5
-[07:51:01] high-poly: 3128968 verts in 25 objects
+00:01.250  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+[11:51:47] GPU OPTIX
+[11:51:48] low-poly 1682 faces, centre mismatch 0.0000 cm
+[11:51:48] board left 0 island 8 76319
+[11:51:48] board left 1 island 6 76319
+[11:51:49] board left 2 island 7 76319
+[11:51:49] board left 3 island 13 76319
+[11:51:49] board right 0 island 0 76319
+[11:51:50] board right 1 island 2 76204
+[11:51:50] board right 2 island 12 75662
+[11:51:50] board right 3 island 15 75534
+[11:51:50] board front 0 island 16 57713
+[11:51:51] board front 1 island 25 55104
+[11:51:51] board front 2 island 27 55343
+[11:51:51] board front 3 island 14 58234
+[11:51:51] board back 0 island 21 55577
+[11:51:51] board back 1 island 4 57000
+[11:51:51] board back 2 island 11 58190
+[11:51:52] board back 3 island 22 55627
+[11:51:52]   flipped hp_hoop0
+[11:51:52] hoop 0 (2193, 52) corners 8 joint s 299.4
+[11:51:53]   flipped hp_hoop1
+[11:51:53] hoop 1 (2194, 52) corners 8 joint s 299.6
+[11:51:54]   flipped hp_floor
+[11:51:54] floor field (449, 331)
+[11:52:04] hp_stones 1577268
+[11:52:04] hp_coals 76860
+[11:52:04] hp_logs 13182
+[11:52:04] scoop 10622 handle 1520 ground 4.67
+[11:52:05] leaf at 10.5 22.0
+[11:52:05] high-poly: 3118726 verts in 25 objects
 C:\Users\akeel\OneDrive\rustskin\skins\sauna\wood-storage-box\bake_v2.py:440: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   m.use_nodes = True
 C:\Users\akeel\OneDrive\rustskin\skins\sauna\wood-storage-box\bake_v2.py:549: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   m.use_nodes = True
 Info: Saved as "highpoly.blend"
-[07:51:02] bake wA_nobj NORMAL OBJECT
+[11:52:06] bake wA_nobj NORMAL OBJECT
 Info: Baking map saved to internal image, save it externally or pack it
-[07:51:45] bake wA_ao AO 
+[11:52:50] bake wA_ao AO 
 Info: Baking map saved to internal image, save it externally or pack it
-[07:52:25] bake wA_m1 EMIT 
+[11:53:54] bake wA_m1 EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[07:53:17] bake wA_m2 EMIT 
+[11:54:51] bake wA_m2 EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[07:54:14] bake wA_m3 EMIT 
+[11:55:50] bake wA_m3 EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[07:55:10] bake wA_idc EMIT 
+[11:56:46] bake wA_idc EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[07:56:06] bake wA_cover EMIT 
+[11:57:43] bake wA_cover EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[07:57:01] bake wA_ntan NORMAL TANGENT
+[11:58:33] bake wA_ntan NORMAL TANGENT
 C:\Users\akeel\OneDrive\rustskin\skins\sauna\wood-storage-box\bake_v2.py:571: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   m.use_nodes = True
 Info: Baking map saved to internal image, save it externally or pack it
-[07:57:07] bake wA_mask EMIT 
+[11:58:38] bake wA_mask EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[07:57:14] group wA texels 4045667
-[07:57:15] bake wB_nobj NORMAL OBJECT
+[11:58:44] group wA texels 4045667
+[11:58:44] bake wB_nobj NORMAL OBJECT
 Info: Baking map saved to internal image, save it externally or pack it
-[07:57:50] bake wB_ao AO 
+[11:59:11] bake wB_ao AO 
 Info: Baking map saved to internal image, save it externally or pack it
-[07:58:33] bake wB_m1 EMIT 
+[11:59:41] bake wB_m1 EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[07:59:28] bake wB_m2 EMIT 
+[12:00:20] bake wB_m2 EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:00:21] bake wB_m3 EMIT 
+[12:00:57] bake wB_m3 EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:01:13] bake wB_idc EMIT 
+[12:01:35] bake wB_idc EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:02:07] bake wB_cover EMIT 
+[12:02:13] bake wB_cover EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:02:56] bake wB_ntan NORMAL TANGENT
+[12:02:50] bake wB_ntan NORMAL TANGENT
 Info: Baking map saved to internal image, save it externally or pack it
-[08:03:02] bake wB_mask EMIT 
+[12:02:55] bake wB_mask EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:03:08] group wB texels 4145178
-[08:03:08] bake floor_nobj NORMAL OBJECT
+[12:02:59] group wB texels 4145178
+[12:02:59] bake floor_nobj NORMAL OBJECT
 Info: Baking map saved to internal image, save it externally or pack it
-[08:03:39] bake floor_ao AO 
+[12:03:21] bake floor_ao AO 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:04:14] bake floor_m1 EMIT 
+[12:03:46] bake floor_m1 EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:05:25] bake floor_m2 EMIT 
+[12:04:36] bake floor_m2 EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:06:34] bake floor_m3 EMIT 
+[12:05:27] bake floor_m3 EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:07:45] bake floor_idc EMIT 
+[12:06:17] bake floor_idc EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:08:56] bake floor_cover EMIT 
+[12:07:07] bake floor_cover EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:10:02] bake floor_ntan NORMAL TANGENT
+[12:07:57] bake floor_ntan NORMAL TANGENT
 Info: Baking map saved to internal image, save it externally or pack it
-[08:10:07] bake floor_mask EMIT 
+[12:08:01] bake floor_mask EMIT 
 Info: Baking map saved to internal image, save it externally or pack it
-[08:10:13] group floor texels 1174628
-[08:10:14]   -> ao.png
-[08:10:14]   -> m1.png
-[08:10:15]   -> m2.png
-[08:10:16]   -> m3.png
-[08:10:17]   -> idc.png
-[08:10:17]   -> cover.png
-[08:10:18]   -> normal.png
-[08:10:19]   -> mask.png
-[08:10:19] done
+[12:08:06] group floor texels 1174628
+[12:08:07]   -> ao.png
+[12:08:07]   -> m1.png
+[12:08:08]   -> m2.png
+[12:08:08]   -> m3.png
+[12:08:09]   -> idc.png
+[12:08:09]   -> cover.png
+[12:08:10]   -> normal.png
+[12:08:11]   -> mask.png
+[12:08:11] done
 Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
-OBJ import of 'box.wooden.obj' took 6.20 ms
+OBJ import of 'box.wooden.obj' took 22.30 ms
 
 Blender quit

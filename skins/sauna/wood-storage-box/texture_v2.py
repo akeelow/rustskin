@@ -48,15 +48,18 @@ RUST = hexc("#8C4A26")
 RUST_DARK = hexc("#5A3424")
 FLOOR_WOOD = hexc("#3B2E25")
 CHARCOAL = hexc("#141211")
-ASH = hexc("#77726B")           # пепел: на солнце светлеет (урок v1.1 «снежки») — держим средне-серым
-ASH_LIGHT = hexc("#8E8981")
-STONE_SKIN = hexc("#2A2A2D")    # габбро-диабаз: корка
-STONE_FACE = hexc("#35373C")    # грань раскола: чуть светлее и холоднее
-STONE_CHIP = hexc("#53575D")    # свежий скол: светлее — рёбра ловят свет (референс)
+ASH = hexc("#5F5A54")           # пепел: v2.0 #77726B в игре — белый «снег» (урок v1.1 «снежки»)
+ASH_LIGHT = hexc("#6C6761")
+STONE_SKIN = hexc("#29292A")    # габбро-диабаз: корка (v2.1 нейтральнее: в игре отдавал сиренью)
+STONE_FACE = hexc("#323335")    # грань раскола: чуть светлее
+STONE_CHIP = hexc("#4A4B4D")    # свежий скол: светлее — рёбра ловят свет (референс)
 STONE_OLD = hexc("#2D2A28")     # окатанный старый
 MINERAL = hexc("#B8B3A8")
-LEAF_DRY = hexc("#7E6342")
-LEAF_DARK = hexc("#5B4430")
+LEAF_DRY = hexc("#6A5236")      # v2.1 темнее: #7E6342 в игре — «самородок»
+LEAF_DARK = hexc("#4C3826")
+TIN = hexc("#6A6763")
+PEG = hexc("#857561")
+CHAR_ASH = hexc("#4A4642")
 EMB_EDGE = hexc("#B51805")
 EMB_MID = hexc("#FF7A10")
 EMB_HOT = hexc("#FFB347")
@@ -186,9 +189,26 @@ def build():
     nm = (wood & (nail > 0.5)).astype(np.float32)
     halo = np.clip(fblur(nm, 8) * 3.0, 0, 1) * (1 - nm) * wood
     wc = mix(wc, hexc("#4E3424"), 0.4 * halo)
+    # обугленный верх у печи (решение 2: формой): ячейки угля, пепельно-серые макушки, бурая подпалина вокруг
+    ch = np.clip(m2[..., 2], 0, 1) * wood
+    scorch = np.clip(fblur(ch, 14) * 2.2, 0, 1) * (1 - ch) * wood
+    wc = mix(wc, hexc("#3A2A20"), 0.55 * scorch)
+    cc = mix(np.zeros_like(col) + CHAR, CHAR_ASH, 0.25 * np.clip(1 - cav * 1.5, 0, 1) * (0.5 + 0.5 * fbm(x * 0.7 + z * 0.7, y * 0.7, 909, 2)))
+    wc = mix(wc, cc, ch)
     col = np.where(wood[..., None], wc, col)
     spec = np.where(wood, 0.05, spec)
-    gloss = np.where(wood, 0.2 + 0.14 * gr - 0.08 * smoke, gloss)
+    gloss = np.where(wood, 0.2 + 0.14 * gr - 0.08 * smoke - 0.1 * ch, gloss)
+    # жестяная заплата: серая жесть, ржавчина по рёбрам и краю, подкопчена
+    tin = walls & (mat == M["tin"])
+    tr_ = np.clip(0.3 * np.clip(grain, 0, 1) + 0.6 * sstep(0.55, 0.8, fbm(z * 0.4, y * 0.4, 911, 3)), 0, 1)
+    tc = mix(np.zeros_like(col) + TIN * (0.9 + 0.2 * fbm(z * 1.2, y * 1.2, 913, 2)[..., None]), RUST * 0.85, 0.7 * tr_)
+    tc = tc * 0.7 + SOOT * 0.3
+    col = np.where(tin[..., None], tc, col)
+    spec = np.where(tin, 0.3 - 0.15 * tr_, spec)
+    gloss = np.where(tin, 0.36 - 0.16 * tr_, gloss)
+    # колышек: свежее дерево торцом, кольца темнее
+    peg = walls & (mat == M["peg"])
+    col = np.where(peg[..., None], PEG * (1.05 - 0.25 * np.clip(grain, 0, 1)[..., None]), col)
     # гвозди досок
     bn = walls & (mat == M["nail"])
     nrust = sstep(0.45, 0.8, fbm(x * 2 + z, y * 2, 921, 2))
@@ -200,7 +220,7 @@ def build():
     pit, flake, edge, lap = m1[..., 0], m2[..., 1], m3[..., 0], m3[..., 1]
     rn = fbm(x * 0.2 + z * 0.2, y * 0.6, 931, 4)
     hc = mix(np.zeros_like(col) + IRON, RUST * 0.8, np.clip(0.2 + 0.6 * (rn - 0.45) * 2, 0, 1) * 0.55)
-    hc = mix(hc, RUST_DARK * 1.15, 0.7 * np.clip(pit, 0, 1))          # ржавчина в раковинах — тёмная, не «крапинка»
+    hc = mix(hc, RUST_DARK * 1.1, 0.45 * np.clip(pit, 0, 1))          # ржавчина в раковинах — тёмная, не «крапинка»
     hc = mix(hc, hexc("#1E1B19"), 0.5 * np.clip(flake, 0, 1))
     hc = mix(hc, IRON_EDGE, 0.35 * np.clip(edge, 0, 1) * (1 - np.clip(pit, 0, 1)))
     hc = mix(hc, RUST_DARK, 0.35 * np.clip(lap, 0, 1))
@@ -216,9 +236,9 @@ def build():
     seam = cap & (np.abs(y - 13.5) < 0.6)
     seam2 = cap & (np.abs(y - 26.75) < 0.6)
     nz_ = fbm(x * 0.3 + z * 0.3, y, 951, 2)
-    gap_heat = np.maximum(seam * (0.4 + 0.6 * nz_) * 0.75, seam2 * (0.3 + 0.7 * nz_) * 0.45)
+    gap_heat = np.maximum(seam * (0.4 + 0.6 * nz_) * 0.38, seam2 * (0.3 + 0.7 * nz_) * 0.22)   # v2.1: вдвое тише (днём «неон»)
     face_line = (walls & ~cap) & (np.minimum(np.abs(y - 13.45), np.abs(y - 26.75)) < 0.35)
-    gap_heat = np.maximum(gap_heat, face_line * 0.12 * (0.3 + 0.7 * nz_))
+    gap_heat = np.maximum(gap_heat, face_line * 0.06 * (0.3 + 0.7 * nz_))
     yb = FW.slot_bottom(x, 40.25)
     ends = front | back
     in_slot = ends & (np.abs(x - FW.SLOT["xc"]) < FW.SLOT["hw"]) & (y > 40.0) & (y < 45.5)

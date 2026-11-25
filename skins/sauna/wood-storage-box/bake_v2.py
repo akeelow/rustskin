@@ -386,12 +386,12 @@ def build_scoop(f):
     hu = -L / 2 - 0.1 - 13.0 * t
     hy = top + 0.1 + 1.2 * t - 0.6 * t * (1 - t)
     C = np.column_stack([cx + hu * ca, hy, cz + hu * sa])
-    V1, Q1 = tube(C, np.full(len(t), 0.5), 12)
+    V1, Q1 = tube(C, np.full(len(t), 0.7), 12)       # v2.1: была «ниткой»
     a = np.linspace(0, 2 * np.pi, 80)
     rc = -L / 2 - 13.1 - 1.9
     ring = np.column_stack([cx + (rc + 1.9 * np.cos(a)) * ca - 1.9 * np.sin(a) * sa, top + 1.3 + 0.1 * np.sin(a),
                             cz + (rc + 1.9 * np.cos(a)) * sa + 1.9 * np.sin(a) * ca])
-    V2, Q2 = tube(ring, np.full(len(a), 0.38), 10)
+    V2, Q2 = tube(ring, np.full(len(a), 0.5), 10)
     acc = Acc(4)
     acc.add(V1, Q1, consts(len(V1), FF.MAT["scoop"], tone=0.4, idx=51))
     acc.add(V2, Q2, consts(len(V2), FF.MAT["scoop"], tone=0.4, idx=51))
@@ -401,16 +401,16 @@ def build_scoop(f):
 
 
 def build_leaf(floor_obs, items):
-    """Сухой бурый лист на большом камне ближе к середине; ложится лучами на то, что под ним."""
+    """Сухой бурый лист на пепле у кучи (FF.LEAF, v2.1; в v2.0 на камне читался «самородком»); ложится лучами на то, что под ним."""
     dg = bpy.context.evaluated_depsgraph_get()
     bvh = [BVHTree.FromObject(o, dg) for o in floor_obs if o.name in ("hp_stones", "hp_coals", "hp_logs", "hp_floor")]
-    big = [it for it in items if it[0] == "stone" and it[3] > 4.4 and it[4] == 0]
-    tgt = min(big, key=lambda it: np.hypot(it[1] - 6.0, it[2] + 4.0))
     rng = np.random.default_rng(91)
-    x, y, h, vein, burn = FF.leaf(8.2, rng)
-    ang = np.radians(35.0)
-    X = tgt[1] - 3.0 + x * np.cos(ang) - y * np.sin(ang)
-    Z = tgt[2] - 2.0 + x * np.sin(ang) + y * np.cos(ang)
+    x, y, h, vein, burn = FF.leaf(FF.LEAF["L"], rng)
+    ang = FF.LEAF["ang"]
+    cx, cz = FF.LEAF["c"]
+    X = cx - FF.LEAF["L"] * 0.45 * np.cos(ang) + x * np.cos(ang) - y * np.sin(ang)
+    Z = cz - FF.LEAF["L"] * 0.45 * np.sin(ang) + x * np.sin(ang) + y * np.cos(ang)
+    tgt = (None, cx, cz)
     Hs = np.zeros_like(X)
     for i in range(X.shape[0]):
         for j in range(X.shape[1]):
@@ -420,17 +420,17 @@ def build_leaf(floor_obs, items):
                 if hit is not None:
                     best = max(best, hit.y)
             Hs[i, j] = best
-    # лист жёсткий: опора — сглаженный максимум под ним (не проваливается в щели между камнями)
+    # опора — сглаженная высота под листом
     from numpy.lib.stride_tricks import sliding_window_view as sw
     pad = np.pad(Hs, 4, mode="edge")
-    Hm = sw(pad, (9, 9)).max(axis=(-1, -2))
+    Hm = sw(pad, (9, 9)).mean(axis=(-1, -2))     # лист мягкий, ложится на пепел
     P = np.stack([X, Hm + 0.1 + h, Z], -1)
     nu, nv = x.shape
     att = consts(nu * nv, FF.MAT["leaf"], tone=0.6, idx=52, a1=vein.ravel(), b3=burn.ravel())
     att["m3"][:, 1] = burn.ravel()
     ob = mesh_np("hp_leaf", P.reshape(-1, 3), grid_quads(nu, nv), att, "floor")
     fix_outward(ob, lambda c: np.tile([0.0, 1.0, 0.0], (len(c), 1)))
-    log("leaf on stone at %.1f %.1f" % (tgt[1], tgt[2]))
+    log("leaf at %.1f %.1f" % (tgt[1], tgt[2]))
     return ob
 
 

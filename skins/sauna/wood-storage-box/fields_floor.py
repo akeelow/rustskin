@@ -23,6 +23,7 @@ BEAD_R = 0.45                   # закатанная кромка
 STEP = 0.2                      # шаг сетки поля, см
 SCOOP = dict(c=(-19.5, 27.0), yaw=np.radians(-35.0), L=16.0, W=13.0)   # совок: центр, поворот, длина/ширина ковша
 SEED = 23
+LEAF = dict(c=(10.5, 22.0), r=5.2, ang=np.radians(28.0), L=8.0)   # v2.1: лист лежит на пепле, а не на камне
 
 
 # ------------------------------------------------------------------ дно ящика (низ из OBJ)
@@ -124,7 +125,9 @@ def floor_field(X, Z):
     ember = np.clip(gapc + 0.35 * crk * taper, 0, 1) * (1 - under_scoop)
     # --- пепел: у бортов внутри, пятнами на углях, горками в зазоре у стенок и в углах ящика
     an = fbm2(X * 0.09, Z * 0.09, 53, 4)
-    ash_t = np.clip(sstep(0.42, 0.56, an) * 0.95 + sstep(5.0, 1.6, e) * sstep(0.3, 0.55, fbm2(X * 0.2, Z * 0.2, 55, 2)), 0, 1) * (e > 1.2)
+    leafbed = sstep(LEAF["r"] + 1.0, LEAF["r"] - 1.5, np.hypot(X - LEAF["c"][0], Z - LEAF["c"][1]))
+    ash_t = np.clip(sstep(0.42, 0.56, an) * 0.95 + sstep(3.2, 1.6, e) * sstep(0.45, 0.65, fbm2(X * 0.2, Z * 0.2, 55, 2))
+                    + leafbed, 0, 1) * (e > 1.2)
     ash_t = np.maximum(ash_t, under_scoop * 0.0)
     ash_lvl = yb + 0.3 + 1.6 * ash_t * taper + 0.6 * ash_t * (1 - taper)
     dw = np.minimum.reduce([X - INNER[0], INNER[1] - X, Z - INNER[2], INNER[3] - Z])
@@ -363,6 +366,8 @@ def layout(rng=None):
     occ = []                                             # (x, z, r)
 
     def free(x, z, r, k=0.86):
+        if np.hypot(x - LEAF["c"][0], z - LEAF["c"][1]) < LEAF["r"] + r * 0.5:
+            return False
         su, sv = scoop_local(np.array(x), np.array(z))
         if abs(su) < SCOOP["L"] / 2 + r * 0.6 + 0.5 and abs(sv) < SCOOP["W"] / 2 + r * 0.6 + 0.5:
             return False
@@ -396,6 +401,8 @@ def layout(rng=None):
             su, sv = scoop_local(np.array(x), np.array(z))
             if abs(su) < SCOOP["L"] / 2 + r + 2 and abs(sv) < SCOOP["W"] / 2 + r + 2:
                 continue
+            if np.hypot(x - LEAF["c"][0], z - LEAF["c"][1]) < LEAF["r"] + r:
+                continue
             if all(np.hypot(x - a, z - b) > (r + c) * 0.9 for (k, a, b, c, ly, _) in out if ly == 1):
                 out.append(("stone", x, z, r, 1, {}))
                 break
@@ -415,7 +422,8 @@ def scoop_field(su, sv, ground):
     ground — высота слоя под ним. Возвращает (h, маски) или NaN вне ковша."""
     L, W = SCOOP["L"], SCOOP["W"]
     du = su + L / 2                                      # от задней стенки
-    dv = W / 2 - np.abs(sv)
+    wv = W / 2 * (0.68 + 0.32 * np.clip(du / L, 0, 1))  # v2.1: трапеция — у задней стенки уже (сверху был «рамкой»)
+    dv = wv - np.abs(sv)
     fr = L / 2 - su
     inside = (du > -0.35) & (dv > -0.35) & (fr > -0.2)
     tilt = 0.06 * (L / 2 - su)                           # задняя часть приподнята: ручка лежит на борту
@@ -446,7 +454,7 @@ def scoop_field(su, sv, ground):
     inner = (du > 0.5) & (dv > 0.5)
     H = np.where(inner, np.maximum(H, yb + 0.15 + 0.6 * ashh + 1.1 * coal * (coal > 0.05)), H)
     # накладка ручки на дне у задней стенки с двумя заклёпками
-    plate = (du > 0.5) & (du < 3.0) & (np.abs(sv) < 1.4)
+    plate = (du > 0.5) & (du < 3.0) & (np.abs(sv) < 1.2)
     H = np.where(plate & inner & (ashh < 0.3), np.maximum(H, yb + 0.27), H)
     riv = np.zeros_like(su)
     for (ru, rv) in ((1.1, 0.0), (2.4, 0.0)):
@@ -458,13 +466,16 @@ def scoop_field(su, sv, ground):
     return np.where(inside, H, np.nan), dict(mat=mat, coal=coal, ash=ashh * inner, rivet=riv, edge=sstep(0.6, 0.0, np.abs(edge)))
 
 
-def leaf(L, rng, nu=44, nv=17, curl=(0.16, 0.26)):
+def leaf(L, rng, nu=44, nv=17, curl=(0.04, 0.08)):
     """Берёзовый лист (как bed/bake_v2.leaf), сухой и скрученный: x вдоль жилки, y поперёк, h подъём, жилки."""
-    U, Vv = np.meshgrid(np.linspace(0, 1, nu), np.linspace(-1, 1, nv), indexing="ij")
-    W = 0.38 * L * (U ** 0.45) * (1 - U) ** 0.75 / (0.45 ** 0.45 * 0.55 ** 0.75) * 0.95
+    U, Vv = np.meshgrid(np.linspace(-0.18, 1, nu), np.linspace(-1, 1, nv), indexing="ij")
+    Up = np.clip(U, 0, 1)
+    W = 0.36 * L * (Up ** 0.5) * (1 - Up) ** 1.1 / (0.45 ** 0.5 * 0.55 ** 1.1) * 0.95
+    W = np.where(U < 0.02, 0.09, np.maximum(W, 0.09 * (U < 0.08)))           # черешок 1.4 см
     W = W * (1 + 0.05 * np.sin(U * 26 + rng.uniform(0, 6)))
     x, y = U * L, Vv * W
     vein = np.exp(-(np.abs(y) / 0.1) ** 2) * (U < 0.97)
+    U = Up
     for k in range(1, 8):
         u0 = 0.1 + 0.11 * k
         along = x - (u0 * L + np.abs(y) * 0.95)
