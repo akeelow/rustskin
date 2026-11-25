@@ -2,8 +2,8 @@
 
 > 🚀 **Опубликован в Workshop 15.11.2026:** https://steamcommunity.com/sharedfiles/filedetails/?id=3840344106 (v2.5).
 >
-> 🛠️ **v3.1 — полная переделка (26.11.2026), на проверку в игре** (v3.0 — срез, снят 26.11): всё геометрией в Blender,
-> запекание 4096 → 1024, файлы `export/SnowJacket_v3.1_*` (+ слот Occlusion). Как загрузить и что снять — раздел
+> 🛠️ **v3.2 — полная переделка (26.11.2026), на проверку в игре** (v3.0, v3.1 сняты 26.11): всё геометрией в Blender,
+> запекание 4096 → 1024, файлы `export/SnowJacket_v3.2_*` (+ слот Occlusion). Как загрузить и что снять — раздел
 > [«Версия v3»](#версия-v3-вертикальный-срез). План: [PLAN_v3.md](PLAN_v3.md). Цель — обновить ту же страницу Workshop
 > в начале декабря.
 >
@@ -27,6 +27,12 @@
 
 ## Заметки
 
+- 26.11.2026, **v3.2** (`export/SnowJacket_v3.2_*`): заплаты на локтях 9 × 11 см по центру заплат парки (v3.1 —
+  во весь квадрат), застиранный лён ближе к тону халата, кант полотенца 9 + 4 мм у верхнего края. Остальное — как v3.1.
+- 26.11.2026, **v3.1 в игре** (`screenshots/v3/v3.1_shot1–4.jpg`: перёд, бок, спина, бок с другой стороны).
+  Работает: узел читается обмоткой с петлёй, концы пояса отделяются от полы; V — ткань полосы, «манишки» нет;
+  подпалины — коричневые пятна; сзади пояс ровный (треугольника из рендера Blender в игре нет), шов кокетки, лист,
+  штопка не светится, кайма. Не работает: заплаты на локтях огромные и белые, полосы шевроном — «нарукавники».
 - 26.11.2026, **v3.1** (`export/SnowJacket_v3.1_*`), по кадрам v3.0 и этап 3 плана:
   - узел — обмотка концом пояса (на 9 мм выше и ниже пояса) с петлёй поверх наискосок, заломы и тень по краям петли;
     пояс, узел и концы темнее (`#A99272`), крупное AO в цвете сильнее — концы отделяются от полы;
@@ -82,12 +88,12 @@
 
 | Слот | Файл / значение |
 |---|---|
-| Diffuse | `export/SnowJacket_v3.1_diffuse.png`, Color 255/255/255, Alpha Cutoff 0.00 |
-| Normal | `export/SnowJacket_v3.1_normal.png`, Normal Scale 1.00 |
-| Specular/Gloss | `export/SnowJacket_v3.1_specgloss.png`, Spec Color 255, Glossiness 1.00 |
-| Occlusion | `export/SnowJacket_v3.1_occlusion.png`, Occlusion Scale 1.00 (**новое**: у v2.5 слот был пуст) |
+| Diffuse | `export/SnowJacket_v3.2_diffuse.png`, Color 255/255/255, Alpha Cutoff 0.00 |
+| Normal | `export/SnowJacket_v3.2_normal.png`, Normal Scale 1.00 |
+| Specular/Gloss | `export/SnowJacket_v3.2_specgloss.png`, Spec Color 255, Glossiness 1.00 |
+| Occlusion | `export/SnowJacket_v3.2_occlusion.png`, Occlusion Scale 1.00 (**новое**: у v2.5 слот был пуст) |
 | Emission | нет |
-| Fuzz Mask | `export/SnowJacket_v3.1_fuzz.png`, **Fuzz 0.5**, Fuzz Scatter 0.91 |
+| Fuzz Mask | `export/SnowJacket_v3.2_fuzz.png`, **Fuzz 0.5**, Fuzz Scatter 0.91 |
 
 ### Что снять (F12, днём; 4–6 кадров)
 

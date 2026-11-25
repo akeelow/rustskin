@@ -1,52 +1,52 @@
 [   0.3s] low: 2887 граней, свои нормали: True | bbox y 0.203 0.913
-[   3.6s] hp_front: 357217 вершин, 710698 граней (шаг 1.0 мм), перевёрнуто при сборке 3096
-[   3.8s] front: H -7.1…19.4 мм
-[   4.4s] hp_back: 310909 вершин, 618794 граней (шаг 1.0 мм), перевёрнуто при сборке 441
-[   4.6s] back: H -7.0…10.5 мм
-00:05.657  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
-[   4.9s] Cycles: OPTIX ['NVIDIA GeForce RTX 3060 Ti']
+[   3.3s] hp_sleeve_l: 214270 вершин, 426212 граней (шаг 1.0 мм), перевёрнуто при сборке 357
+[   3.5s] sleeve_l: H -6.2…7.0 мм
+[   3.9s] hp_sleeve_r: 206513 вершин, 410710 граней (шаг 1.0 мм), перевёрнуто при сборке 410384
+[   4.0s] sleeve_r: H -6.1…4.6 мм
+00:05.141  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+[   4.3s] Cycles: OPTIX ['NVIDIA GeForce RTX 3060 Ti']
 C:\Users\akeel\OneDrive\rustskin\skins\sauna\snow-jacket\bake_v3.py:283: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   m.use_nodes = True
 C:\Users\akeel\OneDrive\rustskin\skins\sauna\snow-jacket\bake_v3.py:374: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
   lm.use_nodes = True
-[   7.4s] normal: поверх прошлого запекания
-[   7.4s] запекание normal, группа front…
+[   6.7s] normal: поверх прошлого запекания
+[   6.7s] запекание normal, группа sleeve_l…
 Info: Baking map saved to internal image, save it externally or pack it
-[  11.0s] запекание normal, группа back…
+[  10.2s] запекание normal, группа sleeve_r…
 Info: Baking map saved to internal image, save it externally or pack it
-[  23.1s] записано normal
-[  25.3s] normal_base: поверх прошлого запекания
-[  25.3s] запекание normal_base, группа front…
+[  22.1s] записано normal
+[  24.4s] normal_base: поверх прошлого запекания
+[  24.4s] запекание normal_base, группа sleeve_l…
 Info: Baking map saved to internal image, save it externally or pack it
-[  28.9s] запекание normal_base, группа back…
+[  27.8s] запекание normal_base, группа sleeve_r…
 Info: Baking map saved to internal image, save it externally or pack it
-[  40.3s] записано normal_base
-[  42.1s] ao: поверх прошлого запекания
-[  42.1s] запекание ao, группа front…
+[  39.0s] записано normal_base
+[  40.9s] ao: поверх прошлого запекания
+[  40.9s] запекание ao, группа sleeve_l…
 Info: Baking map saved to internal image, save it externally or pack it
-[  47.0s] запекание ao, группа back…
+[  45.1s] запекание ao, группа sleeve_r…
 Info: Baking map saved to internal image, save it externally or pack it
-[  58.5s] записано ao
-[  60.6s] m1: поверх прошлого запекания
-[  60.6s] запекание m1, группа front…
+[  56.4s] записано ao
+[  58.5s] m1: поверх прошлого запекания
+[  58.5s] запекание m1, группа sleeve_l…
 Info: Baking map saved to internal image, save it externally or pack it
-[  64.5s] запекание m1, группа back…
+[  62.0s] запекание m1, группа sleeve_r…
 Info: Baking map saved to internal image, save it externally or pack it
-[  75.6s] записано m1
-[  77.5s] m2: поверх прошлого запекания
-[  77.5s] запекание m2, группа front…
+[  72.9s] записано m1
+[  74.7s] m2: поверх прошлого запекания
+[  74.7s] запекание m2, группа sleeve_l…
 Info: Baking map saved to internal image, save it externally or pack it
-[  81.2s] запекание m2, группа back…
+[  78.2s] запекание m2, группа sleeve_r…
 Info: Baking map saved to internal image, save it externally or pack it
-[  91.6s] записано m2
-[  93.6s] m3: поверх прошлого запекания
-[  93.6s] запекание m3, группа front…
+[  88.2s] записано m2
+[  90.2s] m3: поверх прошлого запекания
+[  90.2s] запекание m3, группа sleeve_l…
 Info: Baking map saved to internal image, save it externally or pack it
-[  97.4s] запекание m3, группа back…
+[  93.7s] запекание m3, группа sleeve_r…
 Info: Baking map saved to internal image, save it externally or pack it
-[ 108.3s] записано m3
-[ 108.3s] готово
+[ 104.4s] записано m3
+[ 104.4s] готово
 Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
-OBJ import of 'jacket.snow.obj' took 7.11 ms
+OBJ import of 'jacket.snow.obj' took 5.85 ms
 
 Blender quit

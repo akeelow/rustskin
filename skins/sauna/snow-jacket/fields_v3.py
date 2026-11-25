@@ -690,8 +690,8 @@ def build():
         ys_, xs_ = np.nonzero(ins)
         if len(ys_) == 0:
             continue
-        hx = (np.percentile(xs_, 97) - np.percentile(xs_, 3)) / 2 / pxmm[n] + 6
-        hyy = (np.percentile(ys_, 97) - np.percentile(ys_, 3)) / 2 / pxmm[n] + 6
+        # v3.2: 9 × 11 см по центру заплаты парки (v3.1 — во весь квадрат парки, в игре — «нарукавники»)
+        hx, hyy = 45.0, 55.0
         cu, cvv = (xs_.mean() + 0.5) / pxmm[n], (ys_.mean() + 0.5) / pxmm[n]
         su, sv = S0 - cu, (ys + 0.5) / PX - cvv                         # мм; sv вниз по атласу
         car, sar = np.cos(np.radians(ang_deg)), np.sin(np.radians(ang_deg))
@@ -706,8 +706,9 @@ def build():
         CODE[inside] = PATCH
         CAV = np.where(inside, 0.0, CAV)
         q = pv / hyy
-        for a_, b_ in ((-0.30, -0.12), (-0.05, 0.02)):                  # полосы полотенца (тканые — цвет)
-            st_ = sstep(a_ - 0.01, a_ + 0.01, q) * (1 - sstep(b_ - 0.01, b_ + 0.01, q))
+        from_top = pv + hyy                                              # мм от верхнего края заплаты
+        for a_, b_ in ((12, 21), (25, 29)):                              # кант полотенца у края: 9 + 4 мм
+            st_ = sstep(a_ - 0.6, a_ + 0.6, from_top) * (1 - sstep(b_ - 0.6, b_ + 0.6, from_top))
             STRIPE = np.where(inside, np.maximum(STRIPE, st_), STRIPE)
         tuft = reg & (dp < 1.5) & (fbm(pu / 2.5, pv / 2.5, 120 + n) > 0.66)   # махры по краю
         H = np.where(tuft, H + 0.8, H)

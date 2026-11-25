@@ -147,7 +147,7 @@ def main():
     col[band] = BAND
     col[code == FV.FRINGE] = FRINGE
     col[code == FV.LINEN] = LINEN
-    col[code == FV.PATCH] = LINEN * 0.92
+    col[code == FV.PATCH] = LINEN * 0.55 + CLOTH * 0.40          # v3.2: застиранный лён (v3.1 — белые «нарукавники»)
     col[code == FV.DARN] = DARN
     col[code == FV.TWIG] = TWIG
     col[code == FV.LEAF] = LEAF
