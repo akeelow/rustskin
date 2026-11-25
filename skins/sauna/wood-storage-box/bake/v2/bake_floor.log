@@ -1,0 +1,50 @@
+00:01.469  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+[08:20:55] GPU OPTIX
+[08:20:55] low-poly 1682 faces, centre mismatch 0.0000 cm
+[08:20:56]   flipped hp_floor
+[08:20:56] floor field (449, 331)
+[08:21:05] hp_stones 1587510
+[08:21:05] hp_coals 76860
+[08:21:05] hp_logs 13182
+[08:21:05] scoop 10622 handle 1520 ground 4.69
+[08:21:06] leaf on stone at -7.0 -7.5
+[08:21:06] high-poly: 1839061 verts in 7 objects
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\wood-storage-box\bake_v2.py:440: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+[08:21:08] merging into the previous bake: ['ao', 'cover', 'idc', 'm1', 'm2', 'm3', 'mask', 'normal']
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\wood-storage-box\bake_v2.py:549: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+[08:21:08] bake floor_nobj NORMAL OBJECT
+Info: Baking map saved to internal image, save it externally or pack it
+[08:21:37] bake floor_ao AO 
+Info: Baking map saved to internal image, save it externally or pack it
+[08:22:07] bake floor_m1 EMIT 
+Info: Baking map saved to internal image, save it externally or pack it
+[08:23:05] bake floor_m2 EMIT 
+Info: Baking map saved to internal image, save it externally or pack it
+[08:23:45] bake floor_m3 EMIT 
+Info: Baking map saved to internal image, save it externally or pack it
+[08:24:24] bake floor_idc EMIT 
+Info: Baking map saved to internal image, save it externally or pack it
+[08:25:01] bake floor_cover EMIT 
+Info: Baking map saved to internal image, save it externally or pack it
+[08:25:38] bake floor_ntan NORMAL TANGENT
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\wood-storage-box\bake_v2.py:571: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+Info: Baking map saved to internal image, save it externally or pack it
+[08:25:42] bake floor_mask EMIT 
+Info: Baking map saved to internal image, save it externally or pack it
+[08:25:46] group floor texels 1174628
+[08:25:47]   -> ao.png
+[08:25:47]   -> m1.png
+[08:25:48]   -> m2.png
+[08:25:48]   -> m3.png
+[08:25:49]   -> idc.png
+[08:25:49]   -> cover.png
+[08:25:50]   -> normal.png
+[08:25:51]   -> mask.png
+[08:25:51] done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+OBJ import of 'box.wooden.obj' took 6.02 ms
+
+Blender quit
