@@ -32,7 +32,7 @@ R = 2048
 T0 = time.time()
 
 # коды материалов (CODE): цвет и Spec/Gloss выбирает texture_v3.py
-BODY, BAND, BELT, POCKET, HEM, KNOT, FRINGE, LINEN, TWIG, LEAF, INNER, LOOP, CUFF = range(1, 14)
+BODY, BAND, BELT, POCKET, HEM, KNOT, FRINGE, LINEN, TWIG, LEAF, INNER, LOOP, CUFF, PATCH, DARN = range(1, 16)
 
 CELL = 11.0          # ячейка вафли, мм (8 px при 1024)
 DEPTH = 1.1          # глубина ячейки, мм
@@ -83,6 +83,39 @@ def sstep(e0, e1, x):
 
 def gauss(x, w):
     return np.exp(-(x / w) ** 2)
+
+
+def box_blur(a, r):
+    """Размытие окном (2r+1)² через накопленные суммы, края — повтором."""
+    a = a.astype(np.float64)
+    for ax in (0, 1):
+        c = np.cumsum(np.pad(a, [(r + 1, r) if k == ax else (0, 0) for k in range(2)], mode="edge"), axis=ax)
+        n = a.shape[ax]
+        a = (np.take(c, np.arange(2 * r + 1, 2 * r + 1 + n), axis=ax) - np.take(c, np.arange(n), axis=ax)) / (2 * r + 1)
+    return a.astype(np.float32)
+
+
+def edge_distance(mask, steps):
+    """Расстояние (в текселях, 8-соседство) от границы маски, до steps; дальше — steps."""
+    D = np.full(mask.shape, float(steps), np.float32)
+    edge = mask & ~(np.roll(mask, 1, 0) & np.roll(mask, -1, 0) & np.roll(mask, 1, 1) & np.roll(mask, -1, 1))
+    seen = edge.copy()
+    D[edge] = 0
+    ring = edge
+    for k in range(1, steps):
+        g = ring.copy()
+        for dy, dx in ((0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+            g |= np.roll(ring, (dy, dx), (0, 1))
+        ring = g & ~seen
+        D[ring] = k
+        seen |= ring
+    return D
+
+
+def rrect(px, py, hx, hy, r):
+    """Знаковое расстояние до скруглённого прямоугольника (− внутри)."""
+    qx, qy = np.abs(px) - (hx - r), np.abs(py) - (hy - r)
+    return np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) + np.minimum(np.maximum(qx, qy), 0) - r
 
 
 def prof(d, r):
@@ -422,9 +455,13 @@ def build():
     STRIPE = np.where(band_u, stU, STRIPE)
     GROOVE = np.where(band_u, np.maximum(GROOVE, grU), GROOVE)
     CODE[band_u] = BAND
-    vdepth = sstep(0, 20, np.minimum(dU, dT))
-    H = np.where(vgap, base - 2.5 * vdepth + hw * 0.6, H)
-    CODE[vgap] = INNER
+    # V над перекрестьем: v3.0 — утопленная вафля тела читалась светлым «нагрудником»; v3.1 — ткань полосы
+    # (нижний воротник кимоно) в тени от обоих сгибов
+    hv, cv_ = waffle(aU, dU + 3.3, 23)
+    edge_v = np.minimum(dU, dT)
+    H = np.where(vgap, base + 1.0 - 2.0 * (1 - sstep(0, 12, edge_v)) + hv * sstep(2, 6, edge_v), H)
+    CAV = np.where(vgap, cv_, CAV)
+    CODE[vgap] = BAND
     H = np.where(top & ~band_t, base + 1.5 + hw, H)       # верхняя пола лежит поверх: +1.5, полоса +4
     hT, cT, stT, grT = band_surface(dT, aT, 4.0, 22)
     H = np.where(band_t, hT, H)
@@ -458,18 +495,25 @@ def build():
     patch(-0.158, -0.058, 0.548, 0.655, 44)
 
     # --- подпалины от искр (перёд, у подола и на кармане)
-    for (cx, cy, r) in ((-0.100, 0.236, 4.5), (0.160, 0.268, 3.6), (-0.020, 0.300, 3.0)):
+    # v3.1: неровное пятно с большим ореолом (v3.0 — круглые тёмные точки читались пуговицами)
+    for k, (cx, cy, r) in enumerate(((-0.100, 0.236, 4.0), (0.160, 0.268, 3.2), (-0.020, 0.300, 2.6))):
         c = uv((cx, cy))
-        rr = np.hypot(S0 - c[0], T0_ - c[1])
-        m = front & (rr < r * 4)
-        H = np.where(m, H - 0.6 * gauss(rr, r * 0.8) + 0.35 * gauss(rr - r * 1.1, 0.9), H)
-        SCORCH = np.maximum(SCORCH, m * np.clip(1.25 - rr / (r * 3.2), 0, 1))
+        dx_, dy_ = S0 - c[0], T0_ - c[1]
+        ang = np.arctan2(dy_, dx_)
+        wob = 1 + 0.45 * (fbm(np.cos(ang) * 1.3 + 7 * k, np.sin(ang) * 1.3, 90 + k) - 0.5) * 2
+        rr = np.hypot(dx_, dy_) / wob
+        m = front & (rr < r * 6)
+        H = np.where(m, H - 0.5 * gauss(rr, r * 0.7) + 0.3 * gauss(rr - r * 1.0, 0.8) - 0.25 * hw * (rr < r * 2.5), H)
+        SCORCH = np.maximum(SCORCH, m * np.clip(1.3 - rr / (r * 5.0), 0, 1))
 
     # ================================================================== пояс, шлёвки (0 и 3)
     belt_d = (BELT_H - np.abs(Y - BELT_Y)) * 1000          # мм от края пояса внутрь
     beltm = torso & (belt_d > 0)
     hb, cb = waffle(arc, Y * 1000, 51)
-    h_belt = H + (base + BELT_TOP + hb * sstep(2, 5, belt_d) - H) * prof(belt_d, 3.5)
+    # пояс — плотная лента: лежит почти ровно, сборка и родные складки под ним сглажены (v3.0: пояс повторял
+    # сборку, в бороздах набиралось AO — тёмное пятно на поясе сзади)
+    base_belt = 0.35 * (FOLD - gather)
+    h_belt = H + (base_belt + BELT_TOP + hb * sstep(2, 5, belt_d) - H) * prof(belt_d, 3.5)
     h_belt += -0.45 * gauss(belt_d - 4.5, 0.9)
     H = np.where(beltm, h_belt, H)
     CAV = np.where(beltm, cb, CAV)
@@ -480,7 +524,7 @@ def build():
     loopm = torso & (ld > 0) & (lv > 0)
     dl = np.minimum(ld, lv)
     hl, cl = waffle(Y * 1000, arc + 2.2, 52)
-    h_loop = H + (base + BELT_TOP + 3.0 + 0.5 * hl * sstep(1.5, 3, dl) - H) * prof(dl, 2.0)
+    h_loop = H + (base_belt + BELT_TOP + 3.0 + 0.5 * hl * sstep(1.5, 3, dl) - H) * prof(dl, 2.0)
     h_loop += 0.7 * gauss(lv - 4, 1.6) * (ld > 0)          # закрепки на концах
     H = np.where(loopm, h_loop, H)
     CODE[loopm] = LOOP
@@ -556,22 +600,29 @@ def build():
 
     ribbon([(0.064, 0.486), (0.076, 0.41), (0.085, 0.34), (0.088, 0.300)], 0.042, BELT_TOP + 2.0, 61, 0.5)
     ribbon([(0.040, 0.484), (0.031, 0.40), (0.023, 0.31), (0.019, 0.250)], 0.045, BELT_TOP + 2.5, 62, 0.42)
-    K = uv((0.050, 0.500))
-    kx, ky = (S0 - K[0]) / 38.0, (T0_ - K[1]) / 32.0
-    kr = np.hypot(kx, ky)
-    km = front & (kr < 1)
-    dome = np.sqrt(np.clip(1 - kr ** 2, 0, 1)) ** 0.7
-    hk, ck = waffle(((S0 - K[0]) * 0.8 - (T0_ - K[1]) * 0.6), ((S0 - K[0]) * 0.6 + (T0_ - K[1]) * 0.8), 63)
-    lw = np.abs((S0 - K[0]) * 0.55 + (T0_ - K[1]) * 0.83)              # поперёк петли (наискосок)
-    loop = prof(21 - lw, 2.6) * (lw < 21)
-    hkn = base + BELT_TOP + 6.5 * dome + 3.0 * loop + 0.8 * hk * sstep(0.1, 0.3, dome)
-    hkn += -1.2 * gauss(lw - 21, 1.4) * (kr < 0.95)                    # тень под краем петли
-    for a in (0.6, 1.9, 3.4, 4.6):                                      # заломы от центра
-        rx, ry = np.cos(a), np.sin(a)
-        hkn += -0.9 * gauss((kx * ry - ky * rx) * 30, 1.2) * (kx * rx + ky * ry > 0.3) * dome
-    H = np.where(km, H + (hkn - H) * prof((1 - kr) * 34, 2.5), H)
-    CAV = np.where(km, ck, CAV)
-    CODE[km] = KNOT
+    # узел v3.1: обмотка концом пояса (выше и ниже пояса на 9 мм) и петля поверх наискосок;
+    # v3.0 — купол с перехлёстом читался в игре плоской круглой «бляхой»
+    K = uv((0.052, 0.498))
+    ca, sa = np.cos(np.radians(-10)), np.sin(np.radians(-10))
+    ku = (S0 - K[0]) * ca + (T0_ - K[1]) * sa
+    kv = -(S0 - K[0]) * sa + (T0_ - K[1]) * ca
+    dwrap = -rrect(ku, kv, 25.0, 34.0, 9.0)                              # мм внутрь от края обмотки
+    km = front & (dwrap > 0)
+    hk, ck = waffle(kv, ku + 2.1, 63)                                    # ячейки вдоль обмотки
+    puff = 1.6 * np.sqrt(np.clip(1 - (ku / 25) ** 2, 0, 1))              # обмотка выпуклая поперёк
+    hkn = base + BELT_TOP + 4.5 + puff + hk * sstep(2, 5, dwrap) + 1.0 * gauss(34 - np.abs(kv), 3.0)
+    lw = ku * 0.70 + kv * 0.71                                           # петля поверх: лента 22 мм наискосок
+    loopd = 11.0 - np.abs(lw)
+    loopm = (loopd > 0) & (dwrap > -4)
+    hl2, cl2 = waffle(-ku * 0.71 + kv * 0.70, lw + 4.4, 64)
+    hkn = np.where(loopm, hkn + 3.5 * prof(loopd, 3.0) + hl2 * sstep(2, 4, loopd), hkn)
+    hkn += -1.3 * gauss(np.abs(lw) - 11.5, 1.2) * (dwrap > 2)            # тень по краям петли
+    for off in (-14.0, 0.0, 15.0):                                       # заломы обмотки у петли
+        hkn += -0.8 * gauss(ku - off - kv * 0.3, 1.1) * (np.abs(lw) > 12) * sstep(3, 8, dwrap)
+    km2 = km | (front & loopm)
+    H = np.where(km2, H + (hkn - H) * prof(np.maximum(dwrap, loopd * loopm), 3.0), H)
+    CAV = np.where(km2, np.where(loopm, cl2, ck), CAV)
+    CODE[km2] = KNOT
     log("рулон, узел и концы готовы")
 
     # ================================================================== веточка и листья в нагрудном +x
@@ -586,7 +637,7 @@ def build():
         H = np.where(m, np.maximum(H, H + 2 * r * tube(d, r) + bud), H)
         CODE[m] = TWIG
 
-    def leaf(b0, ang, L, W, seed):
+    def leaf(b0, ang, L, W, seed, region=None):
         """Лист: черешок в точке b0 (мм развёртки), направление ang (град., 0 = +u), длина L, ширина W, мм."""
         nonlocal H
         b0 = np.asarray(b0, float)
@@ -595,7 +646,7 @@ def build():
         b = -(S0 - b0[0]) * sa + (T0_ - b0[1]) * ca
         half = W / 2 * np.sin(np.pi * np.clip(a, 0, 1)) ** 0.75 * (1 - 0.3 * np.clip(a, 0, 1))
         e = half - np.abs(b)
-        m = front & (a > 0) & (a < 1) & (e > 0)
+        m = (front if region is None else region) & (a > 0) & (a < 1) & (e > 0)
         bm = np.abs(b)
         vein = 0.0
         for k in range(1, 7):
@@ -609,6 +660,119 @@ def build():
     leaf(twig[-1], 105, 38, 24, 71)
     leaf(shoot[-1], 165, 32, 20, 72)
     log("веточка и листья готовы")
+
+    # ================================================================== этап 3: швы вставок, заплаты, затяжка, спина
+    from PIL import Image
+    dorig = np.asarray(Image.open(HERE / "originals" / "jacket_snow_red_bc.png").convert("RGB")
+                       .resize((R, R), Image.NEAREST), np.float32) / 255
+    dark = (dorig.max(2) < 0.22) & (np.abs(dorig[..., 0] - dorig[..., 1]) < 0.08)
+    soft = box_blur(dark.astype(np.float32), 7) > 0.5                   # вставки парки, без пятен грязи
+    # --- шов кокетки (спина) и плечевых вставок (перёд): по контуру вставки парки; на вставке ячейки в другой фазе
+    for n in (0, 3):
+        ins = soft & (isl == n)
+        dpx = edge_distance(ins, 16) / PX
+        body = (isl == n) & (CODE == BODY)
+        hy, cy_ = waffle(S0 + 5.5, T0_ + 5.5, 81 + n)
+        H = np.where(ins & body, H - hw + hy * sstep(1.5, 4, dpx), H)
+        CAV = np.where(ins & body, cy_, CAV)
+        seam = body & (dpx < 12)
+        H = np.where(seam, H - 0.8 * gauss(dpx, 1.1) + 0.6 * gauss(dpx - 4.5, 2.2) - 0.45 * gauss(dpx - 6.5, 0.9) * ins, H)
+        GROOVE = np.where(seam, np.maximum(GROOVE, gauss(dpx, 1.1) + gauss(dpx - 6.5, 0.9) * ins), GROOVE)
+    log("швы вставок готовы")
+
+    # --- заплаты из полотенца на локтях (на месте заплат парки): лён, кирпичные полосы, стежки через край
+    rng = np.random.default_rng(31)
+    # окна вокруг квадратов заплат парки (по оригинальной текстуре, px 2048): у плеча рукава +x тоже есть тёмное
+    WIN = {1: (440, 780, 340, 660), 2: (1340, 1680, 300, 600)}
+    for n, ang_deg in ((1, 4.0), (2, -6.0)):
+        x0w, x1w, y0w, y1w = WIN[n]
+        ins = soft & (isl == n) & (xs >= x0w) & (xs <= x1w) & (ys >= y0w) & (ys <= y1w)
+        ys_, xs_ = np.nonzero(ins)
+        if len(ys_) == 0:
+            continue
+        hx = (np.percentile(xs_, 97) - np.percentile(xs_, 3)) / 2 / pxmm[n] + 6
+        hyy = (np.percentile(ys_, 97) - np.percentile(ys_, 3)) / 2 / pxmm[n] + 6
+        cu, cvv = (xs_.mean() + 0.5) / pxmm[n], (ys_.mean() + 0.5) / pxmm[n]
+        su, sv = S0 - cu, (ys + 0.5) / PX - cvv                         # мм; sv вниз по атласу
+        car, sar = np.cos(np.radians(ang_deg)), np.sin(np.radians(ang_deg))
+        pu, pv = su * car + sv * sar, -su * sar + sv * car
+        fray = 1.2 * (fbm(pu / 4, pv / 4, 100 + n) - 0.5) * 2
+        dp = -rrect(pu, pv, hx, hyy, 3.0) + fray                          # мм внутрь от края заплаты
+        reg = (isl == n) & (dp > -1.5)
+        inside = reg & (dp > 0)
+        crumple = 0.35 * (fbm(pu / 9, pv / 9, 110 + n) - 0.5) * 2
+        hpch = base + 1.5 * prof(dp, 2.0) + crumple + 0.5 * gauss(dp - 2.2, 1.0)   # подвёрнутый край — валик
+        H = np.where(inside, H + (hpch - H) * prof(dp, 1.2), H)
+        CODE[inside] = PATCH
+        CAV = np.where(inside, 0.0, CAV)
+        q = pv / hyy
+        for a_, b_ in ((-0.30, -0.12), (-0.05, 0.02)):                  # полосы полотенца (тканые — цвет)
+            st_ = sstep(a_ - 0.01, a_ + 0.01, q) * (1 - sstep(b_ - 0.01, b_ + 0.01, q))
+            STRIPE = np.where(inside, np.maximum(STRIPE, st_), STRIPE)
+        tuft = reg & (dp < 1.5) & (fbm(pu / 2.5, pv / 2.5, 120 + n) > 0.66)   # махры по краю
+        H = np.where(tuft, H + 0.8, H)
+        THREAD = np.maximum(THREAD, tuft * 1.0)
+        PP = np.stack([pu, pv], -1)
+        for L2 in np.arange(0, 4 * hx + 4 * hyy, 7.0):                   # стежки через край каждые 7 мм
+            if L2 < 2 * hx:
+                ex, ey, nx_, ny_ = -hx + L2, -hyy, 0, -1
+            elif L2 < 2 * hx + 2 * hyy:
+                ex, ey, nx_, ny_ = hx, -hyy + (L2 - 2 * hx), 1, 0
+            elif L2 < 4 * hx + 2 * hyy:
+                ex, ey, nx_, ny_ = hx - (L2 - 2 * hx - 2 * hyy), hyy, 0, 1
+            else:
+                ex, ey, nx_, ny_ = -hx, hyy - (L2 - 4 * hx - 2 * hyy), -1, 0
+            j = rng.uniform(-0.8, 0.8)
+            pa = (ex - nx_ * 3.5 - ny_ * 1.6 + j, ey - ny_ * 3.5 + nx_ * 1.6)
+            pb = (ex + nx_ * 2.5 + ny_ * 1.6, ey + ny_ * 2.5 - nx_ * 1.6)
+            dd, _, _ = polyline(PP, [pa, pb])
+            ms = (isl == n) & (dd < 0.85)
+            H = np.where(ms, np.maximum(H, H + 1.1 * tube(dd, 0.85)), H)
+            THREAD = np.maximum(THREAD, ms * 1.0)
+    log("заплаты готовы")
+
+    # --- затяжка на предплечье +x: вытянутая петля нитки, ячейки вдоль неё стянуты
+    cand = (isl == 1) & (np.abs(X - 0.40) < 0.006) & (nrm[..., 2] > 0.55)
+    if cand.any():
+        yy, xx = np.nonzero(cand)
+        k = len(yy) // 2
+        c_ = np.array([S0[yy[k], xx[k]], T0_[yy[k], xx[k]]])
+        d_line, _, _ = polyline(P2, [tuple(c_ + (0, -25)), tuple(c_ + (0, 25))])
+        near = (isl == 1) & (d_line < 6)
+        H = np.where(near, H - hw * 0.6 * (1 - sstep(1, 6, d_line)) - 0.6 * gauss(d_line, 1.2), H)
+        r_arc = np.hypot(S0 - c_[0] - 4.0, T0_ - c_[1])
+        loopm2 = (isl == 1) & (np.abs(r_arc - 5.5) < 1.0) & (S0 > c_[0])
+        H = np.where(loopm2, np.maximum(H, H + 1.6 * tube(np.abs(r_arc - 5.5), 1.0)), H)
+        THREAD = np.maximum(THREAD, loopm2 * 1.0)
+    log("затяжка готова")
+
+    # --- спина: мокрый берёзовый лист у левой лопатки, штопка у подола справа
+    back3 = isl == 3
+    by_, bx_ = np.nonzero(back3 & (Z < 0.0))
+    bX, bY, bU, bW = X[by_, bx_], Y[by_, bx_], S0[by_, bx_], T0_[by_, bx_]
+
+    def uvb(p):
+        k = np.argmin((bX - p[0]) ** 2 + (bY - p[1]) ** 2)
+        return np.array([bU[k], bW[k]])
+
+    leaf(uvb((0.075, 0.690)), 250, 58, 40, 73, region=back3)
+    cd = uvb((-0.120, 0.300))
+    ca2, sa2 = np.cos(np.radians(8)), np.sin(np.radians(8))
+    du_ = (S0 - cd[0]) * ca2 + (T0_ - cd[1]) * sa2
+    dv_ = -(S0 - cd[0]) * sa2 + (T0_ - cd[1]) * ca2
+    ddn = -rrect(du_, dv_, 15.0, 13.0, 4.0) + 1.5 * (fbm(du_ / 3, dv_ / 3, 130) - 0.5) * 2
+    dm_ = back3 & (ddn > 0)
+    ph_u = np.abs(((du_ / 3.2) % 1) - 0.5) * 3.2
+    ph_v = np.abs(((dv_ / 3.2) % 1) - 0.5) * 3.2
+    over = ((np.floor(du_ / 3.2) + np.floor(dv_ / 3.2)) % 2) == 0
+    tu = tube(ph_u, 0.85) * np.where(over, 1.0, 0.6)
+    tv = tube(ph_v, 0.85) * np.where(over, 0.6, 1.0)
+    hdn = base + 0.2 + 0.55 * np.maximum(tu, tv)
+    H = np.where(dm_, H + (hdn - H) * prof(ddn, 1.5), H)
+    CODE[dm_] = DARN
+    THREAD = np.where(dm_, np.maximum(tu, tv), THREAD)
+    CAV = np.where(dm_, 0.0, CAV)
+    log("лист и штопка готовы")
 
     # нить-бахрома по сгибу отворота (редкие петли)
     rng = np.random.default_rng(9)

@@ -34,7 +34,8 @@ def hexc(h):
 
 
 CLOTH = hexc("#BBA889")      # вафля (v2.3–v2.5, проверено в игре)
-BAND = hexc("#B09B7A")       # полоса, пояс, узел: плотнее, чуть темнее
+BAND = hexc("#A99272")       # полоса, пояс, узел: плотнее, темнее (v3.0 #B09B7A — концы пояса сливались с полой)
+DARN = hexc("#C3B193")       # нитка штопки (v3.1 #D6CCB6 — светлый квадрат читался ярлыком)
 FRINGE = hexc("#C9BA9C")
 LINEN = hexc("#CFC6B4")
 STRIPE = hexc("#8E3A30")
@@ -146,14 +147,17 @@ def main():
     col[band] = BAND
     col[code == FV.FRINGE] = FRINGE
     col[code == FV.LINEN] = LINEN
+    col[code == FV.PATCH] = LINEN * 0.92
+    col[code == FV.DARN] = DARN
     col[code == FV.TWIG] = TWIG
     col[code == FV.LEAF] = LEAF
-    col = mix(col, STRIPE * 0.92 + CLOTH * 0.08, stripe * np.isin(code, (FV.BODY, FV.BAND, FV.CUFF, FV.LINEN)))
+    col = mix(col, STRIPE * 0.80 + CLOTH * 0.20, stripe * np.isin(code, (FV.BODY, FV.BAND, FV.CUFF, FV.LINEN, FV.PATCH)))   # v3.1: приглушён
     # тон после стирки: неровно, крупными пятнами (формы нет — только цвет)
     wash = FV.fbm(X * 9 + 3, Y * 9 + Z * 5, 301) - 0.5
     col *= (1 + 0.10 * wash)[..., None]
     # полость вафли чуть темнее (пыль и сырость держатся в ячейках), гребни светлее
     cloth = ~np.isin(code, (FV.TWIG, FV.LEAF))
+    col = mix(col, FRINGE * 1.03, thread * cloth * 0.6)          # нитки стежков, затяжки, махры — светлее
     col *= (1 - 0.05 * cav * cloth + 0.02 * (1 - cav) * cloth)[..., None]   # 0.10 давало «клетку»
     col *= (1 - 0.18 * groove)[..., None]
     # сырость: подол снизу и манжеты (по высоте и по расстоянию до кисти), гуще во впадинах
@@ -171,7 +175,7 @@ def main():
     # AO в Diffuse — мягко (основное — в слоте Occlusion)
     # AO в Diffuse — только крупное (складки, под поясом, узел): ячейки вафли в цвете читались клеткой;
     # мелкое AO — в слоте Occlusion (в игре влияет на рассеянный свет)
-    col *= (0.70 + 0.30 * blur(ao1, 14))[..., None]
+    col *= (0.62 + 0.38 * blur(ao1, 14))[..., None]
     col = extend(np.clip(col, 0, 1), cov | (isl >= 0))
 
     # ---------------------------------------------------------------- Spec/Gloss, Fuzz, Occlusion
