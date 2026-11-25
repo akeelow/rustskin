@@ -57,7 +57,7 @@ STONE_OLD = hexc("#2D2A28")     # окатанный старый
 MINERAL = hexc("#B8B3A8")
 LEAF_DRY = hexc("#6A5236")      # v2.1 темнее: #7E6342 в игре — «самородок»
 LEAF_DARK = hexc("#4C3826")
-TIN = hexc("#6A6763")
+TIN = hexc("#5A5854")            # v2.2 темнее: #6A6763 в игре по тону сливался с деревом
 PEG = hexc("#857561")
 CHAR_ASH = hexc("#4A4642")
 EMB_EDGE = hexc("#B51805")
@@ -189,23 +189,30 @@ def build():
     nm = (wood & (nail > 0.5)).astype(np.float32)
     halo = np.clip(fblur(nm, 8) * 3.0, 0, 1) * (1 - nm) * wood
     wc = mix(wc, hexc("#4E3424"), 0.4 * halo)
-    # обугленный верх у печи (решение 2: формой): ячейки угля, пепельно-серые макушки, бурая подпалина вокруг
+    # обугленный верх у печи (решение 2: формой): блоки угля, бурая подпалина вокруг.
+    # v2.2: без светлых «пепельных» макушек (в игре с выпуклыми ячейками — «брусчатка»): макушки чёрные с атласным
+    # блеском, трещины ещё темнее и матовые
     ch = np.clip(m2[..., 2], 0, 1) * wood
     scorch = np.clip(fblur(ch, 14) * 2.2, 0, 1) * (1 - ch) * wood
     wc = mix(wc, hexc("#3A2A20"), 0.55 * scorch)
-    cc = mix(np.zeros_like(col) + CHAR, CHAR_ASH, 0.25 * np.clip(1 - cav * 1.5, 0, 1) * (0.5 + 0.5 * fbm(x * 0.7 + z * 0.7, y * 0.7, 909, 2)))
+    ccr = np.clip(cav * 1.4, 0, 1)
+    cc = CHAR * (0.92 + 0.22 * fbm(x * 0.9 + z * 0.9, y * 1.4, 909, 2))[..., None] * (1 - 0.45 * ccr)[..., None]
+    cc = mix(cc, CHAR_ASH, 0.1 * sstep(0.6, 0.85, fbm(x * 0.5 + z * 0.5, y * 0.5, 917, 3)) * (1 - ccr))
     wc = mix(wc, cc, ch)
     col = np.where(wood[..., None], wc, col)
-    spec = np.where(wood, 0.05, spec)
-    gloss = np.where(wood, 0.2 + 0.14 * gr - 0.08 * smoke - 0.1 * ch, gloss)
-    # жестяная заплата: серая жесть, ржавчина по рёбрам и краю, подкопчена
+    spec = np.where(wood, 0.05 + 0.04 * ch * (1 - ccr), spec)
+    gloss = np.where(wood, (0.2 + 0.14 * gr - 0.08 * smoke) * (1 - ch) + ch * (0.36 - 0.24 * ccr), gloss)
+    # жестяная заплата (v2.2: в игре светлая и чистая, ржавые кольца — «мишень»): тёмная жесть, ржавчина ползёт
+    # от загнутого края и от гвоздей (m3[1] у жести), рёбра — едва; копоть гуще кверху (к углю)
     tin = walls & (mat == M["tin"])
-    tr_ = np.clip(0.3 * np.clip(grain, 0, 1) + 0.6 * sstep(0.55, 0.8, fbm(z * 0.4, y * 0.4, 911, 3)), 0, 1)
-    tc = mix(np.zeros_like(col) + TIN * (0.9 + 0.2 * fbm(z * 1.2, y * 1.2, 913, 2)[..., None]), RUST * 0.85, 0.7 * tr_)
-    tc = tc * 0.7 + SOOT * 0.3
+    tr_ = np.clip(0.8 * sstep(0.15, 0.75, grease) * sstep(0.35, 0.7, fbm(z * 0.7, y * 0.7, 915, 3))   # пятнами, не рамкой
+                  + 0.08 * np.clip(grain, 0, 1) + 0.45 * sstep(0.62, 0.85, fbm(z * 0.4, y * 0.4, 911, 3)), 0, 1)
+    tc = mix(np.zeros_like(col) + TIN * (0.88 + 0.18 * fbm(z * 1.2, y * 1.2, 913, 2)[..., None]), RUST_DARK, 0.65 * tr_)
+    tsoot = 0.35 + 0.25 * sstep(19.0, 25.0, y)
+    tc = tc * (1 - tsoot[..., None]) + SOOT * tsoot[..., None]
     col = np.where(tin[..., None], tc, col)
-    spec = np.where(tin, 0.3 - 0.15 * tr_, spec)
-    gloss = np.where(tin, 0.36 - 0.16 * tr_, gloss)
+    spec = np.where(tin, 0.16 - 0.1 * tr_, spec)          # v2.2: 0.3 — середина на солнце блестела светлым
+    gloss = np.where(tin, 0.3 - 0.14 * tr_, gloss)
     # колышек: свежее дерево торцом, кольца темнее
     peg = walls & (mat == M["peg"])
     col = np.where(peg[..., None], PEG * (1.05 - 0.25 * np.clip(grain, 0, 1)[..., None]), col)
@@ -396,6 +403,9 @@ def main():
     r = build()
     mine = r["mine"]
     maps = {k: r[k] for k in ("col", "spec", "gloss", "occ", "nrm", "emis")}
+    # v2.2: нормаль перед 4096 -> 1024 слегка размыть (~0.7 мм): тоньше текселя 1024 всё равно не покажется,
+    # а при уменьшении складывается в «вельвет»
+    maps["nrm"] = np.stack([fblur(maps["nrm"][..., c], 1, passes=2) for c in range(3)], -1)
     area = extend(maps, mine.copy(), 32)
     print("downscale")
     col, spec, gloss, occ, nrm, emis = (down(maps[k]) for k in ("col", "spec", "gloss", "occ", "nrm", "emis"))
@@ -407,9 +417,11 @@ def main():
     dif[..., :3] = np.where(use[..., None], col, od[..., :3])
     dif[..., 3] = np.where(use, 1.0, od[..., 3])
     n = nrm * 2 - 1
-    # мелкий рельеф x1.5 (днём в игре рельеф слабее, чем в Blender); крупная поправка на сглаженную модель — как есть
-    lowp = np.stack([fblur(n[..., c], 2) for c in range(3)], -1)
-    n = n + 0.5 * (n - lowp) * np.array([1, 1, 0], np.float32)
+    # мелкий рельеф x1.5 (днём в игре рельеф слабее, чем в Blender); крупная поправка на сглаженную модель — как есть.
+    # v2.2: поднимаем только средние детали (полоса fblur 1 .. fblur 3); v2.1 поднимал и рябь у самого текселя
+    lowp = np.stack([fblur(n[..., c], 3) for c in range(3)], -1)
+    midp = np.stack([fblur(n[..., c], 1, passes=2) for c in range(3)], -1)
+    n = midp + (n - midp) * 0.85 + 0.5 * (midp - lowp) * np.array([1, 1, 0], np.float32)
     n /= np.linalg.norm(n, axis=-1, keepdims=True) + 1e-6
     nrm_o = np.where(use[..., None], n * 0.5 + 0.5, on)
     sg = osg.copy()
