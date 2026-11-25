@@ -48,15 +48,15 @@ RUST = hexc("#8C4A26")
 RUST_DARK = hexc("#5A3424")
 FLOOR_WOOD = hexc("#3B2E25")
 CHARCOAL = hexc("#141211")
-ASH = hexc("#5F5A54")           # пепел: v2.0 #77726B в игре — белый «снег» (урок v1.1 «снежки»)
-ASH_LIGHT = hexc("#6C6761")
+ASH = hexc("#4D4945")           # пепел: v2.0 #77726B — «снег», v2.2 #5F5A54 — «далматинец» на солнце сверху
+ASH_LIGHT = hexc("#58544F")
 STONE_SKIN = hexc("#29292A")    # габбро-диабаз: корка (v2.1 нейтральнее: в игре отдавал сиренью)
 STONE_FACE = hexc("#323335")    # грань раскола: чуть светлее
 STONE_CHIP = hexc("#4A4B4D")    # свежий скол: светлее — рёбра ловят свет (референс)
-STONE_OLD = hexc("#2D2A28")     # окатанный старый
+STONE_OLD = hexc("#303030")     # окатанный старый (v2.3 нейтральный: бурый #2D2A28 в игре — «картошка»)
 MINERAL = hexc("#B8B3A8")
-LEAF_DRY = hexc("#6A5236")      # v2.1 темнее: #7E6342 в игре — «самородок»
-LEAF_DARK = hexc("#4C3826")
+LEAF_DRY = hexc("#4F3E2C")      # v2.3: #6A5236 в игре — золотой «пряник»
+LEAF_DARK = hexc("#3A2C20")
 TIN = hexc("#5A5854")            # v2.2 темнее: #6A6763 в игре по тону сливался с деревом
 PEG = hexc("#857561")
 CHAR_ASH = hexc("#4A4642")
@@ -283,6 +283,8 @@ def build():
     c = CHARCOAL * (0.8 + 0.5 * tone[..., None]) * (1 + 0.25 * up[..., None])
     fleck = sstep(0.62, 0.75, fbm(x * 0.8, z * 0.8, 965, 2)) * up
     c = mix(c, ASH, 0.45 * fleck)
+    ash_near = np.clip(fblur((fl & (mat == M["ash"])).astype(np.float32), 10) * 1.8, 0, 1)    # v2.3: уголь у пепла припорошен
+    c = mix(c, ASH * 0.88, 0.85 * sstep(0.25, 0.9, ash_near) * (1 - np.clip(ember_m, 0, 1)))
     c = mix(c, hexc("#2A120A"), 0.6 * np.clip(ember_m, 0, 1))
     col = np.where(cb[..., None], c, col)
     spec = np.where(cb, 0.04, spec)
@@ -293,7 +295,7 @@ def build():
     su_, sv_ = FF.scoop_local(x, z)
     in_scoop = (np.abs(su_) < FF.SCOOP["L"] / 2) & (np.abs(sv_) < FF.SCOOP["W"] / 2)
     c = np.where(in_scoop[..., None], c * 0.7, c)
-    c = c * (0.9 + 0.12 * up[..., None])
+    c = c * (0.92 + 0.04 * up[..., None])
     col = np.where(ash[..., None], c, col)
     spec = np.where(ash, 0.03, spec)
     gloss = np.where(ash, 0.05, gloss)
@@ -306,7 +308,7 @@ def build():
     c = c * (0.85 + 0.3 * t3[..., None])
     c = mix(c, STONE_CHIP, 0.8 * np.clip(chip, 0, 1))
     c = np.where(so[..., None], STONE_OLD * (0.75 + 0.2 * t3[..., None]), c)
-    c = mix(c, MINERAL, 0.08 * so * sstep(0.6, 0.8, fbm(x * 0.6, z * 0.6, 969, 2)) * up)
+    c = mix(c, MINERAL, 0.22 * so * sstep(0.55, 0.8, fbm(x * 0.6, z * 0.6, 969, 2)) * up)   # белёсый налёт воды
     dust = sstep(0.8, 1.0, up) * 0.1
     c = mix(c, ASH, dust)
     c = mix(c, GAP, np.clip(fcav * 1.2, 0, 1))
@@ -320,6 +322,7 @@ def build():
     c = CHARCOAL * (0.9 + 0.35 * np.clip(rip, 0, 1)[..., None]) * (0.9 + 0.2 * tone[..., None])
     c = mix(c, hexc("#2A120A"), 0.7 * np.clip(ember_m, 0, 1))
     c = mix(c, ASH, 0.25 * sstep(0.85, 1.0, up) * (1 - np.clip(ember_m, 0, 1)))
+    c = mix(c, ASH * 0.8, 0.6 * sstep(0.25, 0.9, ash_near) * (1 - np.clip(ember_m, 0, 1)))   # v2.3: крошки угля в пепле
     col = np.where(co[..., None], c, col)
     spec = np.where(co, 0.05, spec)
     gloss = np.where(co, 0.18, gloss)            # на изломе угля лёгкий блеск
@@ -335,7 +338,7 @@ def build():
     lf = fl & (mat == M["leaf"])
     c = mix(np.zeros_like(col) + LEAF_DRY, LEAF_DARK, fbm(x * 1.5, z * 1.5, 973, 2))
     c = c * (1 + 0.18 * rip[..., None])
-    c = mix(c, CHARCOAL, 0.85 * np.clip(charm, 0, 1))
+    c = mix(c, CHARCOAL, 0.35 * np.clip(charm, 0, 1))    # v2.3: тёмный кончик сливался с пеплом — лист читался овалом
     col = np.where(lf[..., None], c, col)
     spec = np.where(lf, 0.05, spec)
     gloss = np.where(lf, 0.22, gloss)
@@ -355,7 +358,7 @@ def build():
     stone_heat = stones * sstep(0.7, 0.3, ao) * (0.25 + 0.75 * centre) * 0.4 * (1 - up)
     fheat = np.maximum.reduce([coal_heat, gap_glow, stone_heat])
     fheat = np.clip(1.4 * fheat * (0.06 + 0.94 * sstep(0.15, 0.75, pocket)), 0, 1)   # v1.5: ровно по всему дну — «лава»
-    bounce = (stones * sstep(0.1, 0.8, pocket) * (1 - 0.6 * up) * 0.22)[..., None]
+    bounce = (stones * sstep(0.1, 0.8, pocket) * (1 - 0.9 * up) * 0.12)[..., None]   # v2.3: днём отсвет красил камни в бурый
     col = np.where(fl[..., None], col * (1 - bounce) + hexc("#B4532A") * bounce, col)
     heat = np.maximum(heat, fheat * fl)
 

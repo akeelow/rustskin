@@ -23,7 +23,7 @@ BEAD_R = 0.45                   # закатанная кромка
 STEP = 0.2                      # шаг сетки поля, см
 SCOOP = dict(c=(-19.5, 27.0), yaw=np.radians(-35.0), L=16.0, W=13.0)   # совок: центр, поворот, длина/ширина ковша
 SEED = 23
-LEAF = dict(c=(10.5, 22.0), r=5.2, ang=np.radians(28.0), L=8.0)   # v2.1: лист лежит на пепле, а не на камне
+LEAF = dict(c=(10.5, 22.0), r=5.2, ang=np.radians(28.0), L=7.0)   # v2.1: лист лежит на пепле, а не на камне
 
 
 # ------------------------------------------------------------------ дно ящика (низ из OBJ)
@@ -470,7 +470,7 @@ def leaf(L, rng, nu=44, nv=17, curl=(0.04, 0.08)):
     """Берёзовый лист (как bed/bake_v2.leaf), сухой и скрученный: x вдоль жилки, y поперёк, h подъём, жилки."""
     U, Vv = np.meshgrid(np.linspace(-0.18, 1, nu), np.linspace(-1, 1, nv), indexing="ij")
     Up = np.clip(U, 0, 1)
-    W = 0.36 * L * (Up ** 0.5) * (1 - Up) ** 1.1 / (0.45 ** 0.5 * 0.55 ** 1.1) * 0.95
+    W = 0.27 * L * (Up ** 0.6) * (1 - Up) ** 1.4 / (0.3 ** 0.6 * 0.7 ** 1.4)   # v2.3 уже и острее: в игре «пряник»
     W = np.where(U < 0.02, 0.09, np.maximum(W, 0.09 * (U < 0.08)))           # черешок 1.4 см
     W = W * (1 + 0.05 * np.sin(U * 26 + rng.uniform(0, 6)))
     x, y = U * L, Vv * W
@@ -481,7 +481,8 @@ def leaf(L, rng, nu=44, nv=17, curl=(0.04, 0.08)):
         along = x - (u0 * L + np.abs(y) * 0.95)
         vein = np.maximum(vein, 0.75 * np.exp(-(along / 0.085) ** 2) * (np.abs(y) < W * 0.9) * (u0 < 0.95))
     c = rng.uniform(*curl) * L
-    h = 0.07 * vein + c * np.abs(Vv) ** 2.0 + 0.5 * np.sin(U * np.pi) * rng.uniform(0.2, 0.8)
+    h = 0.07 * vein + c * np.abs(Vv) ** 2.0 + 0.5 * np.sin(U * np.pi) * rng.uniform(0.1, 0.25)   # v2.3: без «горба»
     h = h + 0.05 * np.sin(Vv * 9 + U * 5) * np.abs(Vv)
     burn = sstep(0.7, 1.0, U + 0.15 * (vnoise(np.stack([U * 4, Vv * 3], -1), 7) - 0.5))
+    burn = np.maximum(burn, sstep(0.72, 0.95, np.abs(Vv) + 0.25 * (vnoise(np.stack([U * 6, Vv * 2], -1), 9) - 0.5)) * 0.8)
     return x, y, h, vein, burn
