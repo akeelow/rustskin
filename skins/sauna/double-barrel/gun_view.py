@@ -136,6 +136,8 @@ def lights(scene, mode):
         bg.inputs["Color"].default_value = (0.03, 0.04, 0.07, 1)
         bg.inputs["Strength"].default_value = 1.0
         rot, energy, colour = (math.radians(55), 0, math.radians(-25)), 0.35, (0.6, 0.7, 1.0)
+    if opt("--sun"):   # --sun rx,ry,rz (градусы, Blender): свой угол солнца, например скользящий свет на бок
+        rot = tuple(math.radians(float(v)) for v in opt("--sun").split(","))
     bpy.ops.object.light_add(type="SUN", rotation=rot)
     sun = bpy.context.active_object.data
     sun.energy, sun.color, sun.angle = energy, colour, math.radians(3)
