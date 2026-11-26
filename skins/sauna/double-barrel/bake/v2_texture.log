@@ -1,0 +1,7 @@
+texture main
+  main/frame: 8987118 текселей 4096
+  -> DoubleBarrel_v2.0_main_diffuse.png
+  -> DoubleBarrel_v2.0_main_normal.png
+  -> DoubleBarrel_v2.0_main_specgloss.png
+  -> DoubleBarrel_v2.0_main_occlusion.png
+done

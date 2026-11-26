@@ -1,0 +1,27 @@
+[19:58:22] barrel tubes high-poly
+[19:59:08]   hp_tube: 1589272 вершин, рельеф -0.90…+0.34 мм
+barrel B = M A + t: [[-0.156, 1.001, 0.009], [-1.001, -0.156, -0.01], [-0.009, -0.011, 1.0]] [-0.0362, 0.0421, 0.0004] max err 0.0001
+[19:59:10]   объекты: {'hp_tube': 1589272, 'hp_sleeve_0': 8680, 'hp_sleeve_1': 9145, 'hp_sleeve_twine_0': 1448, 'hp_sleeve_twine_1': 1448, 'hp_sleeve_twine_2': 1448, 'hp_sleeve_twine_3': 1448}
+00:49.093  render           | Saved: 'C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_barrel_tubes_0.png'
+[19:59:11]   look C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_barrel_tubes_0.png
+00:49.234  render           | Saved: 'C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_barrel_tubes_1.png'
+[19:59:11]   look C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_barrel_tubes_1.png
+00:49.406  render           | Saved: 'C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_barrel_tubes_2.png'
+[19:59:11]   look C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_barrel_tubes_2.png
+[19:59:11] stock all high-poly
+[19:59:16]   hp_wood: 675915 вершин, рельеф -1.90…+0.50 мм
+[19:59:21]   hp_band: 236649 вершин, рельеф +0.30…+1.61 мм
+[19:59:22]   hp_iron: 139746 вершин, рельеф -0.27…+0.03 мм
+[19:59:39]   объекты: {'hp_wood': 675915, 'hp_band': 236649, 'hp_iron': 139746, 'hp_screw_5_1': 264, 'hp_screw_5_-1': 264, 'hp_screw_6_1': 264, 'hp_screw_6_-1': 264, 'hp_stock_butt': 19505, 'hp_resin': 300, 'hp_towel_wrist': 39104, 'hp_nail_towel': 9}
+01:17.797  render           | Saved: 'C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_stock_all_0.png'
+[19:59:39]   look C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_stock_all_0.png
+01:18.031  render           | Saved: 'C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_stock_all_1.png'
+[19:59:39]   look C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_stock_all_1.png
+01:18.281  render           | Saved: 'C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_stock_all_2.png'
+[19:59:40]   look C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_stock_all_2.png
+[19:59:40] done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+OBJ import of 'barrel.obj' took 7.69 ms
+OBJ import of 'stock.obj' took 2.03 ms
+
+Blender quit

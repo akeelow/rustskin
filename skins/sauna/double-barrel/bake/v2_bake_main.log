@@ -1,0 +1,46 @@
+[20:38:38] main frame high-poly
+[20:39:39]   hp_frame: 2924810 вершин, рельеф -0.41…+0.39 мм
+[20:39:39]   объекты: {'hp_frame': 2924810, 'hp_leaf_top': 1037, 'hp_leaf_top_stalk': 42}
+01:02.656  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+[20:39:40] GPU OPTIX
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_v2.py:287: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_v2.py:370: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+Info: Baking map saved to internal image, save it externally or pack it
+[20:39:51]   bake main_frame_nfull NORMAL OBJECT 11 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:40:08]   bake main_frame_ao AO  16 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:40:30]   bake main_frame_col EMIT  22 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:40:52]   bake main_frame_idc EMIT  22 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:41:15]   bake main_frame_m1 EMIT  22 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:41:37]   bake main_frame_fb EMIT  22 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:41:59]   bake main_frame_cover EMIT  22 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:42:03]   bake main_frame_nflat NORMAL OBJECT 4 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:42:08]   bake main_frame_nsmooth NORMAL OBJECT 4 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:42:17]   bake main_frame_ntan NORMAL TANGENT 4 с
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_v2.py:461: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+Info: Baking map saved to internal image, save it externally or pack it
+[20:42:21]   bake main_frame_mask EMIT  3 с
+[20:42:21]   main_frame: тексели 8987118, нормаль xy ср. 5.8
+[20:42:22]   -> main_frame_ao.png
+[20:42:22]   -> main_frame_col.png
+[20:42:23]   -> main_frame_idc.png
+[20:42:23]   -> main_frame_m1.png
+[20:42:24]   -> main_frame_cover.png
+[20:42:25]   -> main_frame_normal.png
+[20:42:25]   -> main_frame_mask.png
+[20:42:25] done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+OBJ import of 'main.obj' took 7.99 ms
+
+Blender quit

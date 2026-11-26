@@ -1,0 +1,14 @@
+[19:58:22] main frame high-poly
+[19:59:09]   hp_frame: 2704590 вершин, рельеф -0.33…+0.37 мм
+[19:59:09]   объекты: {'hp_frame': 2704590, 'hp_leaf_top': 1037, 'hp_leaf_top_stalk': 42}
+00:48.453  render           | Saved: 'C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_main_frame_0.png'
+[19:59:10]   look C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_main_frame_0.png
+00:48.609  render           | Saved: 'C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_main_frame_1.png'
+[19:59:10]   look C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_main_frame_1.png
+00:48.875  render           | Saved: 'C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_main_frame_2.png'
+[19:59:10]   look C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake\v2\look_main_frame_2.png
+[19:59:10] done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+OBJ import of 'main.obj' took 7.73 ms
+
+Blender quit

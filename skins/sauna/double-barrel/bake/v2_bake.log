@@ -1,0 +1,119 @@
+[20:20:13] barrel tubes high-poly
+[20:20:43]   hp_tube: 1589272 вершин, рельеф -0.90…+0.38 мм
+barrel B = M A + t: [[-0.156, 1.001, 0.009], [-1.001, -0.156, -0.01], [-0.009, -0.011, 1.0]] [-0.0362, 0.0421, 0.0004] max err 0.0001
+[20:20:44]   объекты: {'hp_tube': 1589272, 'hp_sleeve_0': 8680, 'hp_sleeve_1': 9145, 'hp_sleeve_twine_0': 1448, 'hp_sleeve_twine_1': 1448, 'hp_sleeve_twine_2': 1448, 'hp_sleeve_twine_3': 1448}
+00:32.687  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+[20:20:44] GPU OPTIX
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_v2.py:287: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_v2.py:370: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+Info: Baking map saved to internal image, save it externally or pack it
+[20:21:05]   bake barrel_tubes_nfull NORMAL OBJECT 21 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:21:29]   bake barrel_tubes_ao AO  24 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:22:05]   bake barrel_tubes_col EMIT  36 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:22:41]   bake barrel_tubes_idc EMIT  36 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:23:17]   bake barrel_tubes_m1 EMIT  36 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:23:53]   bake barrel_tubes_fb EMIT  36 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:24:29]   bake barrel_tubes_cover EMIT  36 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:24:32]   bake barrel_tubes_nflat NORMAL OBJECT 3 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:24:36]   bake barrel_tubes_nsmooth NORMAL OBJECT 4 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:24:45]   bake barrel_tubes_ntan NORMAL TANGENT 4 с
+C:\Users\akeel\OneDrive\rustskin\skins\sauna\double-barrel\bake_v2.py:461: DeprecationWarning: 'Material.use_nodes' is expected to be removed in Blender 6.0
+  m.use_nodes = True
+Info: Baking map saved to internal image, save it externally or pack it
+[20:24:49]   bake barrel_tubes_mask EMIT  3 с
+[20:24:49]   barrel_tubes: тексели 4071600, нормаль xy ср. 6.1
+[20:24:49]   -> barrel_tubes_ao.png
+[20:24:50]   -> barrel_tubes_col.png
+[20:24:50]   -> barrel_tubes_idc.png
+[20:24:51]   -> barrel_tubes_m1.png
+[20:24:52]   -> barrel_tubes_cover.png
+[20:24:52]   -> barrel_tubes_normal.png
+[20:24:53]   -> barrel_tubes_mask.png
+[20:24:53] stock all high-poly
+[20:25:01]   hp_wood: 675915 вершин, рельеф -1.54…+0.58 мм
+[20:25:06]   hp_band: 236649 вершин, рельеф +0.30…+1.61 мм
+[20:25:07]   hp_iron: 139746 вершин, рельеф -0.27…+0.03 мм
+[20:25:24]   объекты: {'hp_wood': 675915, 'hp_band': 236649, 'hp_iron': 139746, 'hp_screw_5_1': 264, 'hp_screw_5_-1': 264, 'hp_screw_6_1': 264, 'hp_screw_6_-1': 264, 'hp_stock_butt': 19505, 'hp_resin': 300, 'hp_towel_wrist': 39104, 'hp_nail_towel': 9}
+[20:25:24] GPU OPTIX
+Info: Baking map saved to internal image, save it externally or pack it
+[20:25:55]   bake stock_all_nfull NORMAL OBJECT 31 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:26:33]   bake stock_all_ao AO  37 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:27:18]   bake stock_all_col EMIT  45 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:28:03]   bake stock_all_idc EMIT  45 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:28:48]   bake stock_all_m1 EMIT  45 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:29:34]   bake stock_all_fb EMIT  45 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:30:18]   bake stock_all_cover EMIT  45 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:30:22]   bake stock_all_nflat NORMAL OBJECT 4 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:30:26]   bake stock_all_nsmooth NORMAL OBJECT 4 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:30:36]   bake stock_all_ntan NORMAL TANGENT 4 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:30:39]   bake stock_all_mask EMIT  3 с
+[20:30:39]   stock_all: тексели 8484534, нормаль xy ср. 11.9
+[20:30:40]   -> stock_all_ao.png
+[20:30:41]   -> stock_all_col.png
+[20:30:41]   -> stock_all_idc.png
+[20:30:42]   -> stock_all_m1.png
+[20:30:43]   -> stock_all_cover.png
+[20:30:43]   -> stock_all_normal.png
+[20:30:44]   -> stock_all_mask.png
+[20:30:44] main frame high-poly
+[20:31:35]   hp_frame: 2704590 вершин, рельеф -0.41…+0.39 мм
+[20:31:35]   объекты: {'hp_frame': 2704590, 'hp_leaf_top': 1037, 'hp_leaf_top_stalk': 42}
+[20:31:35] GPU OPTIX
+Info: Baking map saved to internal image, save it externally or pack it
+[20:31:46]   bake main_frame_nfull NORMAL OBJECT 11 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:32:02]   bake main_frame_ao AO  15 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:32:24]   bake main_frame_col EMIT  21 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:32:45]   bake main_frame_idc EMIT  21 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:33:06]   bake main_frame_m1 EMIT  21 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:33:28]   bake main_frame_fb EMIT  21 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:33:49]   bake main_frame_cover EMIT  21 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:33:53]   bake main_frame_nflat NORMAL OBJECT 4 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:33:57]   bake main_frame_nsmooth NORMAL OBJECT 4 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:34:07]   bake main_frame_ntan NORMAL TANGENT 4 с
+Info: Baking map saved to internal image, save it externally or pack it
+[20:34:10]   bake main_frame_mask EMIT  3 с
+[20:34:10]   main_frame: тексели 8535164, нормаль xy ср. 5.4
+[20:34:11]   -> main_frame_ao.png
+[20:34:12]   -> main_frame_col.png
+[20:34:12]   -> main_frame_idc.png
+[20:34:13]   -> main_frame_m1.png
+[20:34:13]   -> main_frame_cover.png
+[20:34:14]   -> main_frame_normal.png
+[20:34:15]   -> main_frame_mask.png
+[20:34:15] done
+Blender 5.3.0 (hash 02f0899d78e3 built 2026-11-10 01:33:43)
+OBJ import of 'barrel.obj' took 8.06 ms
+OBJ import of 'stock.obj' took 4.80 ms
+OBJ import of 'main.obj' took 3.71 ms
+
+Blender quit
